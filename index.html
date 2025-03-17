@@ -35,10 +35,16 @@
         </div>
 
         <div class="panel playlist-manager">
-            <h2>
-                <i class="material-icons">playlist_play</i>
-                当前播放列表
-            </h2>
+            <div class="playlist-header">
+                <h2>
+                    <i class="material-icons">playlist_play</i>
+                    当前播放列表
+                </h2>
+                <button class="danger-button" onclick="clearPlaylist()" id="clearPlaylistBtn" style="display: none;">
+                    <i class="material-icons">delete_sweep</i>
+                    清空列表
+                </button>
+            </div>
             <div id="playlist"></div>
             <div class="playlist-actions">
                 <button onclick="generatePlayerPage()">
