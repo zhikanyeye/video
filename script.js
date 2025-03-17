@@ -51,9 +51,19 @@ class PlaylistManager {
     }
 
     generatePlayerPage() {
-        // 保存播放列表到localStorage后自动打开播放页面
-        this.savePlaylist();
-        window.open('player.html', '_blank');
+        // 将播放列表数据编码为URL安全的字符串
+        const playlistData = encodeURIComponent(JSON.stringify(this.playlist));
+        // 使用URL参数传递播放列表数据
+        const playerUrl = `player.html?playlist=${playlistData}`;
+        window.open(playerUrl, '_blank');
+    }
+
+    // 新增：导出播放列表链接
+    getShareableLink() {
+        const playlistData = encodeURIComponent(JSON.stringify(this.playlist));
+        const currentUrl = window.location.href.split('?')[0];
+        const playerUrl = currentUrl.replace('index.html', `player.html?playlist=${playlistData}`);
+        return playerUrl;
     }
 }
 
@@ -88,4 +98,21 @@ function addBatchVideos() {
 // 生成播放页面
 function generatePlayerPage() {
     playlistManager.generatePlayerPage();
+}
+
+// 复制分享链接
+function copyShareableLink() {
+    const link = playlistManager.getShareableLink();
+    navigator.clipboard.writeText(link).then(() => {
+        alert('播放列表链接已复制到剪贴板！');
+    }).catch(() => {
+        // 如果剪贴板API不可用，创建一个临时输入框
+        const tempInput = document.createElement('input');
+        tempInput.value = link;
+        document.body.appendChild(tempInput);
+        tempInput.select();
+        document.execCommand('copy');
+        document.body.removeChild(tempInput);
+        alert('播放列表链接已复制到剪贴板！');
+    });
 }
