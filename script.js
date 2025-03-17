@@ -2,6 +2,27 @@ class PlaylistManager {
     constructor() {
         this.playlist = [];
         this.loadPlaylist();
+        this.setupConfirmDialog();
+    }
+
+    setupConfirmDialog() {
+        // 创建确认对话框
+        const dialog = document.createElement('div');
+        dialog.innerHTML = `
+            <div class="dialog-overlay" id="dialogOverlay"></div>
+            <div class="confirm-dialog" id="confirmDialog">
+                <h3>确认删除</h3>
+                <p>确定要删除这个视频吗？此操作无法撤销。</p>
+                <div class="dialog-buttons">
+                    <button onclick="playlistManager.cancelDelete()">取消</button>
+                    <button class="danger-button" onclick="playlistManager.confirmDelete()">删除</button>
+                </div>
+            </div>
+        `;
+        document.body.appendChild(dialog);
+
+        this.confirmDialog = document.getElementById('confirmDialog');
+        this.dialogOverlay = document.getElementById('dialogOverlay');
     }
 
     addVideo(title, url) {
@@ -20,6 +41,44 @@ class PlaylistManager {
         });
     }
 
+    removeVideo(index) {
+        this.tempIndex = index;
+        this.showConfirmDialog();
+    }
+
+    showConfirmDialog() {
+        this.confirmDialog.classList.add('show');
+        this.dialogOverlay.classList.add('show');
+    }
+
+    hideConfirmDialog() {
+        this.confirmDialog.classList.remove('show');
+        this.dialogOverlay.classList.remove('show');
+    }
+
+    cancelDelete() {
+        this.hideConfirmDialog();
+        this.tempIndex = null;
+    }
+
+    confirmDelete() {
+        if (this.tempIndex !== null) {
+            this.playlist.splice(this.tempIndex, 1);
+            this.savePlaylist();
+            this.renderPlaylist();
+            this.hideConfirmDialog();
+            this.tempIndex = null;
+        }
+    }
+
+    clearPlaylist() {
+        if (confirm('确定要清空整个播放列表吗？此操作无法撤销。')) {
+            this.playlist = [];
+            this.savePlaylist();
+            this.renderPlaylist();
+        }
+    }
+
     savePlaylist() {
         localStorage.setItem('videoPlaylist', JSON.stringify(this.playlist));
     }
@@ -32,33 +91,39 @@ class PlaylistManager {
 
     renderPlaylist() {
         const playlistElement = document.getElementById('playlist');
+        const clearButton = document.getElementById('clearPlaylistBtn');
+        
         playlistElement.innerHTML = '';
         
         this.playlist.forEach((video, index) => {
             const item = document.createElement('div');
             item.className = 'playlist-item';
-            item.innerHTML = `${video.title}`;
+            item.innerHTML = `
+                <div class="playlist-item-content">
+                    <i class="material-icons">play_circle_outline</i>
+                    <span>${video.title}</span>
+                </div>
+                <button class="delete-button" onclick="event.stopPropagation(); playlistManager.removeVideo(${index})">
+                    <i class="material-icons">delete</i>
+                </button>
+            `;
             playlistElement.appendChild(item);
         });
 
-        // 如果有视频，显示播放页面链接
+        // 更新清空列表按钮的显示状态
+        clearButton.style.display = this.playlist.length > 0 ? 'flex' : 'none';
+
+        // 更新播放页面链接的显示状态
         const playerPageLink = document.getElementById('playerPageLink');
-        if (this.playlist.length > 0) {
-            playerPageLink.style.display = 'inline-block';
-        } else {
-            playerPageLink.style.display = 'none';
-        }
+        playerPageLink.style.display = this.playlist.length > 0 ? 'inline-block' : 'none';
     }
 
     generatePlayerPage() {
-        // 将播放列表数据编码为URL安全的字符串
         const playlistData = encodeURIComponent(JSON.stringify(this.playlist));
-        // 使用URL参数传递播放列表数据
         const playerUrl = `player.html?playlist=${playlistData}`;
         window.open(playerUrl, '_blank');
     }
 
-    // 新增：导出播放列表链接
     getShareableLink() {
         const playlistData = encodeURIComponent(JSON.stringify(this.playlist));
         const currentUrl = window.location.href.split('?')[0];
@@ -115,4 +180,9 @@ function copyShareableLink() {
         document.body.removeChild(tempInput);
         alert('播放列表链接已复制到剪贴板！');
     });
+}
+
+// 清空播放列表
+function clearPlaylist() {
+    playlistManager.clearPlaylist();
 }
