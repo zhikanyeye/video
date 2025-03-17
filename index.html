@@ -51,17 +51,29 @@
                     <i class="material-icons">play_circle_filled</i>
                     生成播放页面
                 </button>
-                <a id="playerPageLink" href="player.html" target="_blank" style="display: none;">
-                    <button>
-                        <i class="material-icons">open_in_new</i>
-                        打开播放页面
-                    </button>
-                </a>
                 <button onclick="copyShareableLink()">
                     <i class="material-icons">share</i>
                     复制分享链接
                 </button>
             </div>
+        </div>
+
+        <div class="panel github-section">
+            <h2>
+                <i class="material-icons">settings</i>
+                GitHub 设置
+            </h2>
+            <div class="token-input">
+                <input type="password" id="githubToken" placeholder="输入 GitHub Token">
+                <button onclick="saveGitHubToken()">
+                    <i class="material-icons">save</i>
+                    保存 Token
+                </button>
+            </div>
+            <p class="token-hint">
+                请在 <a href="https://github.com/settings/tokens" target="_blank">GitHub Token 设置页面</a> 
+                创建一个具有 gist 权限的 Token（至少需要 gist 权限）
+            </p>
         </div>
     </div>
     <script src="script.js"></script>
