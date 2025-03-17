@@ -4,31 +4,57 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>视频列表管理</title>
+    <link href="https://fonts.googleapis.com/icon?family=Material+Icons" rel="stylesheet">
     <link rel="stylesheet" href="style.css">
 </head>
 <body>
     <div class="container">
-        <div class="input-section">
-            <h2>添加视频</h2>
+        <div class="panel input-section">
+            <h2>
+                <i class="material-icons">add_circle_outline</i>
+                添加视频
+            </h2>
             <div class="single-input">
                 <input type="text" id="videoTitle" placeholder="视频标题">
                 <input type="text" id="videoUrl" placeholder="视频链接">
-                <button onclick="addVideo()">添加视频</button>
+                <button onclick="addVideo()">
+                    <i class="material-icons">add</i>
+                    添加视频
+                </button>
             </div>
             
-            <h2>批量添加视频</h2>
+            <h2>
+                <i class="material-icons">playlist_add</i>
+                批量添加视频
+            </h2>
             <textarea id="batchInput" placeholder="格式：每行一个视频，标题和链接用逗号分隔&#10;例如：&#10;视频1,https://example.com/video1&#10;视频2,https://example.com/video2"></textarea>
-            <button onclick="addBatchVideos()">批量添加</button>
+            <button onclick="addBatchVideos()">
+                <i class="material-icons">playlist_add_check</i>
+                批量添加
+            </button>
         </div>
 
-        <div class="playlist-manager">
-            <h2>当前播放列表</h2>
+        <div class="panel playlist-manager">
+            <h2>
+                <i class="material-icons">playlist_play</i>
+                当前播放列表
+            </h2>
             <div id="playlist"></div>
             <div class="playlist-actions">
-                <button onclick="generatePlayerPage()">生成播放页面</button>
+                <button onclick="generatePlayerPage()">
+                    <i class="material-icons">play_circle_filled</i>
+                    生成播放页面
+                </button>
                 <a id="playerPageLink" href="player.html" target="_blank" style="display: none;">
-                    <button>打开播放页面</button>
+                    <button>
+                        <i class="material-icons">open_in_new</i>
+                        打开播放页面
+                    </button>
                 </a>
+                <button onclick="copyShareableLink()">
+                    <i class="material-icons">share</i>
+                    复制分享链接
+                </button>
             </div>
         </div>
     </div>
