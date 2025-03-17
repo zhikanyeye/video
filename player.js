@@ -5,9 +5,45 @@ class VideoPlayer {
         this.currentVideoIndex = -1;
         this.tempIndex = null;
         this.isFullscreen = false;
-        this.loadPlaylistFromUrl();
-        this.renderPlaylist();
+        this.loadPlaylist();
         this.setupEventListeners();
+    }
+
+    async loadPlaylist() {
+        // 从 URL 获取 Gist ID
+        const urlParams = new URLSearchParams(window.location.search);
+        const gistId = urlParams.get('gist');
+
+        if (gistId) {
+            try {
+                await this.loadFromGist(gistId);
+                // 如果有播放列表，自动播放第一个视频
+                if (this.playlist.length > 0) {
+                    this.play(0);
+                }
+            } catch (error) {
+                console.error('Failed to load playlist:', error);
+                this.showError('加载播放列表失败，请检查链接是否正确！');
+            }
+        } else {
+            this.showError('未找到播放列表，请检查链接是否正确！');
+        }
+    }
+
+    async loadFromGist(gistId) {
+        try {
+            const response = await fetch(`https://api.github.com/gists/${gistId}`);
+            if (!response.ok) {
+                throw new Error('Failed to fetch Gist');
+            }
+            const data = await response.json();
+            const content = data.files['playlist.json'].content;
+            this.playlist = JSON.parse(content);
+            this.renderPlaylist();
+        } catch (error) {
+            console.error('Failed to load from Gist:', error);
+            throw error;
+        }
     }
 
     setupEventListeners() {
@@ -115,26 +151,13 @@ class VideoPlayer {
         this.isFullscreen = false;
     }
 
-    loadPlaylistFromUrl() {
-        const urlParams = new URLSearchParams(window.location.search);
-        const playlistData = urlParams.get('playlist');
-        
-        if (playlistData) {
-            try {
-                this.playlist = JSON.parse(decodeURIComponent(playlistData));
-            } catch (e) {
-                console.error('Failed to load playlist from URL:', e);
-                this.playlist = [];
-            }
-        }
-        this.updateVideoCount();
-    }
-
-    updateVideoCount() {
-        const countElement = document.querySelector('.video-count');
-        if (countElement) {
-            countElement.textContent = `${this.playlist.length} 个视频`;
-        }
+    showError(message) {
+        this.player.innerHTML = `
+            <div class="no-video">
+                <i class="material-icons">error_outline</i>
+                <p>${message}</p>
+            </div>
+        `;
     }
 
     play(index) {
@@ -145,70 +168,7 @@ class VideoPlayer {
             this.player.innerHTML = embedCode;
             this.updateActiveItem();
             this.updateVideoTitle(video.title);
-            this.updateUrlWithCurrentState();
             this.updateNavigationButtons();
-        }
-    }
-
-    removeVideo(index) {
-        this.tempIndex = index;
-        this.showConfirmDialog();
-    }
-
-    showConfirmDialog() {
-        document.getElementById('dialogOverlay').classList.add('show');
-        document.getElementById('confirmDialog').classList.add('show');
-    }
-
-    hideConfirmDialog() {
-        document.getElementById('dialogOverlay').classList.remove('show');
-        document.getElementById('confirmDialog').classList.remove('show');
-    }
-
-    cancelDelete() {
-        this.hideConfirmDialog();
-        this.tempIndex = null;
-    }
-
-    confirmDelete() {
-        if (this.tempIndex !== null) {
-            // 如果删除的是当前播放的视频，先切换到下一个视频
-            if (this.tempIndex === this.currentVideoIndex) {
-                if (this.tempIndex < this.playlist.length - 1) {
-                    this.play(this.tempIndex + 1);
-                } else if (this.playlist.length > 1) {
-                    this.play(this.tempIndex - 1);
-                } else {
-                    this.player.innerHTML = `
-                        <div class="no-video">
-                            <i class="material-icons">play_circle_outline</i>
-                            <p>请从播放列表选择视频进行播放</p>
-                        </div>
-                    `;
-                    this.currentVideoIndex = -1;
-                }
-            }
-
-            this.playlist.splice(this.tempIndex, 1);
-            this.updateUrlWithCurrentState();
-            this.renderPlaylist();
-            this.hideConfirmDialog();
-            this.tempIndex = null;
-        }
-    }
-
-    clearPlaylist() {
-        if (confirm('确定要清空整个播放列表吗？此操作无法撤销。')) {
-            this.playlist = [];
-            this.currentVideoIndex = -1;
-            this.updateUrlWithCurrentState();
-            this.renderPlaylist();
-            this.player.innerHTML = `
-                <div class="no-video">
-                    <i class="material-icons">play_circle_outline</i>
-                    <p>请从播放列表选择视频进行播放</p>
-                </div>
-            `;
         }
     }
 
@@ -219,12 +179,6 @@ class VideoPlayer {
     updateNavigationButtons() {
         document.getElementById('prevVideo').disabled = this.currentVideoIndex <= 0;
         document.getElementById('nextVideo').disabled = this.currentVideoIndex >= this.playlist.length - 1;
-    }
-
-    updateUrlWithCurrentState() {
-        const playlistData = encodeURIComponent(JSON.stringify(this.playlist));
-        const newUrl = `${window.location.pathname}?playlist=${playlistData}&current=${this.currentVideoIndex}`;
-        window.history.replaceState({}, '', newUrl);
     }
 
     createEmbedCode(url) {
@@ -258,6 +212,18 @@ class VideoPlayer {
         return match ? match[0] : '';
     }
 
+    updateActiveItem() {
+        const items = document.querySelectorAll('.playlist-item');
+        items.forEach((item, index) => {
+            if (index === this.currentVideoIndex) {
+                item.classList.add('active');
+                item.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+            } else {
+                item.classList.remove('active');
+            }
+        });
+    }
+
     renderPlaylist() {
         const playlistElement = document.getElementById('playerPlaylist');
         playlistElement.innerHTML = '';
@@ -270,15 +236,12 @@ class VideoPlayer {
                     <i class="material-icons">${index === this.currentVideoIndex ? 'play_arrow' : 'play_circle_outline'}</i>
                     <span>${video.title}</span>
                 </div>
-                <button class="delete-button" onclick="event.stopPropagation(); videoPlayer.removeVideo(${index})">
-                    <i class="material-icons">delete</i>
-                </button>
             `;
             playlistElement.appendChild(item);
         });
 
-        this.updateVideoCount();
-        this.updateNavigationButtons();
+        // 更新视频数量显示
+        document.querySelector('.video-count').textContent = `${this.playlist.length} 个视频`;
     }
 }
 
