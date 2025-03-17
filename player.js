@@ -105,11 +105,19 @@ class VideoPlayer {
     toggleSidebar() {
         const sidebar = document.querySelector('.sidebar');
         const icon = document.querySelector('#toggleSidebar i');
+        const isMobile = this.isMobileDevice();
+        
         sidebar.classList.toggle('collapsed');
-        icon.textContent = sidebar.classList.contains('collapsed') ? 'chevron_right' : 'chevron_left';
+        
+        // 根据设备类型和侧边栏状态更新图标
+        if (isMobile) {
+            icon.textContent = sidebar.classList.contains('collapsed') ? 'menu' : 'close';
+        } else {
+            icon.textContent = sidebar.classList.contains('collapsed') ? 'chevron_right' : 'chevron_left';
+        }
 
-        // 当侧边栏隐藏时，延迟一点时间后自动全屏
-        if (sidebar.classList.contains('collapsed') && !this.isFullscreen) {
+        // 仅在桌面端自动全屏
+        if (!isMobile && sidebar.classList.contains('collapsed') && !this.isFullscreen) {
             setTimeout(() => {
                 this.enterFullscreen();
             }, 300);
@@ -119,11 +127,13 @@ class VideoPlayer {
     showSidebar() {
         const sidebar = document.querySelector('.sidebar');
         const icon = document.querySelector('#toggleSidebar i');
+        const isMobile = this.isMobileDevice();
+        
         sidebar.classList.remove('collapsed');
-        icon.textContent = 'chevron_left';
+        icon.textContent = isMobile ? 'close' : 'chevron_left';
 
-        // 如果当前是全屏状态，退出全屏
-        if (this.isFullscreen) {
+        // 仅在桌面端退出全屏
+        if (!isMobile && this.isFullscreen) {
             this.exitFullscreen();
         }
     }
@@ -140,6 +150,12 @@ class VideoPlayer {
         const videoContainer = document.querySelector('.video-container');
         if (videoContainer.requestFullscreen) {
             videoContainer.requestFullscreen();
+        } else if (videoContainer.mozRequestFullScreen) {
+            videoContainer.mozRequestFullScreen();
+        } else if (videoContainer.webkitRequestFullscreen) {
+            videoContainer.webkitRequestFullscreen();
+        } else if (videoContainer.msRequestFullscreen) {
+            videoContainer.msRequestFullscreen();
         }
         this.isFullscreen = true;
     }
@@ -147,8 +163,18 @@ class VideoPlayer {
     exitFullscreen() {
         if (document.exitFullscreen) {
             document.exitFullscreen();
+        } else if (document.mozCancelFullScreen) {
+            document.mozCancelFullScreen();
+        } else if (document.webkitExitFullscreen) {
+            document.webkitExitFullscreen();
+        } else if (document.msExitFullscreen) {
+            document.msExitFullscreen();
         }
         this.isFullscreen = false;
+    }
+
+    isMobileDevice() {
+        return window.innerWidth <= 768;
     }
 
     showError(message) {
