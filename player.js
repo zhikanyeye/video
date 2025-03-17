@@ -3,17 +3,22 @@ class VideoPlayer {
         this.player = document.getElementById('player');
         this.playlist = [];
         this.currentVideoIndex = -1;
+        this.tempIndex = null;
+        this.isFullscreen = false;
         this.loadPlaylistFromUrl();
         this.renderPlaylist();
         this.setupEventListeners();
     }
 
     setupEventListeners() {
-        // 侧边栏切换
+        // 侧边栏切换按钮
         document.getElementById('toggleSidebar').addEventListener('click', () => {
-            document.querySelector('.sidebar').classList.toggle('collapsed');
-            const icon = document.querySelector('#toggleSidebar i');
-            icon.textContent = icon.textContent === 'chevron_left' ? 'chevron_right' : 'chevron_left';
+            this.toggleSidebar();
+        });
+
+        // 显示侧边栏按钮
+        document.getElementById('showSidebar').addEventListener('click', () => {
+            this.showSidebar();
         });
 
         // 上一个视频
@@ -32,11 +37,7 @@ class VideoPlayer {
 
         // 全屏切换
         document.getElementById('toggleFullscreen').addEventListener('click', () => {
-            if (!document.fullscreenElement) {
-                document.querySelector('.video-container').requestFullscreen();
-            } else {
-                document.exitFullscreen();
-            }
+            this.toggleFullscreen();
         });
 
         // 键盘控制
@@ -49,10 +50,69 @@ class VideoPlayer {
                     document.getElementById('nextVideo').click();
                     break;
                 case 'f':
-                    document.getElementById('toggleFullscreen').click();
+                    this.toggleFullscreen();
+                    break;
+                case 'Escape':
+                    if (this.isFullscreen) {
+                        this.exitFullscreen();
+                    }
                     break;
             }
         });
+
+        // 监听全屏变化
+        document.addEventListener('fullscreenchange', () => {
+            this.isFullscreen = !!document.fullscreenElement;
+        });
+    }
+
+    toggleSidebar() {
+        const sidebar = document.querySelector('.sidebar');
+        const icon = document.querySelector('#toggleSidebar i');
+        sidebar.classList.toggle('collapsed');
+        icon.textContent = sidebar.classList.contains('collapsed') ? 'chevron_right' : 'chevron_left';
+
+        // 当侧边栏隐藏时，延迟一点时间后自动全屏
+        if (sidebar.classList.contains('collapsed') && !this.isFullscreen) {
+            setTimeout(() => {
+                this.enterFullscreen();
+            }, 300);
+        }
+    }
+
+    showSidebar() {
+        const sidebar = document.querySelector('.sidebar');
+        const icon = document.querySelector('#toggleSidebar i');
+        sidebar.classList.remove('collapsed');
+        icon.textContent = 'chevron_left';
+
+        // 如果当前是全屏状态，退出全屏
+        if (this.isFullscreen) {
+            this.exitFullscreen();
+        }
+    }
+
+    toggleFullscreen() {
+        if (!document.fullscreenElement) {
+            this.enterFullscreen();
+        } else {
+            this.exitFullscreen();
+        }
+    }
+
+    enterFullscreen() {
+        const videoContainer = document.querySelector('.video-container');
+        if (videoContainer.requestFullscreen) {
+            videoContainer.requestFullscreen();
+        }
+        this.isFullscreen = true;
+    }
+
+    exitFullscreen() {
+        if (document.exitFullscreen) {
+            document.exitFullscreen();
+        }
+        this.isFullscreen = false;
     }
 
     loadPlaylistFromUrl() {
@@ -66,9 +126,14 @@ class VideoPlayer {
                 console.error('Failed to load playlist from URL:', e);
                 this.playlist = [];
             }
-        } else {
-            const saved = localStorage.getItem('videoPlaylist');
-            this.playlist = saved ? JSON.parse(saved) : [];
+        }
+        this.updateVideoCount();
+    }
+
+    updateVideoCount() {
+        const countElement = document.querySelector('.video-count');
+        if (countElement) {
+            countElement.textContent = `${this.playlist.length} 个视频`;
         }
     }
 
@@ -82,6 +147,68 @@ class VideoPlayer {
             this.updateVideoTitle(video.title);
             this.updateUrlWithCurrentState();
             this.updateNavigationButtons();
+        }
+    }
+
+    removeVideo(index) {
+        this.tempIndex = index;
+        this.showConfirmDialog();
+    }
+
+    showConfirmDialog() {
+        document.getElementById('dialogOverlay').classList.add('show');
+        document.getElementById('confirmDialog').classList.add('show');
+    }
+
+    hideConfirmDialog() {
+        document.getElementById('dialogOverlay').classList.remove('show');
+        document.getElementById('confirmDialog').classList.remove('show');
+    }
+
+    cancelDelete() {
+        this.hideConfirmDialog();
+        this.tempIndex = null;
+    }
+
+    confirmDelete() {
+        if (this.tempIndex !== null) {
+            // 如果删除的是当前播放的视频，先切换到下一个视频
+            if (this.tempIndex === this.currentVideoIndex) {
+                if (this.tempIndex < this.playlist.length - 1) {
+                    this.play(this.tempIndex + 1);
+                } else if (this.playlist.length > 1) {
+                    this.play(this.tempIndex - 1);
+                } else {
+                    this.player.innerHTML = `
+                        <div class="no-video">
+                            <i class="material-icons">play_circle_outline</i>
+                            <p>请从播放列表选择视频进行播放</p>
+                        </div>
+                    `;
+                    this.currentVideoIndex = -1;
+                }
+            }
+
+            this.playlist.splice(this.tempIndex, 1);
+            this.updateUrlWithCurrentState();
+            this.renderPlaylist();
+            this.hideConfirmDialog();
+            this.tempIndex = null;
+        }
+    }
+
+    clearPlaylist() {
+        if (confirm('确定要清空整个播放列表吗？此操作无法撤销。')) {
+            this.playlist = [];
+            this.currentVideoIndex = -1;
+            this.updateUrlWithCurrentState();
+            this.renderPlaylist();
+            this.player.innerHTML = `
+                <div class="no-video">
+                    <i class="material-icons">play_circle_outline</i>
+                    <p>请从播放列表选择视频进行播放</p>
+                </div>
+            `;
         }
     }
 
@@ -137,34 +264,21 @@ class VideoPlayer {
         
         this.playlist.forEach((video, index) => {
             const item = document.createElement('div');
-            item.className = 'playlist-item';
+            item.className = `playlist-item${index === this.currentVideoIndex ? ' active' : ''}`;
             item.innerHTML = `
-                <i class="material-icons">${this.currentVideoIndex === index ? 'play_arrow' : 'play_circle_outline'}</i>
-                <span>${video.title}</span>
+                <div class="playlist-item-content" onclick="videoPlayer.play(${index})">
+                    <i class="material-icons">${index === this.currentVideoIndex ? 'play_arrow' : 'play_circle_outline'}</i>
+                    <span>${video.title}</span>
+                </div>
+                <button class="delete-button" onclick="event.stopPropagation(); videoPlayer.removeVideo(${index})">
+                    <i class="material-icons">delete</i>
+                </button>
             `;
-            item.onclick = () => this.play(index);
             playlistElement.appendChild(item);
         });
 
-        const urlParams = new URLSearchParams(window.location.search);
-        const currentIndex = parseInt(urlParams.get('current')) || 0;
-        
-        if (this.playlist.length > 0) {
-            this.play(currentIndex);
-        }
-    }
-
-    updateActiveItem() {
-        const items = document.querySelectorAll('.playlist-item');
-        items.forEach((item, index) => {
-            if (index === this.currentVideoIndex) {
-                item.classList.add('active');
-                item.querySelector('.material-icons').textContent = 'play_arrow';
-            } else {
-                item.classList.remove('active');
-                item.querySelector('.material-icons').textContent = 'play_circle_outline';
-            }
-        });
+        this.updateVideoCount();
+        this.updateNavigationButtons();
     }
 }
 
