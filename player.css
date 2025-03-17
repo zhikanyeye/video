@@ -331,3 +331,49 @@ body.player-page {
 ::-webkit-scrollbar-thumb:hover {
     background: rgba(255, 255, 255, 0.3);
 }
+
+/* 响应式设计 */
+@media (max-width: 768px) {
+    .sidebar {
+        transform: translateX(0);
+        width: 100%;  /* 在移动端使用全屏宽度 */
+        z-index: 1000;
+        overflow-y: auto;
+        -webkit-overflow-scrolling: touch;  /* iOS上平滑滚动 */
+    }
+
+    .main-content {
+        margin-left: 0;
+    }
+
+    .show-sidebar-button {
+        display: flex;
+        width: 48px;    /* 更大的触摸区域 */
+        height: 48px;
+        z-index: 1001;  /* 确保按钮始终可见 */
+    }
+
+    .sidebar.collapsed {
+        transform: translateX(calc(-1 * var(--sidebar-width)));
+    }
+
+    /* 移动端优化 */
+    .playlist-item {
+        padding: 15px;  /* 更大的触摸区域 */
+    }
+    
+    .toggle-sidebar {
+        padding: 12px;  /* 更大的触摸区域 */
+    }
+
+    /* 优化移动端播放列表项 */
+    .playlist-item-content {
+        font-size: 16px;  /* 更大的字体 */
+    }
+
+    /* 确保视频控制按钮在移动端更容易点击 */
+    .control-button {
+        padding: 12px;
+        margin: 0 5px;
+    }
+}
