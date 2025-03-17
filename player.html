@@ -4,10 +4,9 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>视频播放页面</title>
+    <link href="https://fonts.googleapis.com/icon?family=Material+Icons" rel="stylesheet">
     <link rel="stylesheet" href="style.css">
     <link rel="stylesheet" href="player.css">
-    <!-- 添加 Material Icons -->
-    <link href="https://fonts.googleapis.com/icon?family=Material+Icons" rel="stylesheet">
 </head>
 <body class="player-page">
     <div class="player-layout">
@@ -20,12 +19,23 @@
                 </button>
             </div>
             <div class="playlist-container">
+                <div class="playlist-header">
+                    <span class="video-count">0 个视频</span>
+                    <button class="clear-playlist" onclick="videoPlayer.clearPlaylist()">
+                        <i class="material-icons">delete_sweep</i>
+                    </button>
+                </div>
                 <div id="playerPlaylist" class="playlist-items"></div>
             </div>
         </aside>
 
         <!-- 主要内容区 -->
         <main class="main-content">
+            <!-- 添加显示侧边栏按钮 -->
+            <button id="showSidebar" class="show-sidebar-button">
+                <i class="material-icons">menu</i>
+            </button>
+
             <!-- 视频播放器区域 -->
             <div class="video-container">
                 <div id="player">
@@ -53,6 +63,18 @@
             </div>
         </main>
     </div>
+
+    <!-- 确认删除对话框 -->
+    <div class="dialog-overlay" id="dialogOverlay"></div>
+    <div class="confirm-dialog" id="confirmDialog">
+        <h3>确认删除</h3>
+        <p>确定要删除这个视频吗？此操作无法撤销。</p>
+        <div class="dialog-buttons">
+            <button onclick="videoPlayer.cancelDelete()">取消</button>
+            <button class="danger-button" onclick="videoPlayer.confirmDelete()">删除</button>
+        </div>
+    </div>
+
     <script src="player.js"></script>
 </body>
 </html>
