@@ -27,15 +27,23 @@ body {
     box-shadow: 0 2px 4px rgba(0,0,0,0.1);
 }
 
+/* 播放列表头部样式 */
+.playlist-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 15px;
+}
+
 /* 输入区域样式 */
 .input-section h2, 
 .playlist-manager h2 {
-    margin-bottom: 15px;
     color: #333;
     font-size: 1.5rem;
     display: flex;
     align-items: center;
     gap: 8px;
+    margin: 0;
 }
 
 .single-input {
@@ -81,6 +89,14 @@ button:hover {
     background: #1976D2;
 }
 
+.danger-button {
+    background: #dc3545;
+}
+
+.danger-button:hover {
+    background: #c82333;
+}
+
 /* 播放列表样式 */
 .playlist-item {
     padding: 12px;
@@ -88,11 +104,36 @@ button:hover {
     cursor: pointer;
     display: flex;
     align-items: center;
+    justify-content: space-between;
+}
+
+.playlist-item-content {
+    display: flex;
+    align-items: center;
     gap: 8px;
+    flex: 1;
 }
 
 .playlist-item:hover {
     background: #f5f5f5;
+}
+
+.delete-button {
+    color: #dc3545;
+    background: none;
+    border: none;
+    padding: 4px;
+    cursor: pointer;
+    display: none;
+    border-radius: 50%;
+}
+
+.playlist-item:hover .delete-button {
+    display: flex;
+}
+
+.delete-button:hover {
+    background: rgba(220, 53, 69, 0.1);
 }
 
 .playlist-actions {
@@ -160,6 +201,46 @@ button:hover {
     color: white;
     text-align: center;
     padding: 20px;
+}
+
+/* 确认对话框样式 */
+.confirm-dialog {
+    position: fixed;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%);
+    background: white;
+    padding: 20px;
+    border-radius: 8px;
+    box-shadow: 0 4px 12px rgba(0,0,0,0.15);
+    z-index: 1000;
+    display: none;
+}
+
+.confirm-dialog.show {
+    display: block;
+}
+
+.dialog-overlay {
+    position: fixed;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    background: rgba(0,0,0,0.5);
+    z-index: 999;
+    display: none;
+}
+
+.dialog-overlay.show {
+    display: block;
+}
+
+.dialog-buttons {
+    display: flex;
+    justify-content: flex-end;
+    gap: 10px;
+    margin-top: 20px;
 }
 
 /* 响应式设计 */
