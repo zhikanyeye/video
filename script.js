@@ -270,6 +270,7 @@ async function copyShareableLink() {
             document.execCommand('copy');
             document.body.removeChild(tempInput);
             alert('播放列表链接已复制到剪贴板！');
+            }
    
     } catch (error) {
         alert('生成分享链接失败，请确认 GitHub Token 是否正确设置！');
