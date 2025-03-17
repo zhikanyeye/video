@@ -5,18 +5,53 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>视频播放页面</title>
     <link rel="stylesheet" href="style.css">
+    <link rel="stylesheet" href="player.css">
+    <!-- 添加 Material Icons -->
+    <link href="https://fonts.googleapis.com/icon?family=Material+Icons" rel="stylesheet">
 </head>
 <body class="player-page">
-    <div class="player-container">
-        <div class="video-wrapper">
-            <div id="player">
-                <p class="no-video">请从播放列表选择视频进行播放</p>
+    <div class="player-layout">
+        <!-- 侧边栏 -->
+        <aside class="sidebar">
+            <div class="sidebar-header">
+                <h2><i class="material-icons">playlist_play</i> 播放列表</h2>
+                <button id="toggleSidebar" class="toggle-sidebar">
+                    <i class="material-icons">chevron_left</i>
+                </button>
             </div>
-        </div>
-        <div class="playlist-sidebar">
-            <h2>播放列表</h2>
-            <div id="playerPlaylist"></div>
-        </div>
+            <div class="playlist-container">
+                <div id="playerPlaylist" class="playlist-items"></div>
+            </div>
+        </aside>
+
+        <!-- 主要内容区 -->
+        <main class="main-content">
+            <!-- 视频播放器区域 -->
+            <div class="video-container">
+                <div id="player">
+                    <div class="no-video">
+                        <i class="material-icons">play_circle_outline</i>
+                        <p>请从播放列表选择视频进行播放</p>
+                    </div>
+                </div>
+            </div>
+
+            <!-- 视频信息区域 -->
+            <div class="video-info">
+                <h1 id="currentVideoTitle">未选择视频</h1>
+                <div class="video-controls">
+                    <button id="prevVideo" class="control-button">
+                        <i class="material-icons">skip_previous</i>
+                    </button>
+                    <button id="nextVideo" class="control-button">
+                        <i class="material-icons">skip_next</i>
+                    </button>
+                    <button id="toggleFullscreen" class="control-button">
+                        <i class="material-icons">fullscreen</i>
+                    </button>
+                </div>
+            </div>
+        </main>
     </div>
     <script src="player.js"></script>
 </body>
