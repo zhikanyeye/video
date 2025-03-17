@@ -31,7 +31,7 @@
 
         <!-- 主要内容区 -->
         <main class="main-content">
-            <!-- 添加显示侧边栏按钮 -->
+            <!-- 显示侧边栏的按钮 -->
             <button id="showSidebar" class="show-sidebar-button">
                 <i class="material-icons">menu</i>
             </button>
@@ -41,14 +41,14 @@
                 <div id="player">
                     <div class="no-video">
                         <i class="material-icons">play_circle_outline</i>
-                        <p>请从播放列表选择视频进行播放</p>
+                        <p>正在加载播放列表...</p>
                     </div>
                 </div>
             </div>
 
             <!-- 视频信息区域 -->
             <div class="video-info">
-                <h1 id="currentVideoTitle">未选择视频</h1>
+                <h1 id="currentVideoTitle">加载中...</h1>
                 <div class="video-controls">
                     <button id="prevVideo" class="control-button">
                         <i class="material-icons">skip_previous</i>
@@ -63,18 +63,6 @@
             </div>
         </main>
     </div>
-
-    <!-- 确认删除对话框 -->
-    <div class="dialog-overlay" id="dialogOverlay"></div>
-    <div class="confirm-dialog" id="confirmDialog">
-        <h3>确认删除</h3>
-        <p>确定要删除这个视频吗？此操作无法撤销。</p>
-        <div class="dialog-buttons">
-            <button onclick="videoPlayer.cancelDelete()">取消</button>
-            <button class="danger-button" onclick="videoPlayer.confirmDelete()">删除</button>
-        </div>
-    </div>
-
     <script src="player.js"></script>
 </body>
 </html>
