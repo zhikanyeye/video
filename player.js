@@ -3,13 +3,73 @@ class VideoPlayer {
         this.player = document.getElementById('player');
         this.playlist = [];
         this.currentVideoIndex = -1;
-        this.loadPlaylist();
+        this.loadPlaylistFromUrl();
         this.renderPlaylist();
+        this.setupEventListeners();
     }
 
-    loadPlaylist() {
-        const saved = localStorage.getItem('videoPlaylist');
-        this.playlist = saved ? JSON.parse(saved) : [];
+    setupEventListeners() {
+        // 侧边栏切换
+        document.getElementById('toggleSidebar').addEventListener('click', () => {
+            document.querySelector('.sidebar').classList.toggle('collapsed');
+            const icon = document.querySelector('#toggleSidebar i');
+            icon.textContent = icon.textContent === 'chevron_left' ? 'chevron_right' : 'chevron_left';
+        });
+
+        // 上一个视频
+        document.getElementById('prevVideo').addEventListener('click', () => {
+            if (this.currentVideoIndex > 0) {
+                this.play(this.currentVideoIndex - 1);
+            }
+        });
+
+        // 下一个视频
+        document.getElementById('nextVideo').addEventListener('click', () => {
+            if (this.currentVideoIndex < this.playlist.length - 1) {
+                this.play(this.currentVideoIndex + 1);
+            }
+        });
+
+        // 全屏切换
+        document.getElementById('toggleFullscreen').addEventListener('click', () => {
+            if (!document.fullscreenElement) {
+                document.querySelector('.video-container').requestFullscreen();
+            } else {
+                document.exitFullscreen();
+            }
+        });
+
+        // 键盘控制
+        document.addEventListener('keydown', (e) => {
+            switch(e.key) {
+                case 'ArrowLeft':
+                    document.getElementById('prevVideo').click();
+                    break;
+                case 'ArrowRight':
+                    document.getElementById('nextVideo').click();
+                    break;
+                case 'f':
+                    document.getElementById('toggleFullscreen').click();
+                    break;
+            }
+        });
+    }
+
+    loadPlaylistFromUrl() {
+        const urlParams = new URLSearchParams(window.location.search);
+        const playlistData = urlParams.get('playlist');
+        
+        if (playlistData) {
+            try {
+                this.playlist = JSON.parse(decodeURIComponent(playlistData));
+            } catch (e) {
+                console.error('Failed to load playlist from URL:', e);
+                this.playlist = [];
+            }
+        } else {
+            const saved = localStorage.getItem('videoPlaylist');
+            this.playlist = saved ? JSON.parse(saved) : [];
+        }
     }
 
     play(index) {
@@ -19,7 +79,25 @@ class VideoPlayer {
             let embedCode = this.createEmbedCode(video.url);
             this.player.innerHTML = embedCode;
             this.updateActiveItem();
+            this.updateVideoTitle(video.title);
+            this.updateUrlWithCurrentState();
+            this.updateNavigationButtons();
         }
+    }
+
+    updateVideoTitle(title) {
+        document.getElementById('currentVideoTitle').textContent = title;
+    }
+
+    updateNavigationButtons() {
+        document.getElementById('prevVideo').disabled = this.currentVideoIndex <= 0;
+        document.getElementById('nextVideo').disabled = this.currentVideoIndex >= this.playlist.length - 1;
+    }
+
+    updateUrlWithCurrentState() {
+        const playlistData = encodeURIComponent(JSON.stringify(this.playlist));
+        const newUrl = `${window.location.pathname}?playlist=${playlistData}&current=${this.currentVideoIndex}`;
+        window.history.replaceState({}, '', newUrl);
     }
 
     createEmbedCode(url) {
@@ -60,14 +138,19 @@ class VideoPlayer {
         this.playlist.forEach((video, index) => {
             const item = document.createElement('div');
             item.className = 'playlist-item';
-            item.innerHTML = `${video.title}`;
+            item.innerHTML = `
+                <i class="material-icons">${this.currentVideoIndex === index ? 'play_arrow' : 'play_circle_outline'}</i>
+                <span>${video.title}</span>
+            `;
             item.onclick = () => this.play(index);
             playlistElement.appendChild(item);
         });
 
-        // 如果有视频，自动播放第一个
-        if (this.playlist.length > 0 && this.currentVideoIndex === -1) {
-            this.play(0);
+        const urlParams = new URLSearchParams(window.location.search);
+        const currentIndex = parseInt(urlParams.get('current')) || 0;
+        
+        if (this.playlist.length > 0) {
+            this.play(currentIndex);
         }
     }
 
@@ -76,8 +159,10 @@ class VideoPlayer {
         items.forEach((item, index) => {
             if (index === this.currentVideoIndex) {
                 item.classList.add('active');
+                item.querySelector('.material-icons').textContent = 'play_arrow';
             } else {
                 item.classList.remove('active');
+                item.querySelector('.material-icons').textContent = 'play_circle_outline';
             }
         });
     }
