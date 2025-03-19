@@ -1,21 +1,22 @@
 :root {
+    --sidebar-width: 300px;
+    --header-height: 60px;
+    --video-info-height: 80px;
     --primary-color: #2196F3;
     --background-color: #1a1a1a;
-    --sidebar-width: 320px;
-    --header-height: 60px;
     --text-color: #ffffff;
     --sidebar-background: #242424;
     --item-hover-color: #2c2c2c;
-    --video-info-height: 80px;
+    --danger-color: #dc3545;
+    --success-color: #28a745;
 }
 
-body.player-page {
+.player-page {
     margin: 0;
     padding: 0;
     background: var(--background-color);
     color: var(--text-color);
-    font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
-    height: 100vh;
+    font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
     overflow: hidden;
 }
 
@@ -86,6 +87,7 @@ body.player-page {
     gap: 10px;
     font-size: 1.2rem;
     margin: 0;
+    color: #ffffff;
 }
 
 .toggle-sidebar {
@@ -118,6 +120,7 @@ body.player-page {
     margin-left: 0;
 }
 
+/* 视频容器样式 */
 .video-container {
     flex: 1;
     background: black;
@@ -134,7 +137,8 @@ body.player-page {
 }
 
 #player iframe,
-#player video {
+#player video,
+.video-js {
     width: 100%;
     height: 100%;
     border: none;
@@ -190,7 +194,12 @@ body.player-page {
     background: rgba(255, 255, 255, 0.1);
 }
 
-/* 播放列表项样式 */
+.control-button:disabled {
+    opacity: 0.5;
+    cursor: not-allowed;
+}
+
+/* 播放列表样式 */
 .playlist-container {
     flex: 1;
     overflow-y: auto;
@@ -219,6 +228,7 @@ body.player-page {
     display: flex;
     justify-content: space-between;
     align-items: center;
+    transition: background-color 0.3s;
 }
 
 .playlist-item:hover {
@@ -227,7 +237,6 @@ body.player-page {
 
 .playlist-item.active {
     background: var(--primary-color);
-    color: white;
 }
 
 .playlist-item-content {
@@ -237,68 +246,41 @@ body.player-page {
     flex: 1;
 }
 
-.delete-button {
-    display: none;
-    background: none;
-    border: none;
-    color: rgba(255, 255, 255, 0.7);
-    padding: 4px;
-    border-radius: 50%;
+.playlist-item-content span {
+    color: #ffffff;
+    flex: 1;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
 }
 
-.playlist-item:hover .delete-button {
-    display: flex;
-}
-
-.delete-button:hover {
-    background: rgba(255, 0, 0, 0.2);
-}
-
-/* 确认对话框样式 */
-.confirm-dialog {
+/* 视频资源检测提示样式 */
+.sniffer-alert {
     position: fixed;
-    top: 50%;
-    left: 50%;
-    transform: translate(-50%, -50%);
-    background: #2c2c2c;
+    top: 20px;
+    right: 20px;
+    background: rgba(33, 150, 243, 0.9);
     color: white;
-    padding: 20px;
-    border-radius: 8px;
-    box-shadow: 0 4px 12px rgba(0,0,0,0.3);
-    z-index: 1000;
-    display: none;
-}
-
-.confirm-dialog.show {
-    display: block;
-}
-
-.dialog-overlay {
-    position: fixed;
-    top: 0;
-    left: 0;
-    right: 0;
-    bottom: 0;
-    background: rgba(0,0,0,0.7);
-    z-index: 999;
-    display: none;
-}
-
-.dialog-overlay.show {
-    display: block;
-}
-
-.dialog-buttons {
+    padding: 12px 20px;
+    border-radius: 4px;
     display: flex;
-    justify-content: flex-end;
-    gap: 10px;
-    margin-top: 20px;
+    align-items: center;
+    gap: 8px;
+    z-index: 1000;
+    transform: translateX(120%);
+    transition: transform 0.3s ease;
+}
+
+.sniffer-alert.show {
+    transform: translateX(0);
 }
 
 /* 响应式设计 */
 @media (max-width: 768px) {
     .sidebar {
         transform: translateX(calc(-1 * var(--sidebar-width)));
+        width: 100%;
+        z-index: 1000;
     }
 
     .main-content {
@@ -307,10 +289,28 @@ body.player-page {
 
     .show-sidebar-button {
         display: flex;
+        width: 48px;
+        height: 48px;
     }
 
     .sidebar.collapsed {
         transform: translateX(0);
+    }
+
+    .playlist-item {
+        padding: 15px;
+    }
+
+    .playlist-item-content {
+        font-size: 16px;
+    }
+
+    .control-button {
+        padding: 12px;
+    }
+
+    .video-info h1 {
+        font-size: 1rem;
     }
 }
 
@@ -332,48 +332,78 @@ body.player-page {
     background: rgba(255, 255, 255, 0.3);
 }
 
-/* 响应式设计 */
-@media (max-width: 768px) {
-    .sidebar {
-        transform: translateX(0);
-        width: 100%;  /* 在移动端使用全屏宽度 */
-        z-index: 1000;
-        overflow-y: auto;
-        -webkit-overflow-scrolling: touch;  /* iOS上平滑滚动 */
-    }
+/* 错误消息样式 */
+.error-message {
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%);
+    text-align: center;
+    color: rgba(255, 255, 255, 0.7);
+    padding: 20px;
+}
 
-    .main-content {
-        margin-left: 0;
-    }
+.error-message i {
+    font-size: 48px;
+    margin-bottom: 16px;
+    display: block;
+}
 
-    .show-sidebar-button {
-        display: flex;
-        width: 48px;    /* 更大的触摸区域 */
-        height: 48px;
-        z-index: 1001;  /* 确保按钮始终可见 */
-    }
+/* 清空列表按钮样式 */
+.clear-playlist {
+    background: var(--danger-color);
+    border: none;
+    color: white;
+    padding: 6px 12px;
+    border-radius: 4px;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    gap: 4px;
+    font-size: 14px;
+    transition: background-color 0.3s;
+}
 
-    .sidebar.collapsed {
-        transform: translateX(calc(-1 * var(--sidebar-width)));
-    }
+.clear-playlist:hover {
+    background: #c82333;
+}
 
-    /* 移动端优化 */
-    .playlist-item {
-        padding: 15px;  /* 更大的触摸区域 */
-    }
-    
-    .toggle-sidebar {
-        padding: 12px;  /* 更大的触摸区域 */
-    }
+/* 加载状态样式 */
+.loading {
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%);
+    color: var(--text-color);
+    text-align: center;
+}
 
-    /* 优化移动端播放列表项 */
-    .playlist-item-content {
-        font-size: 16px;  /* 更大的字体 */
-    }
+.loading i {
+    font-size: 48px;
+    animation: spin 1s linear infinite;
+}
 
-    /* 确保视频控制按钮在移动端更容易点击 */
-    .control-button {
-        padding: 12px;
-        margin: 0 5px;
+@keyframes spin {
+    from {
+        transform: rotate(0deg);
     }
+    to {
+        transform: rotate(360deg);
+    }
+}
+
+/* 全屏模式样式 */
+.video-container:-webkit-full-screen {
+    width: 100vw;
+    height: 100vh;
+}
+
+.video-container:-moz-full-screen {
+    width: 100vw;
+    height: 100vh;
+}
+
+.video-container:fullscreen {
+    width: 100vw;
+    height: 100vh;
 }
