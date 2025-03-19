@@ -11,28 +11,43 @@
     <!-- 添加依赖检查 -->
     <script>
         function checkDependencies() {
-            const required = ['videojs', 'Hls', 'flvjs'];
-            const missing = required.filter(dep => !window[dep]);
-            if (missing.length > 0) {
-                alert(`缺少必要组件: ${missing.join(', ')}，请检查网络连接或刷新页面`);
-                return false;
-            }
-            return true;
+            return new Promise((resolve, reject) => {
+                const maxAttempts = 20;
+                let attempts = 0;
+                
+                const check = () => {
+                    const required = ['videojs', 'Hls', 'flvjs'];
+                    const missing = required.filter(dep => !window[dep]);
+                    
+                    if (missing.length === 0) {
+                        resolve(true);
+                    } else if (attempts >= maxAttempts) {
+                        reject(new Error(`加载超时，缺少组件: ${missing.join(', ')}`));
+                    } else {
+                        attempts++;
+                        setTimeout(check, 200);
+                    }
+                };
+                
+                check();
+            });
         }
     </script>
     
     <!-- 播放器依赖 -->
-    <script src="https://cdn.jsdelivr.net/npm/video.js@7"></script>
-    <script src="https://cdn.jsdelivr.net/npm/hls.js@latest"></script>
-    <script src="https://cdn.jsdelivr.net/npm/flv.js@latest"></script>
-    <script src="https://cdn.jsdelivr.net/npm/videojs-contrib-hls@latest"></script>
+    <script src="https://vjs.zencdn.net/7.20.3/video.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/hls.js@1.4.12"></script>
+    <script src="https://cdn.jsdelivr.net/npm/flv.js@1.6.2"></script>
 </head>
 <body class="player-page">
     <div class="player-layout">
         <!-- 侧边栏 -->
         <aside class="sidebar">
             <div class="sidebar-header">
-                <h2><i class="material-icons">playlist_play</i> 播放列表</h2>
+                <h2>
+                    <i class="material-icons">playlist_play</i> 
+                    播放列表
+                </h2>
                 <button id="toggleSidebar" class="toggle-sidebar">
                     <i class="material-icons">chevron_left</i>
                 </button>
@@ -109,25 +124,29 @@
     <script src="enhanced-player.js"></script>
     <script>
         // 初始化播放器
-        document.addEventListener('DOMContentLoaded', () => {
+        document.addEventListener('DOMContentLoaded', async () => {
             const loadingIndicator = document.getElementById('loadingIndicator');
+            const errorContainer = document.getElementById('errorContainer');
+            const errorText = document.getElementById('errorText');
             
             try {
-                if (checkDependencies()) {
-                    window.videoPlayer = new EnhancedVideoPlayer();
-                    loadingIndicator.style.display = 'none';
+                // 等待依赖加载完成
+                await checkDependencies();
+                
+                // 确保enhanced-player.js加载完成
+                if (typeof EnhancedVideoPlayer === 'undefined') {
+                    throw new Error('播放器代码加载失败');
                 }
+                
+                // 初始化播放器
+                window.videoPlayer = new EnhancedVideoPlayer();
+                loadingIndicator.style.display = 'none';
+                
             } catch (error) {
-                console.error('Initialization failed:', error);
-                loadingIndicator.innerHTML = `
-                    <div class="error-message">
-                        <i class="material-icons">error_outline</i>
-                        <p>播放器加载失败，请刷新页面重试</p>
-                        <button onclick="location.reload()" class="retry-button">
-                            <i class="material-icons">refresh</i> 重试
-                        </button>
-                    </div>
-                `;
+                console.error('播放器初始化失败:', error);
+                loadingIndicator.style.display = 'none';
+                errorText.textContent = error.message || '播放器加载失败，请检查网络连接并刷新页面';
+                errorContainer.style.display = 'flex';
             }
         });
     </script>
