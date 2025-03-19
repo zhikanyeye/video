@@ -3,10 +3,15 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>视频播放页面</title>
+    <title>增强版视频播放器</title>
     <link href="https://fonts.googleapis.com/icon?family=Material+Icons" rel="stylesheet">
-    <link rel="stylesheet" href="style.css">
+    <link href="https://cdn.jsdelivr.net/npm/video.js@7/dist/video-js.min.css" rel="stylesheet">
     <link rel="stylesheet" href="player.css">
+    <!-- 添加播放器依赖 -->
+    <script src="https://cdn.jsdelivr.net/npm/hls.js@latest"></script>
+    <script src="https://cdn.jsdelivr.net/npm/flv.js@latest"></script>
+    <script src="https://cdn.jsdelivr.net/npm/video.js@7"></script>
+    <script src="https://cdn.jsdelivr.net/npm/videojs-contrib-hls@latest"></script>
 </head>
 <body class="player-page">
     <div class="player-layout">
@@ -31,7 +36,6 @@
 
         <!-- 主要内容区 -->
         <main class="main-content">
-            <!-- 显示侧边栏的按钮 -->
             <button id="showSidebar" class="show-sidebar-button">
                 <i class="material-icons">menu</i>
             </button>
@@ -39,21 +43,22 @@
             <!-- 视频播放器区域 -->
             <div class="video-container">
                 <div id="player">
-                    <div class="no-video">
-                        <i class="material-icons">play_circle_outline</i>
-                        <p>正在加载播放列表...</p>
-                    </div>
+                    <video id="videoElement" class="video-js vjs-default-skin" controls>
+                        <p class="vjs-no-js">
+                            要观看此视频，请启用JavaScript并考虑升级到支持HTML5视频的浏览器
+                        </p>
+                    </video>
                 </div>
             </div>
 
             <!-- 视频信息区域 -->
             <div class="video-info">
-                <h1 id="currentVideoTitle">加载中...</h1>
+                <h1 id="currentVideoTitle">等待播放...</h1>
                 <div class="video-controls">
-                    <button id="prevVideo" class="control-button">
+                    <button id="prevVideo" class="control-button" disabled>
                         <i class="material-icons">skip_previous</i>
                     </button>
-                    <button id="nextVideo" class="control-button">
+                    <button id="nextVideo" class="control-button" disabled>
                         <i class="material-icons">skip_next</i>
                     </button>
                     <button id="toggleFullscreen" class="control-button">
@@ -63,6 +68,13 @@
             </div>
         </main>
     </div>
-    <script src="player.js"></script>
+
+    <!-- 视频资源检测提示 -->
+    <div id="snifferAlert" class="sniffer-alert">
+        <i class="material-icons">notifications</i>
+        <span id="snifferMessage"></span>
+    </div>
+
+    <script src="enhanced-player.js"></script>
 </body>
 </html>
