@@ -253,6 +253,11 @@ function generatePlayerPage() {
     playlistManager.generatePlayerPage();
 }
 
+// 清空播放列表
+function clearPlaylist() {
+    playlistManager.clearPlaylist();
+}
+
 // 复制分享链接
 async function copyShareableLink() {
     try {
@@ -270,8 +275,7 @@ async function copyShareableLink() {
             document.execCommand('copy');
             document.body.removeChild(tempInput);
             alert('播放列表链接已复制到剪贴板！');
-            }
-   
+        }
     } catch (error) {
         alert('生成分享链接失败，请确认 GitHub Token 是否正确设置！');
     }
