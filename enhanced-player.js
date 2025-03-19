@@ -1,13 +1,25 @@
 class EnhancedVideoPlayer {
     constructor() {
-        this.player = null;
-        this.playlist = [];
-        this.currentVideoIndex = -1;
-        this.isFullscreen = false;
-        this.setupVideoPlayer();
-        this.loadPlaylist();
-        this.setupEventListeners();
-        this.setupVideoSniffer();
+        try {
+            this.player = null;
+            this.playlist = [];
+            this.currentVideoIndex = -1;
+            this.isFullscreen = false;
+            
+            // 添加错误处理
+            window.onerror = (message, source, lineno, colno, error) => {
+                console.error('Player Error:', error);
+                this.showError(`加载出错: ${message}`);
+            };
+            
+            this.setupVideoPlayer();
+            this.loadPlaylist();
+            this.setupEventListeners();
+            this.setupVideoSniffer();
+        } catch (error) {
+            console.error('Initialization Error:', error);
+            this.showError('播放器初始化失败，请刷新页面重试');
+        }
     }
 
     setupVideoPlayer() {
@@ -21,6 +33,13 @@ class EnhancedVideoPlayer {
                     overrideNative: true
                 }
             }
+        });
+
+        // 添加播放器错误处理
+        this.player.on('error', () => {
+            const error = this.player.error();
+            console.error('Video.js Error:', error);
+            this.showError(`视频加载失败: ${error.message}`);
         });
     }
 
@@ -63,20 +82,24 @@ class EnhancedVideoPlayer {
         const script = document.createElement('script');
         script.textContent = `
             // 拦截XHR请求
-            const originalXHROpen = XMLHttpRequest.prototype.open;
-            XMLHttpRequest.prototype.open = function(method, url) {
-                if (this.detectVideoUrl(url)) {
-                    this.dispatchVideoDetected(url);
+            const originalXHR = XMLHttpRequest.prototype.open;
+            XMLHttpRequest.prototype.open = function() {
+                if (this._url && this.detectVideoUrl(this._url)) {
+                    window.dispatchEvent(new CustomEvent('videoResourceDetected', {
+                        detail: { url: this._url }
+                    }));
                 }
-                return originalXHROpen.apply(this, arguments);
+                return originalXHR.apply(this, arguments);
             };
 
             // 拦截Fetch请求
             const originalFetch = window.fetch;
             window.fetch = async function(input, init) {
                 const url = typeof input === 'string' ? input : input.url;
-                if (this.detectVideoUrl(url)) {
-                    this.dispatchVideoDetected(url);
+                if (url && detectVideoUrl(url)) {
+                    window.dispatchEvent(new CustomEvent('videoResourceDetected', {
+                        detail: { url: url }
+                    }));
                 }
                 return originalFetch.apply(this, arguments);
             };
@@ -86,13 +109,6 @@ class EnhancedVideoPlayer {
                 return url.match(/\\.(mp4|m3u8|flv)($|\\?)/i) ||
                        url.includes('/video/') ||
                        url.includes('stream');
-            }
-
-            // 发送检测事件
-            function dispatchVideoDetected(url) {
-                window.dispatchEvent(new CustomEvent('videoResourceDetected', {
-                    detail: { url: url }
-                }));
             }
         `;
         document.head.appendChild(script);
@@ -137,29 +153,47 @@ class EnhancedVideoPlayer {
     playLocalVideo(video) {
         const url = video.url;
         
-        // 根据URL类型选择适当的播放方式
         if (url.endsWith('.m3u8')) {
             this.playHLSVideo(url);
         } else if (url.endsWith('.flv')) {
             this.playFLVVideo(url);
         } else {
-            // 普通视频直接使用video.js播放
             this.player.src({ type: 'video/mp4', src: url });
+            this.player.play().catch(error => {
+                console.error('Video playback failed:', error);
+                this.showError('视频播放失败，请检查视频链接是否有效');
+            });
         }
-        
-        this.player.play();
     }
 
     playHLSVideo(url) {
         if (Hls.isSupported()) {
-            const hls = new Hls();
+            const hls = new Hls({
+                debug: false,
+                enableWorker: true,
+                lowLatencyMode: true
+            });
             hls.loadSource(url);
             hls.attachMedia(this.player.tech().el());
             hls.on(Hls.Events.MANIFEST_PARSED, () => {
-                this.player.play();
+                this.player.play().catch(error => {
+                    console.error('HLS playback failed:', error);
+                    this.showError('HLS视频加载失败，请检查网络连接');
+                });
+            });
+            hls.on(Hls.Events.ERROR, (event, data) => {
+                if (data.fatal) {
+                    this.showError('HLS视频播放错误，尝试使用其他格式');
+                }
             });
         } else if (this.player.canPlayType('application/vnd.apple.mpegurl')) {
-            this.player.src({ type: 'application/x-mpegURL', src: url });
+            this.player.src({
+                src: url,
+                type: 'application/x-mpegURL'
+            });
+            this.player.play();
+        } else {
+            this.showError('当前浏览器不支持HLS视频播放');
         }
     }
 
@@ -172,12 +206,23 @@ class EnhancedVideoPlayer {
             flvPlayer.attachMediaElement(this.player.tech().el());
             flvPlayer.load();
             flvPlayer.play();
+
+            flvPlayer.on(flvjs.Events.ERROR, (error) => {
+                console.error('FLV playback failed:', error);
+                this.showError('FLV视频播放失败，请检查视频格式');
+            });
+        } else {
+            this.showError('当前浏览器不支持FLV视频播放');
         }
     }
 
     playExternalVideo(video) {
         const embedCode = this.createEmbedCode(video.url);
-        document.getElementById('player').innerHTML = embedCode;
+        if (embedCode) {
+            document.getElementById('player').innerHTML = embedCode;
+        } else {
+            this.showError('不支持的视频链接格式');
+        }
     }
 
     isExternalVideo(url) {
@@ -189,22 +234,23 @@ class EnhancedVideoPlayer {
     createEmbedCode(url) {
         if (url.includes('youtube.com') || url.includes('youtu.be')) {
             const videoId = this.getYouTubeVideoId(url);
-            return `<iframe src="https://www.youtube.com/embed/${videoId}" allowfullscreen></iframe>`;
+            return videoId ? `<iframe src="https://www.youtube.com/embed/${videoId}" frameborder="0" allowfullscreen></iframe>` : null;
         } else if (url.includes('bilibili.com')) {
             const bvid = this.getBilibiliVideoId(url);
-            return `<iframe src="//player.bilibili.com/player.html?bvid=${bvid}" allowfullscreen></iframe>`;
+            return bvid ? `<iframe src="//player.bilibili.com/player.html?bvid=${bvid}" frameborder="0" allowfullscreen></iframe>` : null;
         }
-        return '';
+        return null;
     }
 
     getYouTubeVideoId(url) {
-        const match = url.match(/(?:youtu\.be\/|youtube\.com(?:\/embed\/|\/v\/|\/watch\?v=|\/user\/\S+|\/ytscreeningroom\?v=|\/sandalsResorts#\w\/\w\/.*\/))([^\/&]{10,12})/);
-        return match ? match[1] : '';
+        const regExp = /^.*(youtu.be\/|v\/|u\/\w\/|embed\/|watch\?v=|\&v=)([^#\&\?]*).*/;
+        const match = url.match(regExp);
+        return match && match[2].length === 11 ? match[2] : null;
     }
 
     getBilibiliVideoId(url) {
         const match = url.match(/BV\w+/);
-        return match ? match[0] : '';
+        return match ? match[0] : null;
     }
 
     setupEventListeners() {
@@ -239,6 +285,10 @@ class EnhancedVideoPlayer {
 
         // 键盘控制
         document.addEventListener('keydown', (e) => {
+            if (e.target.tagName === 'INPUT' || e.target.tagName === 'TEXTAREA') {
+                return;
+            }
+            
             switch(e.key) {
                 case 'ArrowLeft':
                     if (this.currentVideoIndex > 0) {
@@ -251,7 +301,18 @@ class EnhancedVideoPlayer {
                     }
                     break;
                 case 'f':
+                case 'F':
                     this.toggleFullscreen();
+                    break;
+                case ' ':
+                    if (this.player) {
+                        if (this.player.paused()) {
+                            this.player.play();
+                        } else {
+                            this.player.pause();
+                        }
+                        e.preventDefault();
+                    }
                     break;
             }
         });
@@ -316,13 +377,17 @@ class EnhancedVideoPlayer {
     }
 
     showError(message) {
-        const playerElement = document.getElementById('player');
-        playerElement.innerHTML = `
-            <div class="error-message">
-                <i class="material-icons">error_outline</i>
-                <p>${message}</p>
-            </div>
-        `;
+        console.error('Error:', message);
+        const errorContainer = document.getElementById('errorContainer');
+        const errorText = document.getElementById('errorText');
+        
+        if (errorContainer && errorText) {
+            errorText.textContent = message;
+            errorContainer.style.display = 'flex';
+            setTimeout(() => {
+                errorContainer.style.display = 'none';
+            }, 5000);
+        }
     }
 
     addVideo(title, url) {
@@ -330,6 +395,7 @@ class EnhancedVideoPlayer {
         this.renderPlaylist();
         this.saveToGist().catch(error => {
             console.error('Failed to save to Gist:', error);
+            this.showError('保存到播放列表失败');
         });
     }
 
@@ -353,7 +419,6 @@ class EnhancedVideoPlayer {
         try {
             let response;
             if (gistId) {
-                // 更新现有的 Gist
                 response = await fetch(`https://api.github.com/gists/${gistId}`, {
                     method: 'PATCH',
                     headers: {
@@ -363,8 +428,7 @@ class EnhancedVideoPlayer {
                     body: JSON.stringify(gistData)
                 });
             } else {
-                // 创建新的 Gist
-                response = await fetch('https://api.github.com/gists', {
+                                response = await fetch('https://api.github.com/gists', {
                     method: 'POST',
                     headers: {
                         'Authorization': `token ${token}`,
@@ -394,10 +458,56 @@ class EnhancedVideoPlayer {
             this.updateNavigationButtons();
             this.saveToGist().catch(error => {
                 console.error('Failed to save to Gist:', error);
+                this.showError('清空播放列表失败');
             });
         }
     }
+
+    // 工具方法：检查URL是否可访问
+    async checkUrlAvailability(url) {
+        try {
+            const response = await fetch(url, { method: 'HEAD', mode: 'no-cors' });
+            return true;
+        } catch (error) {
+            return false;
+        }
+    }
+
+    // 工具方法：格式化时间
+    formatDuration(seconds) {
+        const hours = Math.floor(seconds / 3600);
+        const minutes = Math.floor((seconds % 3600) / 60);
+        const remainingSeconds = Math.floor(seconds % 60);
+        
+        if (hours > 0) {
+            return `${hours}:${minutes.toString().padStart(2, '0')}:${remainingSeconds.toString().padStart(2, '0')}`;
+        }
+        return `${minutes}:${remainingSeconds.toString().padStart(2, '0')}`;
+    }
+
+    // 工具方法：生成唯一ID
+    generateUUID() {
+        return 'xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx'.replace(/[xy]/g, function(c) {
+            const r = Math.random() * 16 | 0;
+            const v = c == 'x' ? r : (r & 0x3 | 0x8);
+            return v.toString(16);
+        });
+    }
+
+    // 析构函数：清理资源
+    destroy() {
+        if (this.player) {
+            this.player.dispose();
+        }
+        // 移除所有事件监听器
+        document.removeEventListener('keydown', this.handleKeydown);
+        window.removeEventListener('videoResourceDetected', this.handleDetectedVideo);
+    }
 }
 
-// 初始化播放器
-const videoPlayer = new EnhancedVideoPlayer();
+// 确保在页面卸载时清理资源
+window.addEventListener('unload', () => {
+    if (window.videoPlayer) {
+        window.videoPlayer.destroy();
+    }
+});
