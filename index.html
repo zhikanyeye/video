@@ -17,7 +17,7 @@
             <div class="single-input">
                 <input type="text" id="videoTitle" placeholder="视频标题">
                 <input type="text" id="videoUrl" placeholder="视频链接">
-                <button onclick="addVideo()">
+                <button onclick="playlistManager.addVideo()">
                     <i class="material-icons">add</i>
                     添加视频
                 </button>
@@ -28,7 +28,7 @@
                 批量添加视频
             </h2>
             <textarea id="batchInput" placeholder="格式：每行一个视频，标题和链接用逗号分隔&#10;例如：&#10;视频1,https://example.com/video1&#10;视频2,https://example.com/video2"></textarea>
-            <button onclick="addBatchVideos()">
+            <button onclick="playlistManager.addBatchVideos()">
                 <i class="material-icons">playlist_add_check</i>
                 批量添加
             </button>
@@ -40,18 +40,18 @@
                     <i class="material-icons">playlist_play</i>
                     当前播放列表
                 </h2>
-                <button class="danger-button" onclick="clearPlaylist()" id="clearPlaylistBtn" style="display: none;">
+                <button class="danger-button" onclick="playlistManager.clearPlaylist()" id="clearPlaylistBtn" style="display: none;">
                     <i class="material-icons">delete_sweep</i>
                     清空列表
                 </button>
             </div>
             <div id="playlist"></div>
             <div class="playlist-actions">
-                <button onclick="generatePlayerPage()">
+                <button onclick="playlistManager.generatePlayerPage()">
                     <i class="material-icons">play_circle_filled</i>
                     生成播放页面
                 </button>
-                <button onclick="copyShareableLink()">
+                <button onclick="playlistManager.copyShareableLink()">
                     <i class="material-icons">share</i>
                     复制分享链接
                 </button>
@@ -65,7 +65,7 @@
             </h2>
             <div class="token-input">
                 <input type="password" id="githubToken" placeholder="输入 GitHub Token">
-                <button onclick="saveGitHubToken()">
+                <button onclick="playlistManager.saveGitHubToken()">
                     <i class="material-icons">save</i>
                     保存 Token
                 </button>
@@ -76,6 +76,6 @@
             </p>
         </div>
     </div>
-    <script src="script.js"></script>
+    <script src="list-manager.js"></script>
 </body>
 </html>
