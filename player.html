@@ -7,10 +7,24 @@
     <link href="https://fonts.googleapis.com/icon?family=Material+Icons" rel="stylesheet">
     <link href="https://cdn.jsdelivr.net/npm/video.js@7/dist/video-js.min.css" rel="stylesheet">
     <link rel="stylesheet" href="player.css">
-    <!-- 添加播放器依赖 -->
+    
+    <!-- 添加依赖检查 -->
+    <script>
+        function checkDependencies() {
+            const required = ['videojs', 'Hls', 'flvjs'];
+            const missing = required.filter(dep => !window[dep]);
+            if (missing.length > 0) {
+                alert(`缺少必要组件: ${missing.join(', ')}，请检查网络连接或刷新页面`);
+                return false;
+            }
+            return true;
+        }
+    </script>
+    
+    <!-- 播放器依赖 -->
+    <script src="https://cdn.jsdelivr.net/npm/video.js@7"></script>
     <script src="https://cdn.jsdelivr.net/npm/hls.js@latest"></script>
     <script src="https://cdn.jsdelivr.net/npm/flv.js@latest"></script>
-    <script src="https://cdn.jsdelivr.net/npm/video.js@7"></script>
     <script src="https://cdn.jsdelivr.net/npm/videojs-contrib-hls@latest"></script>
 </head>
 <body class="player-page">
@@ -75,6 +89,47 @@
         <span id="snifferMessage"></span>
     </div>
 
+    <!-- 加载状态指示器 -->
+    <div id="loadingIndicator" class="loading-indicator">
+        <div class="spinner"></div>
+        <p>正在加载播放器...</p>
+    </div>
+
+    <!-- 错误提示容器 -->
+    <div id="errorContainer" class="error-container" style="display:none;">
+        <div class="error-message">
+            <i class="material-icons">error_outline</i>
+            <p id="errorText"></p>
+            <button onclick="location.reload()" class="retry-button">
+                <i class="material-icons">refresh</i> 重试
+            </button>
+        </div>
+    </div>
+
     <script src="enhanced-player.js"></script>
+    <script>
+        // 初始化播放器
+        document.addEventListener('DOMContentLoaded', () => {
+            const loadingIndicator = document.getElementById('loadingIndicator');
+            
+            try {
+                if (checkDependencies()) {
+                    window.videoPlayer = new EnhancedVideoPlayer();
+                    loadingIndicator.style.display = 'none';
+                }
+            } catch (error) {
+                console.error('Initialization failed:', error);
+                loadingIndicator.innerHTML = `
+                    <div class="error-message">
+                        <i class="material-icons">error_outline</i>
+                        <p>播放器加载失败，请刷新页面重试</p>
+                        <button onclick="location.reload()" class="retry-button">
+                            <i class="material-icons">refresh</i> 重试
+                        </button>
+                    </div>
+                `;
+            }
+        });
+    </script>
 </body>
 </html>
