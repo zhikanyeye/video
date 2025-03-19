@@ -143,6 +143,10 @@ button i {
     flex: 1;
 }
 
+.playlist-item-content span {
+    color: #ffffff; /* 确保标题文字为白色 */
+}
+
 .delete-button {
     opacity: 0;
     background: none;
@@ -239,4 +243,49 @@ button i {
         transform: translateX(0);
         opacity: 1;
     }
+}
+
+/* 清空列表按钮特殊样式 */
+#clearPlaylistBtn {
+    display: flex;
+    align-items: center;
+    background-color: var(--danger-color);
+    color: white;
+    gap: 8px;
+}
+
+#clearPlaylistBtn:hover {
+    background-color: #c82333;
+}
+
+/* 播放列表为空时的提示样式 */
+#playlist:empty::after {
+    content: "暂无视频";
+    display: block;
+    text-align: center;
+    padding: 20px;
+    color: rgba(255, 255, 255, 0.5);
+    font-style: italic;
+}
+
+/* 确保所有文字内容都是白色 */
+.playlist-item-content span,
+.playlist-item-content i,
+.playlist-header h2,
+.video-count {
+    color: #ffffff;
+}
+
+/* 输入框样式优化 */
+input[type="text"],
+input[type="password"] {
+    flex: 1;
+    min-width: 0;
+    width: 100%;
+}
+
+/* 确保按钮图标对齐 */
+button i.material-icons {
+    font-size: 20px;
+    line-height: 1;
 }
