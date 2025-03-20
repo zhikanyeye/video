@@ -22,34 +22,42 @@ class EnhancedVideoPlayer {
             volume: 0.7,
             mutex: true,
             video: {
-                quality: [],
-                defaultQuality: 0,
-                pic: '',
-                thumbnails: ''
+                url: '',
+                type: 'auto'
             },
-            subtitle: {
-                type: 'webvtt',
-                fontSize: '20px',
-                bottom: '10%',
-                color: '#fff'
-            },
-            contextmenu: [
-                {
-                    text: '视频播放器 v1.0',
-                    link: 'https://github.com/zhikanyeye/video'
-                }
-            ],
-            highlight: true
+            lang: 'zh-cn'
         });
 
         this.player.on('error', () => {
-            this.showError('视频加载失败，请检查视频链接是否有效');
+            console.error('Player Error');
+            this.tryAlternativePlay();
         });
 
         this.player.on('ended', () => {
             if (this.currentVideoIndex < this.playlist.length - 1) {
                 this.play(this.currentVideoIndex + 1);
             }
+        });
+    }
+
+    tryAlternativePlay() {
+        const currentVideo = this.playlist[this.currentVideoIndex];
+        if (!currentVideo) return;
+
+        // 尝试使用原生video播放
+        const video = document.createElement('video');
+        video.src = currentVideo.url;
+        video.controls = true;
+        video.style.width = '100%';
+        video.style.height = '100%';
+        
+        const playerContainer = document.getElementById('player');
+        playerContainer.innerHTML = '';
+        playerContainer.appendChild(video);
+        
+        video.play().catch(error => {
+            console.error('Alternative playback failed:', error);
+            this.showError('视频播放失败，请检查视频链接是否有效');
         });
     }
 
@@ -150,32 +158,22 @@ class EnhancedVideoPlayer {
     }
 
     playVideo(video) {
-        const type = this.getVideoType(video.url);
-        
         this.player.switchVideo(
             {
                 url: video.url,
-                type: type,
-                pic: video.thumbnail || ''
+                type: 'auto'
             },
             {
                 title: video.title
             }
         );
 
-        this.player.play();
-    }
-
-    getVideoType(url) {
-        if (url.includes('.m3u8')) {
-            return 'hls';
-        } else if (url.includes('.flv')) {
-            return 'flv';
-        } else if (url.includes('.ts')) {
-            return 'auto';
-        } else {
-            return 'auto';
-        }
+        setTimeout(() => {
+            this.player.play().catch(error => {
+                console.error('Playback failed:', error);
+                this.tryAlternativePlay();
+            });
+        }, 500);
     }
 
     setupEventListeners() {
@@ -270,10 +268,9 @@ class EnhancedVideoPlayer {
             playlistElement.appendChild(item);
         });
 
-        document.querySelector('.video-count').textContent = `${this.playlist.length} 个视频`;
+        document.querySelector('.video-count').textContent = `${this.playlist.length} 个视频`;  
     }
-
-    showError(message) {
+        showError(message) {
         console.error('Error:', message);
         const errorContainer = document.getElementById('errorContainer');
         const errorText = document.getElementById('errorText');
@@ -283,7 +280,7 @@ class EnhancedVideoPlayer {
             errorContainer.style.display = 'flex';
             setTimeout(() => {
                 errorContainer.style.display = 'none';
-                       }, 5000);
+            }, 5000);
         }
     }
 
@@ -358,7 +355,8 @@ class EnhancedVideoPlayer {
             this.renderPlaylist();
             this.updateVideoTitle('等待播放...');
             this.updateNavigationButtons();
-            this.player.pause();
+            this.player.destroy(); // 销毁当前播放器
+            this.setupVideoPlayer(); // 重新初始化播放器
             this.saveToGist().catch(error => {
                 console.error('Failed to save to Gist:', error);
                 this.showError('清空播放列表失败');
@@ -368,7 +366,11 @@ class EnhancedVideoPlayer {
 
     async checkUrlAvailability(url) {
         try {
-            const response = await fetch(url, { method: 'HEAD', mode: 'no-cors' });
+            const response = await fetch(url, { 
+                method: 'HEAD', 
+                mode: 'no-cors',
+                cache: 'no-cache'
+            });
             return true;
         } catch (error) {
             return false;
