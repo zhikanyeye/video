@@ -14,28 +14,28 @@ class EnhancedVideoPlayer {
         const gistId = urlParams.get('gist');
 
         if (!gistId) {
-            // 如果没有 gist 参数，尝试从本地存储加载
-            const saved = localStorage.getItem('videoPlaylist');
-            this.playlist = saved ? JSON.parse(saved) : [];
-        } else {
-            try {
-                // 从 Gist 加载播放列表
-                const response = await fetch(`https://api.github.com/gists/${gistId}`);
-                if (!response.ok) throw new Error('Failed to fetch Gist');
-                
-                const data = await response.json();
-                this.playlist = JSON.parse(data.files['playlist.json'].content);
-            } catch (error) {
-                console.error('Failed to load playlist from Gist:', error);
-                throw new Error('播放列表加载失败');
-            }
+            alert('请提供播放列表的 Gist ID！');
+            return;
         }
 
-        // 更新视频数量显示
-        document.querySelector('.video-count').textContent = `${this.playlist.length} 个视频`;
-        
-        // 渲染播放列表
-        this.renderPlaylist();
+        try {
+            // 从 Gist 加载播放列表
+            const response = await fetch(`https://api.github.com/gists/${gistId}`);
+            if (!response.ok) throw new Error('Failed to fetch Gist');
+            
+            const data = await response.json();
+            this.playlist = JSON.parse(data.files['playlist.json'].content);
+            
+            // 更新视频数量显示
+            document.querySelector('.video-count').textContent = `${this.playlist.length} 个视频`;
+            
+            // 渲染播放列表
+            this.renderPlaylist();
+        } catch (error) {
+            console.error('Failed to load playlist from Gist:', error);
+            alert('播放列表加载失败，请检查 Gist ID 是否正确！');
+            throw error;
+        }
     }
 
     setupVideoPlayer() {
@@ -178,28 +178,7 @@ class EnhancedVideoPlayer {
         document.getElementById('nextVideo').disabled = this.currentIndex >= this.playlist.length - 1;
     }
 
-    clearPlaylist() {
-        if (confirm('确定要清空播放列表吗？')) {
-            this.playlist = [];
-            this.currentIndex = -1;
-            if (this.player) {
-                this.player.destroy();
-                this.player = null;
-            }
-            this.renderPlaylist();
-            this.updateVideoTitle('等待播放...');
-            this.updateNavigationButtons();
-            document.querySelector('.video-count').textContent = '0 个视频';
-        }
-    }
-
-    addVideo(title, url) {
-        this.playlist.push({ title, url });
-        this.renderPlaylist();
-        document.querySelector('.video-count').textContent = `${this.playlist.length} 个视频`;
-        
-        if (this.playlist.length === 1) {
-            this.setupVideoPlayer();
-        }
-    }
 }
+
+// 初始化视频播放器
+const videoPlayer = new EnhancedVideoPlayer();
