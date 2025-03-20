@@ -1,45 +1,55 @@
 class EnhancedVideoPlayer {
     constructor() {
-        try {
-            this.player = null;
-            this.playlist = [];
-            this.currentVideoIndex = -1;
-            this.isFullscreen = false;
-            
-            // 添加错误处理
-            window.onerror = (message, source, lineno, colno, error) => {
-                console.error('Player Error:', error);
-                this.showError(`加载出错: ${message}`);
-            };
-            
-            this.setupVideoPlayer();
-            this.loadPlaylist();
-            this.setupEventListeners();
-            this.setupVideoSniffer();
-        } catch (error) {
-            console.error('Initialization Error:', error);
-            this.showError('播放器初始化失败，请刷新页面重试');
-        }
+        this.player = null;
+        this.playlist = [];
+        this.currentVideoIndex = -1;
+        this.isFullscreen = false;
+        
+        this.setupVideoPlayer();
+        this.loadPlaylist();
+        this.setupEventListeners();
+        this.setupVideoSniffer();
     }
 
     setupVideoPlayer() {
-        // 初始化video.js播放器
-        this.player = videojs('videoElement', {
-            fluid: true,
-            html5: {
-                hls: {
-                    enableLowInitialPlaylist: true,
-                    smoothQualityChange: true,
-                    overrideNative: true
+        this.player = new DPlayer({
+            container: document.getElementById('player'),
+            autoplay: false,
+            theme: '#2196F3',
+            screenshot: true,
+            hotkey: true,
+            preload: 'auto',
+            volume: 0.7,
+            mutex: true,
+            video: {
+                quality: [],
+                defaultQuality: 0,
+                pic: '',
+                thumbnails: ''
+            },
+            subtitle: {
+                type: 'webvtt',
+                fontSize: '20px',
+                bottom: '10%',
+                color: '#fff'
+            },
+            contextmenu: [
+                {
+                    text: '视频播放器 v1.0',
+                    link: 'https://github.com/zhikanyeye/video'
                 }
-            }
+            ],
+            highlight: true
         });
 
-        // 添加播放器错误处理
         this.player.on('error', () => {
-            const error = this.player.error();
-            console.error('Video.js Error:', error);
-            this.showError(`视频加载失败: ${error.message}`);
+            this.showError('视频加载失败，请检查视频链接是否有效');
+        });
+
+        this.player.on('ended', () => {
+            if (this.currentVideoIndex < this.playlist.length - 1) {
+                this.play(this.currentVideoIndex + 1);
+            }
         });
     }
 
@@ -78,10 +88,8 @@ class EnhancedVideoPlayer {
     }
 
     setupVideoSniffer() {
-        // 注入视频资源检测脚本
         const script = document.createElement('script');
         script.textContent = `
-            // 拦截XHR请求
             const originalXHR = XMLHttpRequest.prototype.open;
             XMLHttpRequest.prototype.open = function() {
                 if (this._url && this.detectVideoUrl(this._url)) {
@@ -92,7 +100,6 @@ class EnhancedVideoPlayer {
                 return originalXHR.apply(this, arguments);
             };
 
-            // 拦截Fetch请求
             const originalFetch = window.fetch;
             window.fetch = async function(input, init) {
                 const url = typeof input === 'string' ? input : input.url;
@@ -104,7 +111,6 @@ class EnhancedVideoPlayer {
                 return originalFetch.apply(this, arguments);
             };
 
-            // 检测视频URL
             function detectVideoUrl(url) {
                 return url.match(/\\.(mp4|m3u8|flv|ts)($|\\?)/i) ||
                        url.includes('/video/') ||
@@ -113,7 +119,6 @@ class EnhancedVideoPlayer {
         `;
         document.head.appendChild(script);
 
-        // 监听检测到的视频资源
         window.addEventListener('videoResourceDetected', (e) => {
             this.handleDetectedVideo(e.detail.url);
         });
@@ -137,163 +142,67 @@ class EnhancedVideoPlayer {
         if (index >= 0 && index < this.playlist.length) {
             const video = this.playlist[index];
             this.currentVideoIndex = index;
-
-            if (this.isExternalVideo(video.url)) {
-                this.playExternalVideo(video);
-            } else {
-                this.playLocalVideo(video);
-            }
-
+            this.playVideo(video);
             this.updateActiveItem();
             this.updateVideoTitle(video.title);
             this.updateNavigationButtons();
         }
     }
 
-    playLocalVideo(video) {
-        const url = video.url;
+    playVideo(video) {
+        const type = this.getVideoType(video.url);
         
-        if (url.endsWith('.m3u8')) {
-            this.playHLSVideo(url);
-        } else if (url.endsWith('.flv')) {
-            this.playFLVVideo(url);
-        } else if (url.endsWith('.ts')) {
-            this.playTSVideo(url);
+        this.player.switchVideo(
+            {
+                url: video.url,
+                type: type,
+                pic: video.thumbnail || ''
+            },
+            {
+                title: video.title
+            }
+        );
+
+        this.player.play();
+    }
+
+    getVideoType(url) {
+        if (url.includes('.m3u8')) {
+            return 'hls';
+        } else if (url.includes('.flv')) {
+            return 'flv';
+        } else if (url.includes('.ts')) {
+            return 'auto';
         } else {
-            this.player.src({ type: 'video/mp4', src: url });
-            this.player.play().catch(error => {
-                console.error('Video playback failed:', error);
-                this.showError('视频播放失败，请检查视频链接是否有效');
-            });
+            return 'auto';
         }
-    }
-
-    playHLSVideo(url) {
-        if (Hls.isSupported()) {
-            const hls = new Hls({
-                debug: false,
-                enableWorker: true,
-                lowLatencyMode: true
-            });
-            hls.loadSource(url);
-            hls.attachMedia(this.player.tech().el());
-            hls.on(Hls.Events.MANIFEST_PARSED, () => {
-                this.player.play().catch(error => {
-                    console.error('HLS playback failed:', error);
-                    this.showError('HLS视频加载失败，请检查网络连接');
-                });
-            });
-            hls.on(Hls.Events.ERROR, (event, data) => {
-                if (data.fatal) {
-                    this.showError('HLS视频播放错误，尝试使用其他格式');
-                }
-            });
-        } else if (this.player.canPlayType('application/vnd.apple.mpegurl')) {
-            this.player.src({
-                src: url,
-                type: 'application/x-mpegURL'
-            });
-            this.player.play();
-        } else {
-            this.showError('当前浏览器不支持HLS视频播放');
-        }
-    }
-
-    playFLVVideo(url) {
-        if (flvjs.isSupported()) {
-            const flvPlayer = flvjs.createPlayer({
-                type: 'flv',
-                url: url
-            });
-            flvPlayer.attachMediaElement(this.player.tech().el());
-            flvPlayer.load();
-            flvPlayer.play();
-
-            flvPlayer.on(flvjs.Events.ERROR, (error) => {
-                console.error('FLV playback failed:', error);
-                this.showError('FLV视频播放失败，请检查视频格式');
-            });
-        } else {
-            this.showError('当前浏览器不支持FLV视频播放');
-        }
-    }
-
-    playTSVideo(url) {
-        this.player.src({ type: 'video/mp2t', src: url });
-        this.player.play().catch(error => {
-            console.error('TS playback failed:', error);
-            this.showError('TS视频播放失败，请检查视频链接是否有效');
-        });
-    }
-
-    playExternalVideo(video) {
-        const embedCode = this.createEmbedCode(video.url);
-        if (embedCode) {
-            document.getElementById('player').innerHTML = embedCode;
-        } else {
-            this.showError('不支持的视频链接格式');
-        }
-    }
-
-    isExternalVideo(url) {
-        return url.includes('youtube.com') || 
-               url.includes('youtu.be') || 
-               url.includes('bilibili.com');
-    }
-
-    createEmbedCode(url) {
-        if (url.includes('youtube.com') || url.includes('youtu.be')) {
-            const videoId = this.getYouTubeVideoId(url);
-            return videoId ? `<iframe src="https://www.youtube.com/embed/${videoId}" frameborder="0" allowfullscreen></iframe>` : null;
-        } else if (url.includes('bilibili.com')) {
-            const bvid = this.getBilibiliVideoId(url);
-            return bvid ? `<iframe src="//player.bilibili.com/player.html?bvid=${bvid}" frameborder="0" allowfullscreen></iframe>` : null;
-        }
-        return null;
-    }
-
-    getYouTubeVideoId(url) {
-        const regExp = /^.*(youtu.be\/|v\/|u\/\w\/|embed\/|watch\?v=|\&v=)([^#\&\?]*).*/;
-        const match = url.match(regExp);
-        return match && match[2].length === 11 ? match[2] : null;
-    }
-
-    getBilibiliVideoId(url) {
-        const match = url.match(/BV\w+/);
-        return match ? match[0] : null;
     }
 
     setupEventListeners() {
-        // 侧边栏切换
         document.getElementById('toggleSidebar').addEventListener('click', () => {
             this.toggleSidebar();
         });
 
-        // 显示侧边栏
         document.getElementById('showSidebar').addEventListener('click', () => {
             this.showSidebar();
         });
 
-        // 上一个视频
         document.getElementById('prevVideo').addEventListener('click', () => {
             if (this.currentVideoIndex > 0) {
                 this.play(this.currentVideoIndex - 1);
             }
         });
 
-        // 下一个视频
         document.getElementById('nextVideo').addEventListener('click', () => {
             if (this.currentVideoIndex < this.playlist.length - 1) {
                 this.play(this.currentVideoIndex + 1);
             }
         });
 
-        // 全屏切换
         document.getElementById('toggleFullscreen').addEventListener('click', () => {
-            this.toggleFullscreen();
+            this.player.fullScreen.toggle();
         });
 
-        // 键盘控制
         document.addEventListener('keydown', (e) => {
             if (e.target.tagName === 'INPUT' || e.target.tagName === 'TEXTAREA') {
                 return;
@@ -310,32 +219,7 @@ class EnhancedVideoPlayer {
                         this.play(this.currentVideoIndex + 1);
                     }
                     break;
-                case 'f':
-                case 'F':
-                    this.toggleFullscreen();
-                    break;
-                case ' ':
-                    if (this.player) {
-                        if (this.player.paused()) {
-                            this.player.play();
-                        } else {
-                            this.player.pause();
-                        }
-                        e.preventDefault();
-                    }
-                    break;
             }
-        });
-
-        // 响应式侧边栏显示和隐藏
-        document.getElementById('showSidebar').addEventListener('click', () => {
-            const sidebar = document.querySelector('.sidebar');
-            sidebar.classList.add('show');
-        });
-
-        document.querySelector('.sidebar').addEventListener('click', () => {
-            const sidebar = document.querySelector('.sidebar');
-            sidebar.classList.remove('show');
         });
     }
 
@@ -389,14 +273,6 @@ class EnhancedVideoPlayer {
         document.querySelector('.video-count').textContent = `${this.playlist.length} 个视频`;
     }
 
-    toggleFullscreen() {
-        if (!document.fullscreenElement) {
-            document.documentElement.requestFullscreen();
-        } else {
-            document.exitFullscreen();
-        }
-    }
-
     showError(message) {
         console.error('Error:', message);
         const errorContainer = document.getElementById('errorContainer');
@@ -407,7 +283,7 @@ class EnhancedVideoPlayer {
             errorContainer.style.display = 'flex';
             setTimeout(() => {
                 errorContainer.style.display = 'none';
-            }, 5000);
+                       }, 5000);
         }
     }
 
@@ -418,6 +294,11 @@ class EnhancedVideoPlayer {
             console.error('Failed to save to Gist:', error);
             this.showError('保存到播放列表失败');
         });
+
+        // 如果是第一个视频，自动播放
+        if (this.playlist.length === 1) {
+            this.play(0);
+        }
     }
 
     async saveToGist() {
@@ -449,7 +330,7 @@ class EnhancedVideoPlayer {
                     body: JSON.stringify(gistData)
                 });
             } else {
-                                response = await fetch('https://api.github.com/gists', {
+                response = await fetch('https://api.github.com/gists', {
                     method: 'POST',
                     headers: {
                         'Authorization': `token ${token}`,
@@ -477,6 +358,7 @@ class EnhancedVideoPlayer {
             this.renderPlaylist();
             this.updateVideoTitle('等待播放...');
             this.updateNavigationButtons();
+            this.player.pause();
             this.saveToGist().catch(error => {
                 console.error('Failed to save to Gist:', error);
                 this.showError('清空播放列表失败');
@@ -484,7 +366,6 @@ class EnhancedVideoPlayer {
         }
     }
 
-    // 工具方法：检查URL是否可访问
     async checkUrlAvailability(url) {
         try {
             const response = await fetch(url, { method: 'HEAD', mode: 'no-cors' });
@@ -494,7 +375,6 @@ class EnhancedVideoPlayer {
         }
     }
 
-    // 工具方法：格式化时间
     formatDuration(seconds) {
         const hours = Math.floor(seconds / 3600);
         const minutes = Math.floor((seconds % 3600) / 60);
@@ -506,7 +386,6 @@ class EnhancedVideoPlayer {
         return `${minutes}:${remainingSeconds.toString().padStart(2, '0')}`;
     }
 
-    // 工具方法：生成唯一ID
     generateUUID() {
         return 'xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx'.replace(/[xy]/g, function(c) {
             const r = Math.random() * 16 | 0;
@@ -515,10 +394,9 @@ class EnhancedVideoPlayer {
         });
     }
 
-    // 析构函数：清理资源
     destroy() {
         if (this.player) {
-            this.player.dispose();
+            this.player.destroy();
         }
         // 移除所有事件监听器
         document.removeEventListener('keydown', this.handleKeydown);
