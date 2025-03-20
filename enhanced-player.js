@@ -9,51 +9,75 @@ class EnhancedVideoPlayer {
     }
 
     setupVideoPlayer() {
-        this.player = new DPlayer({
-            container: document.getElementById('player'),
-            autoplay: false,
-            theme: '#2196F3',
-            video: {
-                quality: [{
-                    name: '默认',
-                    url: '',
-                    type: 'auto'
-                }],
-                defaultQuality: 0,
-                pic: '',
-                thumbnails: '',
-                customType: {
-                    custom: function (video, player) {
-                        video.src = video.src;
-                    }
-                }
-            },
-            subtitle: {
-                type: 'webvtt',
-                fontSize: '25px',
-                bottom: '10%',
-                color: '#fff'
-            },
-            screenshot: true,
-            hotkey: true,
-            preload: 'auto',
-            loop: false,
-            lang: 'zh-cn',
+        // 创建 ArtPlayer 实例
+        this.player = new Artplayer({
+            container: '#player',
+            url: '',
+            title: '',
             volume: 0.7,
-            contextmenu: [
+            isLive: false,
+            muted: false,
+            autoplay: false,
+            pip: true,
+            autoSize: true,
+            autoMini: true,
+            screenshot: true,
+            setting: true,
+            loop: false,
+            flip: true,
+            rotate: true,
+            playbackRate: true,
+            aspectRatio: true,
+            fullscreen: true,
+            fullscreenWeb: true,
+            subtitleOffset: true,
+            miniProgressBar: true,
+            mutex: true,
+            backdrop: true,
+            playsInline: true,
+            autoPlayback: true,
+            airplay: true,
+            theme: '#23ade5',
+            lang: navigator.language.toLowerCase(),
+            whitelist: ['*'],
+            moreVideoAttr: {
+                crossOrigin: 'anonymous',
+            },
+            settings: [
                 {
-                    text: '视频播放器',
-                    link: 'https://github.com/DIYgod/DPlayer'
-                }
+                    html: '字幕',
+                    selector: [
+                        {
+                            html: '显示',
+                            value: true,
+                        },
+                        {
+                            html: '隐藏',
+                            value: false,
+                        },
+                    ],
+                    onSelect: function (item) {
+                        this.subtitle.show = item.value;
+                        return item.html;
+                    },
+                },
             ],
-            mutex: true
+            plugins: [
+                artplayerPluginHls({
+                    // hls 配置
+                    debug: false,
+                    manifestLoadingTimeOut: 10000,
+                }),
+            ],
         });
 
+        // 错误处理
         this.player.on('error', () => {
             console.error('Player Error');
             this.showError('视频加载失败，请检查视频链接是否有效');
         });
 
+        // 播放结束自动播放下一个
         this.player.on('ended', () => {
             if (this.currentVideoIndex < this.playlist.length - 1) {
                 this.play(this.currentVideoIndex + 1);
@@ -73,30 +97,7 @@ class EnhancedVideoPlayer {
     }
 
     playVideo(video) {
-        const newVideo = {
-            name: '默认',
-            url: video.url,
-            type: 'auto'
-        };
-
-        this.player.switchVideo(
-            {
-                url: video.url,
-                pic: video.pic || '',
-                type: 'auto',
-                customType: {
-                    custom: function (video, player) {
-                        video.src = video.src;
-                    }
-                }
-            },
-            {
-                name: video.title,
-                quality: [newVideo],
-                defaultQuality: 0
-            }
-        );
-
+        this.player.switchUrl(video.url, video.title);
         setTimeout(() => {
             this.player.play();
         }, 100);
@@ -124,9 +125,10 @@ class EnhancedVideoPlayer {
         });
 
         document.getElementById('toggleFullscreen').addEventListener('click', () => {
-            this.player.fullScreen.toggle();
+            this.player.fullscreen = !this.player.fullscreen;
         });
 
+        // 键盘快捷键
         document.addEventListener('keydown', (e) => {
             if (e.target.tagName === 'INPUT' || e.target.tagName === 'TEXTAREA') {
                 return;
