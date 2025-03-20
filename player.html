@@ -2,7 +2,9 @@
 <html lang="zh-CN">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-status-bar-style" content="black">
     <title>增强版视频播放器</title>
     <link href="https://fonts.googleapis.com/icon?family=Material+Icons" rel="stylesheet">
     <link href="https://cdn.jsdelivr.net/npm/video.js@7/dist/video-js.min.css" rel="stylesheet">
@@ -32,6 +34,18 @@
                 check();
             });
         }
+
+        // 禁用双击缩放
+        document.addEventListener('dblclick', function(e) {
+            e.preventDefault();
+        });
+
+        // 处理移动端触摸事件
+        document.addEventListener('touchstart', function(e) {
+            if (e.touches.length > 1) {
+                e.preventDefault(); // 禁用双指缩放
+            }
+        }, { passive: false });
     </script>
     
     <!-- 播放器依赖 -->
@@ -48,14 +62,14 @@
                     <i class="material-icons">playlist_play</i> 
                     播放列表
                 </h2>
-                <button id="toggleSidebar" class="toggle-sidebar">
+                <button id="toggleSidebar" class="toggle-sidebar" aria-label="切换侧边栏">
                     <i class="material-icons">chevron_left</i>
                 </button>
             </div>
             <div class="playlist-container">
                 <div class="playlist-header">
                     <span class="video-count">0 个视频</span>
-                    <button class="clear-playlist" onclick="videoPlayer.clearPlaylist()">
+                    <button class="clear-playlist" onclick="videoPlayer.clearPlaylist()" aria-label="清空播放列表">
                         <i class="material-icons">delete_sweep</i>
                     </button>
                 </div>
@@ -65,14 +79,18 @@
 
         <!-- 主要内容区 -->
         <main class="main-content">
-            <button id="showSidebar" class="show-sidebar-button">
+            <button id="showSidebar" class="show-sidebar-button" aria-label="显示侧边栏">
                 <i class="material-icons">menu</i>
             </button>
 
             <!-- 视频播放器区域 -->
             <div class="video-container">
                 <div id="player">
-                    <video id="videoElement" class="video-js vjs-default-skin" controls>
+                    <video id="videoElement" 
+                           class="video-js vjs-default-skin vjs-big-play-centered" 
+                           controls 
+                           playsinline 
+                           webkit-playsinline>
                         <p class="vjs-no-js">
                             要观看此视频，请启用JavaScript并考虑升级到支持HTML5视频的浏览器
                         </p>
@@ -84,13 +102,13 @@
             <div class="video-info">
                 <h1 id="currentVideoTitle">等待播放...</h1>
                 <div class="video-controls">
-                    <button id="prevVideo" class="control-button" disabled>
+                    <button id="prevVideo" class="control-button" disabled aria-label="上一个视频">
                         <i class="material-icons">skip_previous</i>
                     </button>
-                    <button id="nextVideo" class="control-button" disabled>
+                    <button id="nextVideo" class="control-button" disabled aria-label="下一个视频">
                         <i class="material-icons">skip_next</i>
                     </button>
-                    <button id="toggleFullscreen" class="control-button">
+                    <button id="toggleFullscreen" class="control-button" aria-label="切换全屏">
                         <i class="material-icons">fullscreen</i>
                     </button>
                 </div>
@@ -99,19 +117,19 @@
     </div>
 
     <!-- 视频资源检测提示 -->
-    <div id="snifferAlert" class="sniffer-alert">
+    <div id="snifferAlert" class="sniffer-alert" role="alert" aria-live="polite">
         <i class="material-icons">notifications</i>
         <span id="snifferMessage"></span>
     </div>
 
     <!-- 加载状态指示器 -->
-    <div id="loadingIndicator" class="loading-indicator">
+    <div id="loadingIndicator" class="loading-indicator" role="progressbar">
         <div class="spinner"></div>
         <p>正在加载播放器...</p>
     </div>
 
     <!-- 错误提示容器 -->
-    <div id="errorContainer" class="error-container" style="display:none;">
+    <div id="errorContainer" class="error-container" style="display:none;" role="alert">
         <div class="error-message">
             <i class="material-icons">error_outline</i>
             <p id="errorText"></p>
@@ -120,6 +138,18 @@
             </button>
         </div>
     </div>
+
+    <!-- PWA 支持 -->
+    <link rel="manifest" href="manifest.json">
+    <script>
+        if ('serviceWorker' in navigator) {
+            window.addEventListener('load', () => {
+                navigator.serviceWorker.register('/sw.js').catch(err => {
+                    console.error('ServiceWorker registration failed:', err);
+                });
+            });
+        }
+    </script>
 
     <script src="enhanced-player.js"></script>
     <script>
@@ -149,6 +179,35 @@
                 errorContainer.style.display = 'flex';
             }
         });
+
+        // 处理移动端事件
+        let touchStartX = 0;
+        let touchEndX = 0;
+        
+        document.addEventListener('touchstart', (e) => {
+            touchStartX = e.touches[0].clientX;
+        }, { passive: true });
+
+        document.addEventListener('touchend', (e) => {
+            touchEndX = e.changedTouches[0].clientX;
+            handleSwipe();
+        }, { passive: true });
+
+        function handleSwipe() {
+            const minSwipeDistance = 50;
+            const swipeDistance = touchEndX - touchStartX;
+            
+            if (Math.abs(swipeDistance) > minSwipeDistance) {
+                const sidebar = document.querySelector('.sidebar');
+                if (swipeDistance > 0) {
+                    // 向右滑动，显示侧边栏
+                    sidebar.classList.add('show');
+                } else {
+                    // 向左滑动，隐藏侧边栏
+                    sidebar.classList.remove('show');
+                }
+            }
+        }
     </script>
 </body>
 </html>
