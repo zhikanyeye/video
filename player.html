@@ -2,109 +2,464 @@
 <html lang="zh-CN">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>视频播放器</title>
     <link href="https://fonts.googleapis.com/icon?family=Material+Icons" rel="stylesheet">
-    <link rel="stylesheet" href="player.css">
-    
-    <!-- ArtPlayer 依赖 -->
+    <!-- ArtPlayer 核心 -->
     <script src="https://cdn.jsdelivr.net/npm/artplayer@5.0.9/dist/artplayer.min.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/artplayer-plugin-hls@2.0.0/dist/artplayer-plugin-hls.min.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/hls.js@1.4.12/dist/hls.min.js"></script>
+    <!-- 字幕支持 -->
+    <script src="https://cdn.jsdelivr.net/npm/artplayer-plugin-ass@2.0.0/dist/artplayer-plugin-ass.min.js"></script>
+    <style>
+        :root {
+            --primary-color: #23ade5;
+            --background-color: #1a1a1a;
+            --text-color: #ffffff;
+            --panel-background: #242424;
+        }
+
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+            background: var(--background-color);
+            color: var(--text-color);
+            overflow: hidden;
+            height: 100vh;
+        }
+
+        .player-container {
+            display: flex;
+            height: 100vh;
+        }
+
+        .main-content {
+            flex: 1;
+            display: flex;
+            flex-direction: column;
+            height: 100%;
+            transition: margin-right 0.3s ease;
+        }
+
+        .player-header {
+            padding: 16px;
+            background: rgba(255, 255, 255, 0.05);
+            display: flex;
+            align-items: center;
+            gap: 16px;
+            z-index: 100;
+        }
+
+        #player {
+            flex: 1;
+            width: 100%;
+            background: #000;
+        }
+
+        .header-controls {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        .control-button {
+            display: flex;
+            align-items: center;
+            gap: 5px;
+            color: var(--text-color);
+            text-decoration: none;
+            padding: 8px 12px;
+            border-radius: 4px;
+            background: rgba(255, 255, 255, 0.1);
+            border: none;
+            cursor: pointer;
+            font-size: 14px;
+        }
+
+        .control-button:hover {
+            background: rgba(255, 255, 255, 0.2);
+        }
+
+        #videoTitle {
+            margin: 0;
+            font-size: 1.2em;
+            flex: 1;
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
+        }
+
+        .playlist-sidebar {
+            width: 300px;
+            background: var(--panel-background);
+            border-left: 1px solid rgba(255, 255, 255, 0.1);
+            display: flex;
+            flex-direction: column;
+            transition: transform 0.3s ease;
+            transform: translateX(100%);
+        }
+
+        .playlist-sidebar.show {
+            transform: translateX(0);
+        }
+
+        .playlist-header {
+            padding: 16px;
+            background: rgba(255, 255, 255, 0.05);
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        .playlist-header h2 {
+            margin: 0;
+            font-size: 1.1em;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        .playlist-content {
+            flex: 1;
+            overflow-y: auto;
+            padding: 16px;
+        }
+
+        .playlist-item {
+            display: flex;
+            align-items: center;
+            padding: 12px;
+            border-radius: 6px;
+            cursor: pointer;
+            transition: all 0.2s ease;
+            margin-bottom: 8px;
+            gap: 12px;
+        }
+
+        .playlist-item:hover {
+            background: rgba(255, 255, 255, 0.1);
+        }
+
+        .playlist-item.active {
+            background: var(--primary-color);
+        }
+
+        .playlist-item span {
+            flex: 1;
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
+        }
+
+        /* 自定义滚动条 */
+        ::-webkit-scrollbar {
+            width: 6px;
+        }
+
+        ::-webkit-scrollbar-track {
+            background: rgba(255, 255, 255, 0.05);
+        }
+
+        ::-webkit-scrollbar-thumb {
+            background: rgba(255, 255, 255, 0.2);
+            border-radius: 3px;
+        }
+
+        ::-webkit-scrollbar-thumb:hover {
+            background: rgba(255, 255, 255, 0.3);
+        }
+
+        @media (max-width: 768px) {
+            .playlist-sidebar {
+                position: fixed;
+                top: 0;
+                right: 0;
+                bottom: 0;
+                z-index: 1000;
+                width: 100%;
+            }
+        }
+    </style>
 </head>
-<body class="player-page">
-    <div class="player-layout">
-        <!-- 侧边栏 -->
-        <aside class="sidebar">
-            <div class="sidebar-header">
+<body>
+    <div class="player-container">
+        <div class="main-content">
+            <div class="player-header">
+                <div class="header-controls">
+                    <a href="index.html" class="control-button">
+                        <i class="material-icons">arrow_back</i>
+                        返回列表
+                    </a>
+                    <button class="control-button" onclick="togglePlaylist()">
+                        <i class="material-icons">playlist_play</i>
+                        播放列表
+                    </button>
+                </div>
+                <h1 id="videoTitle">加载中...</h1>
+            </div>
+            <div id="player"></div>
+        </div>
+
+        <div class="playlist-sidebar" id="playlistSidebar">
+            <div class="playlist-header">
                 <h2>
-                    <i class="material-icons">playlist_play</i> 
+                    <i class="material-icons">playlist_play</i>
                     播放列表
                 </h2>
-                <button id="toggleSidebar" class="toggle-sidebar">
-                    <i class="material-icons">chevron_left</i>
+                <button class="control-button" onclick="togglePlaylist()">
+                    <i class="material-icons">close</i>
                 </button>
             </div>
-            <div class="playlist-container">
-                <div class="playlist-header">
-                    <span class="video-count">0 个视频</span>
-                    <button class="clear-playlist" onclick="videoPlayer.clearPlaylist()">
-                        <i class="material-icons">delete_sweep</i>
-                    </button>
-                </div>
-                <div id="playerPlaylist" class="playlist-items"></div>
-            </div>
-        </aside>
-
-        <!-- 主要内容区 -->
-        <main class="main-content">
-            <button id="showSidebar" class="show-sidebar-button">
-                <i class="material-icons">menu</i>
-            </button>
-
-            <!-- 视频播放器区域 -->
-            <div class="video-container">
-                <div id="player"></div>
-            </div>
-
-            <!-- 视频信息区域 -->
-            <div class="video-info">
-                <h1 id="currentVideoTitle">等待播放...</h1>
-                <div class="video-controls">
-                    <button id="prevVideo" class="control-button" disabled>
-                        <i class="material-icons">skip_previous</i>
-                    </button>
-                    <button id="nextVideo" class="control-button" disabled>
-                        <i class="material-icons">skip_next</i>
-                    </button>
-                    <button id="toggleFullscreen" class="control-button">
-                        <i class="material-icons">fullscreen</i>
-                    </button>
-                </div>
-            </div>
-        </main>
-    </div>
-
-    <!-- 加载状态指示器 -->
-    <div id="loadingIndicator" class="loading-indicator">
-        <div class="spinner"></div>
-        <p>正在加载播放器...</p>
-    </div>
-
-    <!-- 错误提示容器 -->
-    <div id="errorContainer" class="error-container" style="display:none;">
-        <div class="error-message">
-            <i class="material-icons">error_outline</i>
-            <p id="errorText"></p>
-            <button onclick="location.reload()" class="retry-button">
-                <i class="material-icons">refresh</i> 重试
-            </button>
+            <div class="playlist-content" id="playlistContent"></div>
         </div>
     </div>
 
-    <script src="enhanced-player.js"></script>
     <script>
-        // 初始化播放器
-        document.addEventListener('DOMContentLoaded', () => {
-            const loadingIndicator = document.getElementById('loadingIndicator');
-            const errorContainer = document.getElementById('errorContainer');
-            const errorText = document.getElementById('errorText');
+        let art = null;
+        let playlist = [];
+        let currentIndex = 0;
+
+        // 加载播放列表
+        async function loadPlaylist() {
+            const urlParams = new URLSearchParams(window.location.search);
+            const gistId = urlParams.get('gist');
             
+            if (!gistId) {
+                alert('无效的播放列表！');
+                window.location.href = 'index.html';
+                return;
+            }
+
             try {
-                window.videoPlayer = new EnhancedVideoPlayer();
-                loadingIndicator.style.display = 'none';
+                const response = await fetch(`https://api.github.com/gists/${gistId}`);
+                if (!response.ok) throw new Error('Failed to fetch Gist');
                 
-                // 测试视频
-                videoPlayer.addVideo('测试视频', 'https://cloud.06dn.com/s/Q7LKiJ/video?name=0101.mp4');
+                const data = await response.json();
+                playlist = JSON.parse(data.files['playlist.json'].content);
                 
-            } catch (error) {
-                console.error('播放器初始化失败:', error);
-                loadingIndicator.style.display = 'none';
-                errorText.textContent = error.message || '播放器加载失败，请检查网络连接并刷新页面';
-                errorContainer.style.display = 'flex';
+                if (playlist.length === 0) {
+                    alert('播放列表为空！');
+                    window.location.href = 'index.html';
+                                    return;
+            }
+                
+            renderPlaylist();
+            initializePlayer(0);
+        } catch (error) {
+            console.error('Failed to load playlist:', error);
+            alert('加载播放列表失败！');
+            window.location.href = 'index.html';
+        }
+    }
+
+    // 初始化播放器
+    function initializePlayer(index) {
+        if (art) {
+            art.destroy();
+        }
+
+        const video = playlist[index];
+        if (!video) return;
+
+        currentIndex = index;
+        document.getElementById('videoTitle').textContent = video.title;
+        document.title = `${video.title} - 视频播放器`;
+
+        // 创建 ArtPlayer 实例
+        art = new Artplayer({
+            container: '#player',
+            url: video.url,
+            title: video.title,
+            volume: localStorage.getItem('playerVolume') || 0.7,
+            isLive: false,
+            muted: false,
+            autoplay: true,
+            pip: true,
+            autoSize: true,
+            autoMini: true,
+            screenshot: true,
+            setting: true,
+            loop: false,
+            flip: true,
+            rotate: true,
+            playbackRate: true,
+            aspectRatio: true,
+            fullscreen: true,
+            fullscreenWeb: true,
+            subtitleOffset: true,
+            miniProgressBar: true,
+            mutex: true,
+            backdrop: true,
+            playsInline: true,
+            autoPlayback: true,
+            airplay: true,
+            theme: '#23ade5',
+            lang: navigator.language.toLowerCase(),
+            moreVideoAttr: {
+                crossOrigin: 'anonymous',
+            },
+            contextmenu: [
+                {
+                    html: '播放列表',
+                    click: function () {
+                        togglePlaylist();
+                    },
+                },
+                {
+                    html: '返回列表页',
+                    click: function () {
+                        window.location.href = 'index.html';
+                    },
+                },
+            ],
+            settings: [
+                {
+                    html: '播放速度',
+                    selector: [
+                        { html: '0.5x', value: 0.5 },
+                        { html: '0.75x', value: 0.75 },
+                        { html: '正常', value: 1 },
+                        { html: '1.25x', value: 1.25 },
+                        { html: '1.5x', value: 1.5 },
+                        { html: '2x', value: 2 },
+                    ],
+                    onSelect: function (item) {
+                        art.playbackRate = item.value;
+                        return item.html;
+                    },
+                },
+                {
+                    html: '画质',
+                    selector: [
+                        { html: '自动', value: 'auto' },
+                        { html: '原画', value: 'origin' },
+                    ],
+                    onSelect: function (item) {
+                        return item.html;
+                    },
+                }
+            ],
+            customType: {
+                m3u8: function (video, url) {
+                    if (Hls.isSupported()) {
+                        const hls = new Hls({
+                            debug: false,
+                            manifestLoadingTimeOut: 10000,
+                        });
+                        hls.loadSource(url);
+                        hls.attachMedia(video);
+                        art.hls = hls;
+                        art.once('destroy', () => hls.destroy());
+                    } else if (video.canPlayType('application/vnd.apple.mpegurl')) {
+                        video.src = url;
+                    } else {
+                        art.notice.show = '当前浏览器不支持 m3u8 视频格式';
+                    }
+                }
+            },
+            plugins: [
+                artplayerPluginHls({
+                    debug: false,
+                }),
+                artplayerPluginAss({
+                    // 字幕插件配置
+                }),
+            ]
+        });
+
+        // 事件监听
+        art.on('ready', () => {
+            console.log('播放器就绪');
+        });
+
+        art.on('error', () => {
+            art.notice.show = '视频加载失败，请检查网络或视频链接';
+        });
+
+        art.on('video:ended', () => {
+            if (currentIndex < playlist.length - 1) {
+                initializePlayer(currentIndex + 1);
             }
         });
-    </script>
-</body>
-</html>
+
+        art.on('destroy', () => {
+            if (art.hls) {
+                art.hls.destroy();
+            }
+        });
+
+        // 记住播放音量
+        art.on('volume', value => {
+            localStorage.setItem('playerVolume', value);
+        });
+
+        updatePlaylistActiveState();
+    }
+
+    // 渲染播放列表
+    function renderPlaylist() {
+        const container = document.getElementById('playlistContent');
+        container.innerHTML = playlist.map((video, index) => `
+            <div class="playlist-item${index === currentIndex ? ' active' : ''}" 
+                 onclick="initializePlayer(${index})">
+                <i class="material-icons">
+                    ${index === currentIndex ? 'play_arrow' : 'play_circle_outline'}
+                </i>
+                <span>${video.title}</span>
+            </div>
+        `).join('');
+    }
+
+    // 更新播放列表激活状态
+    function updatePlaylistActiveState() {
+        const items = document.querySelectorAll('.playlist-item');
+        items.forEach((item, index) => {
+            item.classList.toggle('active', index === currentIndex);
+            item.querySelector('.material-icons').textContent = 
+                index === currentIndex ? 'play_arrow' : 'play_circle_outline';
+        });
+    }
+
+    // 切换播放列表显示
+    function togglePlaylist() {
+        document.getElementById('playlistSidebar').classList.toggle('show');
+    }
+
+    // 键盘快捷键
+    document.addEventListener('keydown', (e) => {
+        if (e.target.tagName === 'INPUT' || e.target.tagName === 'TEXTAREA') return;
+        
+        switch(e.key.toLowerCase()) {
+            case 'arrowleft':
+                if (!e.ctrlKey && !e.metaKey) return; // 需要按住 Ctrl/Command
+                if (currentIndex > 0) {
+                    initializePlayer(currentIndex - 1);
+                }
+                break;
+            case 'arrowright':
+                if (!e.ctrlKey && !e.metaKey) return; // 需要按住 Ctrl/Command
+                if (currentIndex < playlist.length - 1) {
+                    initializePlayer(currentIndex + 1);
+                }
+                break;
+            case 'p':
+                togglePlaylist();
+                break;
+        }
+    });
+
+    // 响应式处理
+    window.addEventListener('resize', () => {
+        if (window.innerWidth > 768) {
+            document.getElementById('playlistSidebar').classList.remove('show');
+        }
+    });
+
+    // 初始化加载
+    loadPlaylist();
+</script>
