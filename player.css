@@ -2,11 +2,13 @@
     --sidebar-width: 300px;
     --header-height: 60px;
     --video-info-height: 80px;
-    --primary-color: #2196F3;
+    --primary-color: #23ade5;
     --background-color: #1a1a1a;
     --text-color: #ffffff;
     --sidebar-background: #242424;
     --item-hover-color: #2c2c2c;
+    --danger-color: #dc3545;
+    --success-color: #28a745;
 }
 
 /* 基础样式 */
@@ -16,26 +18,27 @@
     box-sizing: border-box;
 }
 
-.player-page {
-    margin: 0;
-    padding: 0;
-    background: var(--background-color);
+body {
+    font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, sans-serif;
+    line-height: 1.5;
+    background-color: var(--background-color);
     color: var(--text-color);
-    font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
     overflow: hidden;
 }
 
+/* 布局容器 */
 .player-layout {
     display: flex;
     height: 100vh;
-    position: relative;
+    width: 100vw;
 }
 
 /* 侧边栏样式 */
 .sidebar {
     width: var(--sidebar-width);
-    background: var(--sidebar-background);
-    height: 100%;
+    height: 100vh;
+    background-color: var(--sidebar-background);
+    border-right: 1px solid rgba(255, 255, 255, 0.1);
     display: flex;
     flex-direction: column;
     transition: transform 0.3s ease;
@@ -46,7 +49,7 @@
 }
 
 .sidebar.collapsed {
-    transform: translateX(calc(-1 * var(--sidebar-width)));
+    transform: translateX(-100%);
 }
 
 .sidebar-header {
@@ -59,35 +62,81 @@
     border-bottom: 1px solid rgba(255, 255, 255, 0.1);
 }
 
+.sidebar-header h2 {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    font-size: 1.2rem;
+    font-weight: 500;
+}
+
+.toggle-sidebar {
+    background: none;
+    border: none;
+    color: var(--text-color);
+    cursor: pointer;
+    padding: 8px;
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    transition: background-color 0.2s;
+}
+
+.toggle-sidebar:hover {
+    background: rgba(255, 255, 255, 0.1);
+}
+
+/* 播放列表容器 */
 .playlist-container {
     flex: 1;
     overflow-y: auto;
-    padding: 10px;
+    padding: 16px;
 }
 
 .playlist-header {
     display: flex;
     justify-content: space-between;
     align-items: center;
-    padding: 0 10px;
-    margin-bottom: 10px;
+    margin-bottom: 16px;
+    padding: 0 8px;
+}
+
+.video-count {
+    font-size: 0.9rem;
     color: rgba(255, 255, 255, 0.7);
 }
 
+.clear-playlist {
+    background: none;
+    border: none;
+    color: var(--danger-color);
+    cursor: pointer;
+    padding: 6px;
+    border-radius: 4px;
+    display: flex;
+    align-items: center;
+    transition: background-color 0.2s;
+}
+
+.clear-playlist:hover {
+    background: rgba(220, 53, 69, 0.1);
+}
+
+/* 播放列表项样式 */
 .playlist-items {
     display: flex;
     flex-direction: column;
-    gap: 4px;
+    gap: 8px;
 }
 
 .playlist-item {
     padding: 12px;
     border-radius: 6px;
     cursor: pointer;
-    display: flex;
-    align-items: center;
-    transition: background-color 0.3s;
+    transition: all 0.2s ease;
 }
+
 .playlist-item:hover {
     background: var(--item-hover-color);
 }
@@ -99,17 +148,20 @@
 .playlist-item-content {
     display: flex;
     align-items: center;
-    gap: 8px;
+    gap: 12px;
+}
+
+.playlist-item-content span {
     flex: 1;
     overflow: hidden;
     text-overflow: ellipsis;
     white-space: nowrap;
 }
 
-/* 主内容区域样式 */
+/* 主内容区域 */
 .main-content {
-    margin-left: var(--sidebar-width);
     flex: 1;
+    margin-left: var(--sidebar-width);
     display: flex;
     flex-direction: column;
     transition: margin-left 0.3s ease;
@@ -119,11 +171,12 @@
     margin-left: 0;
 }
 
-/* 视频容器样式 */
+/* 视频容器 */
 .video-container {
     flex: 1;
-    background: black;
+    background: #000;
     position: relative;
+    width: 100%;
     height: calc(100vh - var(--video-info-height));
 }
 
@@ -132,38 +185,28 @@
     height: 100%;
 }
 
-/* DPlayer 样式覆盖 */
-.dplayer {
-    width: 100%;
-    height: 100%;
-}
-
-.dplayer-video-wrap {
-    height: 100% !important;
-}
-
-/* 视频信息区域样式 */
+/* 视频信息区域 */
 .video-info {
     height: var(--video-info-height);
-    padding: 16px 24px;
     background: var(--sidebar-background);
+    border-top: 1px solid rgba(255, 255, 255, 0.1);
+    padding: 0 24px;
     display: flex;
     align-items: center;
     justify-content: space-between;
-    border-top: 1px solid rgba(255, 255, 255, 0.1);
 }
 
 .video-info h1 {
+    font-size: 1.1rem;
+    font-weight: 500;
     margin: 0;
-    font-size: 1.2rem;
-    color: var(--text-color);
     flex: 1;
     overflow: hidden;
     text-overflow: ellipsis;
     white-space: nowrap;
 }
 
-/* 控制按钮样式 */
+/* 控制按钮 */
 .video-controls {
     display: flex;
     gap: 8px;
@@ -179,7 +222,7 @@
     display: flex;
     align-items: center;
     justify-content: center;
-    transition: background-color 0.3s;
+    transition: all 0.2s ease;
 }
 
 .control-button:hover {
@@ -191,108 +234,100 @@
     cursor: not-allowed;
 }
 
-/* 显示侧边栏按钮样式 */
+.control-button i {
+    font-size: 24px;
+}
+
+/* 侧边栏显示按钮 */
 .show-sidebar-button {
     position: fixed;
     left: 20px;
     top: 20px;
     z-index: 100;
-    background: rgba(0, 0, 0, 0.5);
-    color: white;
+    background: rgba(0, 0, 0, 0.6);
     border: none;
-    border-radius: 50%;
+    color: white;
     width: 40px;
     height: 40px;
+    border-radius: 50%;
     cursor: pointer;
     display: none;
     align-items: center;
     justify-content: center;
-    transition: background-color 0.3s;
+    transition: background-color 0.2s;
 }
 
 .show-sidebar-button:hover {
-    background: rgba(0, 0, 0, 0.7);
+    background: rgba(0, 0, 0, 0.8);
 }
 
-.sidebar.collapsed + .main-content .show-sidebar-button {
+.sidebar.collapsed ~ .main-content .show-sidebar-button {
     display: flex;
 }
 
-/* 清空列表按钮样式 */
-.clear-playlist {
-    background: none;
-    border: none;
-    color: #dc3545;
-    cursor: pointer;
-    padding: 4px;
-    border-radius: 4px;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    transition: background-color 0.3s;
-}
-
-.clear-playlist:hover {
-    background: rgba(220, 53, 69, 0.1);
-}
-
-/* 加载状态指示器样式 */
+/* 加载指示器 */
 .loading-indicator {
     position: fixed;
     top: 0;
     left: 0;
     right: 0;
     bottom: 0;
-    background: rgba(0, 0, 0, 0.8);
+    background: rgba(0, 0, 0, 0.9);
     display: flex;
     flex-direction: column;
     align-items: center;
     justify-content: center;
-    z-index: 9999;
+    z-index: 2000;
 }
 
 .spinner {
     width: 40px;
     height: 40px;
-    border: 4px solid #f3f3f3;
-    border-top: 4px solid var(--primary-color);
+    border: 4px solid rgba(255, 255, 255, 0.1);
+    border-left-color: var(--primary-color);
     border-radius: 50%;
     animation: spin 1s linear infinite;
-    margin-bottom: 20px;
+    margin-bottom: 16px;
 }
 
 @keyframes spin {
-    0% { transform: rotate(0deg); }
-    100% { transform: rotate(360deg); }
+    to {
+        transform: rotate(360deg);
+    }
 }
 
-/* 错误提示容器样式 */
+/* 错误提示 */
 .error-container {
     position: fixed;
     top: 0;
     left: 0;
     right: 0;
     bottom: 0;
-    background: rgba(0, 0, 0, 0.8);
+    background: rgba(0, 0, 0, 0.9);
     display: none;
     align-items: center;
     justify-content: center;
-    z-index: 9999;
+    z-index: 2000;
 }
 
 .error-message {
-    text-align: center;
-    color: var(--text-color);
-    padding: 30px;
     background: var(--sidebar-background);
+    padding: 32px;
     border-radius: 8px;
+    text-align: center;
     max-width: 400px;
+    width: 90%;
 }
 
 .error-message i {
     font-size: 48px;
-    color: #dc3545;
+    color: var(--danger-color);
     margin-bottom: 16px;
+}
+
+.error-message p {
+    margin: 16px 0;
+    color: rgba(255, 255, 255, 0.9);
 }
 
 .retry-button {
@@ -302,20 +337,34 @@
     padding: 8px 16px;
     border-radius: 4px;
     cursor: pointer;
-    display: flex;
+    display: inline-flex;
     align-items: center;
     gap: 8px;
-    margin: 16px auto 0;
+    transition: background-color 0.2s;
 }
 
 .retry-button:hover {
-    background: #1976D2;
+    background: #1e95c3;
+}
+
+/* ArtPlayer 样式覆盖 */
+.art-video-player {
+    --art-theme: var(--primary-color) !important;
+}
+
+.art-video-player .art-control {
+    height: 50px !important;
+}
+
+.art-video-player .art-control-progress {
+    bottom: 50px !important;
 }
 
 /* 响应式设计 */
 @media (max-width: 768px) {
     :root {
         --sidebar-width: 100%;
+        --video-info-height: auto;
     }
 
     .sidebar {
@@ -332,14 +381,13 @@
 
     .video-info {
         flex-direction: column;
-        height: auto;
-        gap: 16px;
         padding: 12px;
+        gap: 12px;
     }
 
     .video-info h1 {
-        font-size: 1rem;
         text-align: center;
+        font-size: 1rem;
     }
 
     .video-controls {
@@ -353,16 +401,16 @@
 
 /* 自定义滚动条 */
 ::-webkit-scrollbar {
-    width: 8px;
+    width: 6px;
 }
 
 ::-webkit-scrollbar-track {
-    background: rgba(255, 255, 255, 0.1);
+    background: rgba(255, 255, 255, 0.05);
 }
 
 ::-webkit-scrollbar-thumb {
     background: rgba(255, 255, 255, 0.2);
-    border-radius: 4px;
+    border-radius: 3px;
 }
 
 ::-webkit-scrollbar-thumb:hover {
