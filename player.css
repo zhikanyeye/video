@@ -40,15 +40,22 @@
     height: 100%;
     display: flex;
     flex-direction: column;
-    transition: transform 0.3s ease;
+    transition: all 0.3s ease;
     position: fixed;
     left: 0;
     top: 0;
     z-index: 1000;
+    overflow-y: auto;
+    -webkit-overflow-scrolling: touch; /* 增加iOS滚动支持 */
 }
 
 .sidebar.collapsed {
     transform: translateX(calc(-1 * var(--sidebar-width)));
+}
+
+.sidebar.show {
+    transform: translateX(0);
+    box-shadow: 2px 0 8px rgba(0, 0, 0, 0.3);
 }
 
 .sidebar-header {
@@ -59,6 +66,9 @@
     justify-content: space-between;
     background: rgba(255, 255, 255, 0.05);
     border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+    position: sticky;
+    top: 0;
+    z-index: 1;
 }
 
 .sidebar-header h2 {
@@ -92,6 +102,7 @@
     flex: 1;
     overflow-y: auto;
     padding: 10px;
+    -webkit-overflow-scrolling: touch; /* 增加iOS滚动支持 */
 }
 
 .playlist-header {
@@ -101,6 +112,10 @@
     padding: 0 10px;
     margin-bottom: 10px;
     color: rgba(255, 255, 255, 0.7);
+    position: sticky;
+    top: 0;
+    z-index: 1;
+    background: var(--sidebar-background);
 }
 
 .playlist-items {
@@ -131,6 +146,9 @@
     align-items: center;
     gap: 8px;
     flex: 1;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
 }
 
 /* 主内容区域样式 */
@@ -181,133 +199,95 @@
     border-top: 1px solid rgba(255, 255, 255, 0.1);
 }
 
-.video-info h1 {
-    margin: 0;
-    font-size: 1.2rem;
-    color: var(--text-color);
+/* 响应式设计优化 */
+@media (max-width: 768px) {
+    :root {
+        --sidebar-width: 100%;
+        --video-info-height: auto;
+    }
+
+    .sidebar {
+        transform: translateX(-100%);
+        width: 100%;
+        height: 100%;
+    }
+
+    .sidebar.show {
+        transform: translateX(0);
+    }
+
+    .main-content {
+        margin-left: 0;
+    }
+
+    .video-info {
+        flex-direction: column;
+        padding: 12px;
+        gap: 12px;
+    }
+
+    .video-info h1 {
+        font-size: 1rem;
+        text-align: center;
+    }
+
+    .video-controls {
+        justify-content: center;
+        width: 100%;
+    }
+
+    .show-sidebar-button {
+        display: flex;
+        position: fixed;
+        left: 10px;
+        top: 10px;
+        z-index: 1001;
+        background: rgba(0, 0, 0, 0.7);
+        padding: 12px;
+    }
+    
+    /* 增加触摸支持 */
+    .playlist-item {
+        padding: 15px 12px;
+    }
+    
+    .control-button {
+        padding: 12px;
+    }
+    
+    /* 防止iOS橡皮筋效果 */
+    .sidebar {
+        overscroll-behavior: contain;
+    }
 }
 
-.video-controls {
-    display: flex;
-    gap: 8px;
+/* 暗色主题优化 */
+@media (prefers-color-scheme: dark) {
+    .video-js .vjs-control-bar {
+        background-color: rgba(0, 0, 0, 0.8);
+    }
+
+    .video-js .vjs-big-play-button {
+        background-color: rgba(33, 150, 243, 0.8);
+    }
 }
 
-.control-button {
-    background: none;
-    border: none;
-    color: var(--text-color);
-    padding: 8px;
-    border-radius: 50%;
-    cursor: pointer;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    transition: background-color 0.3s;
+/* 自定义滚动条 */
+::-webkit-scrollbar {
+    width: 8px;
 }
 
-.control-button:hover {
+::-webkit-scrollbar-track {
     background: rgba(255, 255, 255, 0.1);
 }
 
-.control-button:disabled {
-    opacity: 0.5;
-    cursor: not-allowed;
-}
-
-/* 显示侧边栏按钮样式 */
-.show-sidebar-button {
-    position: fixed;
-    left: 20px;
-    top: 20px;
-    z-index: 100;
-    background: rgba(0, 0, 0, 0.5);
-    color: white;
-    border: none;
-    border-radius: 50%;
-    width: 40px;
-    height: 40px;
-    cursor: pointer;
-    display: none;
-    align-items: center;
-    justify-content: center;
-    transition: background-color 0.3s;
-}
-
-.show-sidebar-button:hover {
-    background: rgba(0, 0, 0, 0.7);
-}
-
-.sidebar.collapsed + .main-content .show-sidebar-button {
-    display: flex;
-}
-
-/* 清空列表按钮样式 */
-.clear-playlist {
-    background: none;
-    border: none;
-    color: var(--danger-color);
-    cursor: pointer;
-    padding: 4px;
+::-webkit-scrollbar-thumb {
+    background: rgba(255, 255, 255, 0.2);
     border-radius: 4px;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    transition: background-color 0.3s;
 }
 
-.clear-playlist:hover {
-    background: rgba(220, 53, 69, 0.1);
-}
-
-/* 视频检测提示样式 */
-.sniffer-alert {
-    position: fixed;
-    bottom: 20px;
-    right: 20px;
-    background: rgba(40, 167, 69, 0.9);
-    color: white;
-    padding: 12px 20px;
-    border-radius: 4px;
-    display: flex;
-    align-items: center;
-    gap: 8px;
-    transform: translateY(100px);
-    transition: transform 0.3s ease;
-    z-index: 1000;
-}
-
-.sniffer-alert.show {
-    transform: translateY(0);
-}
-
-/* 加载状态指示器样式 */
-.loading-indicator {
-    position: fixed;
-    top: 0;
-    left: 0;
-    right: 0;
-    bottom: 0;
-    background: rgba(0, 0, 0, 0.8);
-    display: flex;
-    flex-direction: column;
-    align-items: center;
-    justify-content: center;
-    z-index: 9999;
-}
-
-.spinner {
-    width: 40px;
-    height: 40px;
-    border: 4px solid #f3f3f3;
-    border-top: 4px solid var(--primary-color);
-    border-radius: 50%;
-    animation: spin 1s linear infinite;
-    margin-bottom: 20px;
-}
-
-@keyframes spin {
-    0% { transform: rotate(0deg); }
-    100% { transform: rotate(360deg); }
+::-webkit-scrollbar-thumb:hover {
+    background: rgba(255, 255, 255, 0.3);
 }
 
 /* 错误提示容器样式 */
@@ -333,179 +313,36 @@
     max-width: 400px;
 }
 
-.error-message i {
-    font-size: 48px;
-    color: var(--danger-color);
-    margin-bottom: 16px;
-}
-
-.retry-button {
-    background: var(--primary-color);
+/* 视频检测提示样式 */
+.sniffer-alert {
+    position: fixed;
+    bottom: 20px;
+    right: 20px;
+    background: rgba(40, 167, 69, 0.9);
     color: white;
-    border: none;
-    padding: 8px 16px;
+    padding: 12px 20px;
     border-radius: 4px;
-    cursor: pointer;
     display: flex;
     align-items: center;
     gap: 8px;
-    margin: 16px auto 0;
+    transform: translateY(100px);
+    transition: transform 0.3s ease;
+    z-index: 1000;
 }
 
-.retry-button:hover {
-    background: #1976D2;
+.sniffer-alert.show {
+    transform: translateY(0);
 }
 
-/* Video.js 自定义主题 */
-.video-js {
-    font-size: 16px;
-}
-
-.video-js .vjs-control-bar {
-    background-color: rgba(0, 0, 0, 0.7);
-}
-
-.video-js .vjs-big-play-button {
-    background-color: rgba(0, 0, 0, 0.6);
-    border-color: white;
-}
-
-.video-js .vjs-play-progress,
-.video-js .vjs-volume-level {
-    background-color: var(--primary-color);
-}
-
-/* 自定义滚动条 */
-::-webkit-scrollbar {
-    width: 8px;
-}
-
-::-webkit-scrollbar-track {
-    background: rgba(255, 255, 255, 0.1);
-}
-
-::-webkit-scrollbar-thumb {
-    background: rgba(255, 255, 255, 0.2);
-    border-radius: 4px;
-}
-
-::-webkit-scrollbar-thumb:hover {
-    background: rgba(255, 255, 255, 0.3);
-}
-
-/* 响应式设计 */
-@media (max-width: 768px) {
-    :root {
-        --sidebar-width: 100%;
+/* 触摸设备优化 */
+@media (hover: none) {
+    .control-button:active,
+    .playlist-item:active,
+    .toggle-sidebar:active {
+        background: rgba(255, 255, 255, 0.2);
     }
 
     .sidebar {
-        transform: translateX(-100%);
+        touch-action: pan-y pinch-zoom;
     }
-
-    .sidebar.show {
-        transform: translateX(0);
-    }
-
-    .main-content {
-        margin-left: 0;
-    }
-
-    .video-info {
-        flex-direction: column;
-        height: auto;
-        gap: 16px;
-        padding: 12px;
-    }
-
-    .video-info h1 {
-        font-size: 1rem;
-        text-align: center;
-    }
-
-    .video-controls {
-        justify-content: center;
-    }
-
-    .show-sidebar-button {
-        display: flex;
-    }
-
-    .playlist-item {
-        padding: 8px;
-    }
-
-    .playlist-item-content {
-        font-size: 0.9rem;
-    }
-}
-
-/* 暗色主题优化 */
-@media (prefers-color-scheme: dark) {
-    .video-js .vjs-control-bar {
-        background-color: rgba(0, 0, 0, 0.8);
-    }
-
-    .video-js .vjs-big-play-button {
-        background-color: rgba(33, 150, 243, 0.8);
-    }
-}
-
-/* 工具提示 */
-[data-tooltip] {
-    position: relative;
-}
-
-[data-tooltip]:before {
-    content: attr(data-tooltip);
-    position: absolute;
-    bottom: 100%;
-    left: 50%;
-    transform: translateX(-50%);
-    padding: 4px 8px;
-    background: rgba(0, 0, 0, 0.8);
-    color: white;
-    font-size: 12px;
-    white-space: nowrap;
-    border-radius: 4px;
-    opacity: 0;
-    visibility: hidden;
-    transition: opacity 0.3s, visibility 0.3s;
-}
-
-[data-tooltip]:hover:before {
-    opacity: 1;
-    visibility: visible;
-}
-
-/* 触摸屏设备优化 */
-@media (hover: none) {
-    .control-button:hover,
-    .playlist-item:hover,
-    .toggle-sidebar:hover {
-        background: none;
-    }
-
-    [data-tooltip]:hover:before {
-        display: none;
-    }
-}
-
-/* 动画效果 */
-@keyframes fadeIn {
-    from { opacity: 0; }
-    to { opacity: 1; }
-}
-
-@keyframes slideIn {
-    from { transform: translateY(20px); opacity: 0; }
-    to { transform: translateY(0); opacity: 1; }
-}
-
-.playlist-item {
-    animation: fadeIn 0.3s ease;
-}
-
-.error-message {
-    animation: slideIn 0.3s ease;
 }
