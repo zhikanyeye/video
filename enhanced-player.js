@@ -106,7 +106,7 @@ class EnhancedVideoPlayer {
 
             // 检测视频URL
             function detectVideoUrl(url) {
-                return url.match(/\\.(mp4|m3u8|flv)($|\\?)/i) ||
+                return url.match(/\\.(mp4|m3u8|flv|ts)($|\\?)/i) ||
                        url.includes('/video/') ||
                        url.includes('stream');
             }
@@ -157,6 +157,8 @@ class EnhancedVideoPlayer {
             this.playHLSVideo(url);
         } else if (url.endsWith('.flv')) {
             this.playFLVVideo(url);
+        } else if (url.endsWith('.ts')) {
+            this.playTSVideo(url);
         } else {
             this.player.src({ type: 'video/mp4', src: url });
             this.player.play().catch(error => {
@@ -214,6 +216,14 @@ class EnhancedVideoPlayer {
         } else {
             this.showError('当前浏览器不支持FLV视频播放');
         }
+    }
+
+    playTSVideo(url) {
+        this.player.src({ type: 'video/mp2t', src: url });
+        this.player.play().catch(error => {
+            console.error('TS playback failed:', error);
+            this.showError('TS视频播放失败，请检查视频链接是否有效');
+        });
     }
 
     playExternalVideo(video) {
@@ -315,6 +325,17 @@ class EnhancedVideoPlayer {
                     }
                     break;
             }
+        });
+
+        // 响应式侧边栏显示和隐藏
+        document.getElementById('showSidebar').addEventListener('click', () => {
+            const sidebar = document.querySelector('.sidebar');
+            sidebar.classList.add('show');
+        });
+
+        document.querySelector('.sidebar').addEventListener('click', () => {
+            const sidebar = document.querySelector('.sidebar');
+            sidebar.classList.remove('show');
         });
     }
 
