@@ -11,8 +11,6 @@
     <!-- DPlayer 依赖 -->
     <script src="https://cdn.jsdelivr.net/npm/dplayer@1.27.1/dist/DPlayer.min.js"></script>
     <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/dplayer@1.27.1/dist/DPlayer.min.css">
-    
-    <!-- 其他依赖 -->
     <script src="https://cdn.jsdelivr.net/npm/hls.js@1.4.12"></script>
     <script src="https://cdn.jsdelivr.net/npm/flv.js@1.6.2"></script>
 </head>
@@ -92,25 +90,7 @@
         </div>
     </div>
 
-    <script src="enhanced-player.js"></script>
     <script>
-        // 初始化播放器
-        document.addEventListener('DOMContentLoaded', () => {
-            const loadingIndicator = document.getElementById('loadingIndicator');
-            const errorContainer = document.getElementById('errorContainer');
-            const errorText = document.getElementById('errorText');
-            
-            try {
-                window.videoPlayer = new EnhancedVideoPlayer();
-                loadingIndicator.style.display = 'none';
-            } catch (error) {
-                console.error('播放器初始化失败:', error);
-                loadingIndicator.style.display = 'none';
-                errorText.textContent = error.message || '播放器加载失败，请检查网络连接并刷新页面';
-                errorContainer.style.display = 'flex';
-            }
-        });
-
         // 处理移动端手势
         let touchStartX = 0;
         let touchEndX = 0;
@@ -137,6 +117,29 @@
                 }
             }
         }
+    </script>
+    <script src="enhanced-player.js"></script>
+    <script>
+        // 初始化播放器
+        document.addEventListener('DOMContentLoaded', () => {
+            const loadingIndicator = document.getElementById('loadingIndicator');
+            const errorContainer = document.getElementById('errorContainer');
+            const errorText = document.getElementById('errorText');
+            
+            try {
+                window.videoPlayer = new EnhancedVideoPlayer();
+                loadingIndicator.style.display = 'none';
+                
+                // 测试视频
+                videoPlayer.addVideo('测试视频', 'https://cloud.06dn.com/s/Q7LKiJ/video?name=0101.mp4');
+                
+            } catch (error) {
+                console.error('播放器初始化失败:', error);
+                loadingIndicator.style.display = 'none';
+                errorText.textContent = error.message || '播放器加载失败，请检查网络连接并刷新页面';
+                errorContainer.style.display = 'flex';
+            }
+        });
     </script>
 </body>
 </html>
