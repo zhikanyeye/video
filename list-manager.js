@@ -3,12 +3,12 @@ class PlaylistManager {
         this.playlist = [];
         this.gistId = null;
         this.checkGitHubToken();
+        this.loadPlaylist();
     }
 
     checkGitHubToken() {
         const token = localStorage.getItem('githubToken');
         if (token) {
-            // Token 存在，更新 UI 状态
             document.querySelector('.github-section').classList.add('token-set');
             document.getElementById('githubToken').value = '';
             document.querySelector('.token-hint').innerHTML = '✅ GitHub Token 已设置';
@@ -22,9 +22,15 @@ class PlaylistManager {
             return;
         }
 
-        // 验证 token 格式
-        if (!/^ghp_[a-zA-Z0-9]{36}$/.test(token)) {
-            alert('请输入正确格式的 GitHub Token！');
+        // 验证 token 前缀
+        if (!token.startsWith('ghp_') && !token.startsWith('github_pat_')) {
+            alert('请输入正确格式的 GitHub Token！\n应以 ghp_ 或 github_pat_ 开头');
+            return;
+        }
+
+        // 验证 token 长度
+        if (token.length < 30) {
+            alert('Token 长度不正确，请检查！');
             return;
         }
 
@@ -33,6 +39,30 @@ class PlaylistManager {
         document.querySelector('.github-section').classList.add('token-set');
         document.querySelector('.token-hint').innerHTML = '✅ GitHub Token 已设置';
         alert('GitHub Token 已保存！');
+    }
+
+    loadPlaylist() {
+        const savedPlaylist = localStorage.getItem('currentPlaylist');
+        if (savedPlaylist) {
+            try {
+                this.playlist = JSON.parse(savedPlaylist);
+                this.renderPlaylist();
+                if (this.playlist.length > 0) {
+                    document.getElementById('clearPlaylistBtn').style.display = 'flex';
+                }
+            } catch (e) {
+                console.error('Failed to load playlist:', e);
+                localStorage.removeItem('currentPlaylist');
+            }
+        }
+
+        // 尝试从 URL 加载 gistId
+        const urlParams = new URLSearchParams(window.location.search);
+        this.gistId = urlParams.get('gist');
+    }
+
+    savePlaylist() {
+        localStorage.setItem('currentPlaylist', JSON.stringify(this.playlist));
     }
 
     async addVideo() {
@@ -58,8 +88,8 @@ class PlaylistManager {
         titleInput.value = '';
         urlInput.value = '';
         this.renderPlaylist();
+        this.savePlaylist();
 
-        // 显示清空按钮
         document.getElementById('clearPlaylistBtn').style.display = 'flex';
     }
 
@@ -77,18 +107,25 @@ class PlaylistManager {
         }
 
         const lines = batchInput.value.split('\n');
+        let addedCount = 0;
+
         for (const line of lines) {
             const [title, url] = line.split(',').map(item => item.trim());
             if (title && url) {
                 this.playlist.push({ title, url });
+                addedCount++;
             }
         }
 
-        batchInput.value = '';
-        this.renderPlaylist();
-
-        // 显示清空按钮
-        document.getElementById('clearPlaylistBtn').style.display = 'flex';
+        if (addedCount > 0) {
+            batchInput.value = '';
+            this.renderPlaylist();
+            this.savePlaylist();
+            document.getElementById('clearPlaylistBtn').style.display = 'flex';
+            alert(`成功添加 ${addedCount} 个视频！`);
+        } else {
+            alert('没有找到有效的视频数据，请检查格式！');
+        }
     }
 
     async generatePlayerPage() {
@@ -118,24 +155,30 @@ class PlaylistManager {
             const response = await fetch('https://api.github.com/gists', {
                 method: 'POST',
                 headers: {
-                    'Authorization': `token ${token}`,
+                    'Authorization': `Bearer ${token}`,
                     'Content-Type': 'application/json',
+                    'Accept': 'application/vnd.github.v3+json'
                 },
                 body: JSON.stringify(gistData)
             });
 
             if (!response.ok) {
-                throw new Error('Failed to create Gist');
+                const errorData = await response.json();
+                throw new Error(`创建 Gist 失败: ${errorData.message}`);
             }
 
             const data = await response.json();
             this.gistId = data.id;
 
+            // 成功创建后清空本地播放列表
+            this.playlist = [];
+            this.savePlaylist();
+            
             // 转到播放器页面
             window.location.href = `player.html?gist=${this.gistId}`;
         } catch (error) {
             console.error('Failed to create Gist:', error);
-            alert('创建播放列表失败，请检查 GitHub Token 是否正确！');
+            alert(error.message || '创建播放列表失败，请检查 GitHub Token 是否正确！');
         }
     }
 
@@ -162,8 +205,8 @@ class PlaylistManager {
     removeVideo(index) {
         this.playlist.splice(index, 1);
         this.renderPlaylist();
+        this.savePlaylist();
         
-        // 如果列表为空，隐藏清空按钮
         if (this.playlist.length === 0) {
             document.getElementById('clearPlaylistBtn').style.display = 'none';
         }
@@ -173,6 +216,7 @@ class PlaylistManager {
         if (confirm('确定要清空整个播放列表吗？此操作无法撤销。')) {
             this.playlist = [];
             this.renderPlaylist();
+            this.savePlaylist();
             document.getElementById('clearPlaylistBtn').style.display = 'none';
         }
     }
@@ -180,3 +224,17 @@ class PlaylistManager {
 
 // 初始化播放列表管理器
 const playlistManager = new PlaylistManager();
+
+// 添加键盘快捷键支持
+document.addEventListener('keydown', (e) => {
+    // 如果焦点在输入框中，不处理快捷键
+    if (e.target.tagName === 'INPUT' || e.target.tagName === 'TEXTAREA') {
+        return;
+    }
+
+    // Ctrl/Cmd + S: 保存播放列表
+    if ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === 's') {
+        e.preventDefault();
+        playlistManager.generatePlayerPage();
+    }
+});
