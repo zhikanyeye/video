@@ -7,8 +7,6 @@
     --text-color: #ffffff;
     --sidebar-background: #242424;
     --item-hover-color: #2c2c2c;
-    --danger-color: #dc3545;
-    --success-color: #28a745;
 }
 
 /* 基础样式 */
@@ -45,17 +43,10 @@
     left: 0;
     top: 0;
     z-index: 1000;
-    overflow-y: auto;
-    -webkit-overflow-scrolling: touch;
 }
 
 .sidebar.collapsed {
     transform: translateX(calc(-1 * var(--sidebar-width)));
-}
-
-.sidebar.show {
-    transform: translateX(0);
-    box-shadow: 2px 0 8px rgba(0, 0, 0, 0.3);
 }
 
 .sidebar-header {
@@ -66,16 +57,12 @@
     justify-content: space-between;
     background: rgba(255, 255, 255, 0.05);
     border-bottom: 1px solid rgba(255, 255, 255, 0.1);
-    position: sticky;
-    top: 0;
-    z-index: 1;
 }
 
 .playlist-container {
     flex: 1;
     overflow-y: auto;
     padding: 10px;
-    -webkit-overflow-scrolling: touch;
 }
 
 .playlist-header {
@@ -101,7 +88,6 @@
     align-items: center;
     transition: background-color 0.3s;
 }
-
 .playlist-item:hover {
     background: var(--item-hover-color);
 }
@@ -167,6 +153,16 @@
     border-top: 1px solid rgba(255, 255, 255, 0.1);
 }
 
+.video-info h1 {
+    margin: 0;
+    font-size: 1.2rem;
+    color: var(--text-color);
+    flex: 1;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
 /* 控制按钮样式 */
 .video-controls {
     display: flex;
@@ -195,30 +191,53 @@
     cursor: not-allowed;
 }
 
-/* 提示框样式 */
-.sniffer-alert {
+/* 显示侧边栏按钮样式 */
+.show-sidebar-button {
     position: fixed;
-    bottom: 20px;
-    right: 20px;
-    background: rgba(40, 167, 69, 0.9);
+    left: 20px;
+    top: 20px;
+    z-index: 100;
+    background: rgba(0, 0, 0, 0.5);
     color: white;
-    padding: 12px 20px;
+    border: none;
+    border-radius: 50%;
+    width: 40px;
+    height: 40px;
+    cursor: pointer;
+    display: none;
+    align-items: center;
+    justify-content: center;
+    transition: background-color 0.3s;
+}
+
+.show-sidebar-button:hover {
+    background: rgba(0, 0, 0, 0.7);
+}
+
+.sidebar.collapsed + .main-content .show-sidebar-button {
+    display: flex;
+}
+
+/* 清空列表按钮样式 */
+.clear-playlist {
+    background: none;
+    border: none;
+    color: #dc3545;
+    cursor: pointer;
+    padding: 4px;
     border-radius: 4px;
     display: flex;
     align-items: center;
-    gap: 8px;
-    transform: translateY(100px);
-    transition: transform 0.3s ease;
-    z-index: 1000;
+    justify-content: center;
+    transition: background-color 0.3s;
 }
 
-.sniffer-alert.show {
-    transform: translateY(0);
+.clear-playlist:hover {
+    background: rgba(220, 53, 69, 0.1);
 }
 
-/* 加载和错误提示样式 */
-.loading-indicator,
-.error-container {
+/* 加载状态指示器样式 */
+.loading-indicator {
     position: fixed;
     top: 0;
     left: 0;
@@ -226,6 +245,36 @@
     bottom: 0;
     background: rgba(0, 0, 0, 0.8);
     display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    z-index: 9999;
+}
+
+.spinner {
+    width: 40px;
+    height: 40px;
+    border: 4px solid #f3f3f3;
+    border-top: 4px solid var(--primary-color);
+    border-radius: 50%;
+    animation: spin 1s linear infinite;
+    margin-bottom: 20px;
+}
+
+@keyframes spin {
+    0% { transform: rotate(0deg); }
+    100% { transform: rotate(360deg); }
+}
+
+/* 错误提示容器样式 */
+.error-container {
+    position: fixed;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    background: rgba(0, 0, 0, 0.8);
+    display: none;
     align-items: center;
     justify-content: center;
     z-index: 9999;
@@ -240,15 +289,41 @@
     max-width: 400px;
 }
 
+.error-message i {
+    font-size: 48px;
+    color: #dc3545;
+    margin-bottom: 16px;
+}
+
+.retry-button {
+    background: var(--primary-color);
+    color: white;
+    border: none;
+    padding: 8px 16px;
+    border-radius: 4px;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    margin: 16px auto 0;
+}
+
+.retry-button:hover {
+    background: #1976D2;
+}
+
 /* 响应式设计 */
 @media (max-width: 768px) {
     :root {
         --sidebar-width: 100%;
-        --video-info-height: auto;
     }
 
     .sidebar {
         transform: translateX(-100%);
+    }
+
+    .sidebar.show {
+        transform: translateX(0);
     }
 
     .main-content {
@@ -257,8 +332,9 @@
 
     .video-info {
         flex-direction: column;
+        height: auto;
+        gap: 16px;
         padding: 12px;
-        gap: 12px;
     }
 
     .video-info h1 {
@@ -272,25 +348,6 @@
 
     .show-sidebar-button {
         display: flex;
-        position: fixed;
-        left: 10px;
-        top: 10px;
-        z-index: 1001;
-        background: rgba(0, 0, 0, 0.7);
-        padding: 12px;
-    }
-
-    .playlist-item {
-        padding: 15px 12px;
-    }
-
-    /* DPlayer 移动端优化 */
-    .dplayer-mobile .dplayer-controller {
-        opacity: 1;
-    }
-
-    .dplayer-mobile .dplayer-controller-mask {
-        opacity: 0.5;
     }
 }
 
