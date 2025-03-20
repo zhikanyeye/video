@@ -6,13 +6,12 @@
     <meta name="apple-mobile-web-app-capable" content="yes">
     <title>视频播放器</title>
     <link href="https://fonts.googleapis.com/icon?family=Material+Icons" rel="stylesheet">
-    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/dplayer@1.27.1/dist/DPlayer.min.css">
     <link rel="stylesheet" href="player.css">
     
-    <!-- 依赖 -->
-    <script src="https://cdn.jsdelivr.net/npm/dplayer@1.27.1/dist/DPlayer.min.js"></script>
-    <script src="https://cdn.jsdelivr.net/npm/hls.js@1.4.12"></script>
-    <script src="https://cdn.jsdelivr.net/npm/flv.js@1.6.2"></script>
+    <!-- ArtPlayer 依赖 -->
+    <script src="https://cdn.jsdelivr.net/npm/artplayer@5.0.9/dist/artplayer.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/artplayer-plugin-hls@2.0.0/dist/artplayer-plugin-hls.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/hls.js@1.4.12/dist/hls.min.js"></script>
 </head>
 <body class="player-page">
     <div class="player-layout">
@@ -67,12 +66,6 @@
         </main>
     </div>
 
-    <!-- 视频资源检测提示 -->
-    <div id="snifferAlert" class="sniffer-alert">
-        <i class="material-icons">notifications</i>
-        <span id="snifferMessage"></span>
-    </div>
-
     <!-- 加载状态指示器 -->
     <div id="loadingIndicator" class="loading-indicator">
         <div class="spinner"></div>
@@ -102,7 +95,7 @@
                 window.videoPlayer = new EnhancedVideoPlayer();
                 loadingIndicator.style.display = 'none';
                 
-                // 测试播放
+                // 测试视频
                 videoPlayer.addVideo('测试视频', 'https://cloud.06dn.com/s/Q7LKiJ/video?name=0101.mp4');
                 
             } catch (error) {
