@@ -46,6 +46,21 @@ class EnhancedVideoPlayer {
 
     setupVideoPlayer() {
         if (this.playlist.length === 0) return;
+        
+        // 检测视频URL格式
+        const detectVideoType = (url) => {
+            if (!url) return '';
+            const extension = url.split('?')[0].split('#')[0].split('.').pop().toLowerCase();
+            if (['m3u8'].includes(extension)) return 'm3u8';
+            if (['mp4'].includes(extension)) return 'mp4';
+            if (['webm'].includes(extension)) return 'webm';
+            if (['flv'].includes(extension)) return 'flv';
+            return '';
+        };
+        
+        const firstVideoUrl = this.playlist[0].url;
+        const videoType = detectVideoType(firstVideoUrl);
+        console.log('检测到视频格式:', videoType || '未知格式');
 
         // 初始化 ArtPlayer
         this.player = new Artplayer({
@@ -104,6 +119,24 @@ class EnhancedVideoPlayer {
                     } else if (video.canPlayType('application/vnd.apple.mpegurl')) {
                         // 原生支持 HLS 的浏览器（如 Safari）
                         video.src = url;
+                    }
+                },
+                mp4: function (video, url) {
+                    video.src = url;
+                },
+                webm: function (video, url) {
+                    video.src = url;
+                },
+                flv: function (video, url) {
+                    if (typeof flvjs !== 'undefined' && flvjs.isSupported()) {
+                        const flvPlayer = flvjs.createPlayer({
+                            type: 'flv',
+                            url: url
+                        });
+                        flvPlayer.attachMediaElement(video);
+                        flvPlayer.load();
+                    } else {
+                        console.error('当前浏览器不支持FLV格式');
                     }
                 }
             }
@@ -186,10 +219,27 @@ class EnhancedVideoPlayer {
         if (index >= 0 && index < this.playlist.length && this.player) {
             this.currentIndex = index;
             const video = this.playlist[index];
-            this.player.switchUrl(video.url);
-            this.updateVideoTitle(video.title);
-            this.updateNavigationButtons();
-            this.renderPlaylist();
+            
+            // 添加错误处理和调试信息
+            console.log('尝试播放视频:', video.title, video.url);
+            
+            try {
+                this.player.switchUrl(video.url);
+                this.updateVideoTitle(video.title);
+                this.updateNavigationButtons();
+                this.renderPlaylist();
+                
+                // 尝试自动播放
+                setTimeout(() => {
+                    this.player.play().catch(error => {
+                        console.error('自动播放失败:', error);
+                        alert('自动播放失败，请手动点击播放按钮。可能是浏览器阻止了自动播放。');
+                    });
+                }, 1000);
+            } catch (error) {
+                console.error('切换视频URL失败:', error);
+                alert('播放视频失败，请检查视频链接是否有效。');
+            }
         }
     }
 
