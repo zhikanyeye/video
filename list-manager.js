@@ -51,7 +51,7 @@ class PlaylistManager {
                     document.getElementById('clearPlaylistBtn').style.display = 'flex';
                 }
             } catch (e) {
-                console.error('Failed to load playlist:', e);
+                console.error('加载播放列表失败:', e);
                 localStorage.removeItem('currentPlaylist');
             }
         }
@@ -65,7 +65,7 @@ class PlaylistManager {
         localStorage.setItem('currentPlaylist', JSON.stringify(this.playlist));
     }
 
-    async addVideo() {
+    addVideo() {
         const token = localStorage.getItem('githubToken');
         if (!token) {
             alert('请先设置 GitHub Token！');
@@ -93,7 +93,7 @@ class PlaylistManager {
         document.getElementById('clearPlaylistBtn').style.display = 'flex';
     }
 
-    async addBatchVideos() {
+    addBatchVideos() {
         const token = localStorage.getItem('githubToken');
         if (!token) {
             alert('请先设置 GitHub Token！');
@@ -170,21 +170,41 @@ class PlaylistManager {
             const data = await response.json();
             this.gistId = data.id;
 
-            // 成功创建后清空本地播放列表
-            this.playlist = [];
-            this.savePlaylist();
-            
             // 转到播放器页面
             window.location.href = `player.html?gist=${this.gistId}`;
         } catch (error) {
-            console.error('Failed to create Gist:', error);
+            console.error('创建 Gist 失败:', error);
             alert(error.message || '创建播放列表失败，请检查 GitHub Token 是否正确！');
+        }
+    }
+
+    clearPlaylist() {
+        if (confirm('确定要清空当前播放列表吗？')) {
+            this.playlist = [];
+            this.savePlaylist();
+            this.renderPlaylist();
+            document.getElementById('clearPlaylistBtn').style.display = 'none';
+        }
+    }
+
+    removeVideo(index) {
+        this.playlist.splice(index, 1);
+        this.savePlaylist();
+        this.renderPlaylist();
+        
+        if (this.playlist.length === 0) {
+            document.getElementById('clearPlaylistBtn').style.display = 'none';
         }
     }
 
     renderPlaylist() {
         const playlistElement = document.getElementById('playlist');
         playlistElement.innerHTML = '';
+        
+        if (this.playlist.length === 0) {
+            playlistElement.innerHTML = '<div class="empty-playlist">播放列表为空，请添加视频</div>';
+            return;
+        }
         
         this.playlist.forEach((video, index) => {
             const item = document.createElement('div');
@@ -201,40 +221,7 @@ class PlaylistManager {
             playlistElement.appendChild(item);
         });
     }
-
-    removeVideo(index) {
-        this.playlist.splice(index, 1);
-        this.renderPlaylist();
-        this.savePlaylist();
-        
-        if (this.playlist.length === 0) {
-            document.getElementById('clearPlaylistBtn').style.display = 'none';
-        }
-    }
-
-    clearPlaylist() {
-        if (confirm('确定要清空整个播放列表吗？此操作无法撤销。')) {
-            this.playlist = [];
-            this.renderPlaylist();
-            this.savePlaylist();
-            document.getElementById('clearPlaylistBtn').style.display = 'none';
-        }
-    }
 }
 
 // 初始化播放列表管理器
 const playlistManager = new PlaylistManager();
-
-// 添加键盘快捷键支持
-document.addEventListener('keydown', (e) => {
-    // 如果焦点在输入框中，不处理快捷键
-    if (e.target.tagName === 'INPUT' || e.target.tagName === 'TEXTAREA') {
-        return;
-    }
-
-    // Ctrl/Cmd + S: 保存播放列表
-    if ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === 's') {
-        e.preventDefault();
-        playlistManager.generatePlayerPage();
-    }
-});
