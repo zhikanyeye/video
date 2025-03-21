@@ -1,5 +1,5 @@
 :root {
-    --primary-color: #2196F3;
+    --primary-color: #23ade5;
     --background-color: #1a1a1a;
     --panel-background: #242424;
     --text-color: #ffffff;
@@ -33,6 +33,7 @@ body {
     background: var(--panel-background);
     border-radius: 8px;
     padding: 20px;
+    box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
 }
 
 h2 {
@@ -60,21 +61,35 @@ h2 {
     resize: vertical;
 }
 
+.single-input {
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+    margin-bottom: 20px;
+}
+
 button {
     display: flex;
     align-items: center;
+    justify-content: center;
     gap: 8px;
-    padding: 8px 16px;
+    padding: 10px 16px;
     border: none;
     border-radius: 4px;
     background: var(--primary-color);
     color: white;
     cursor: pointer;
-    transition: background-color 0.3s;
+    transition: background-color 0.3s, transform 0.2s;
+    font-weight: 500;
 }
 
 button:hover {
-    background: #1976D2;
+    background: #1e9cd7;
+    transform: translateY(-2px);
+}
+
+button:active {
+    transform: translateY(0);
 }
 
 .danger-button {
@@ -92,24 +107,20 @@ button:hover {
     margin-bottom: 20px;
 }
 
-.playlist-items {
-    display: flex;
-    flex-direction: column;
-    gap: 8px;
-}
-
 .playlist-item {
     display: flex;
     align-items: center;
     justify-content: space-between;
-    padding: 10px;
+    padding: 12px;
     background: rgba(255, 255, 255, 0.05);
     border-radius: 4px;
-    transition: background-color 0.3s;
+    margin-bottom: 8px;
+    transition: background-color 0.3s, transform 0.2s;
 }
 
 .playlist-item:hover {
     background: rgba(255, 255, 255, 0.1);
+    transform: translateX(2px);
 }
 
 .playlist-item-content {
@@ -117,6 +128,13 @@ button:hover {
     align-items: center;
     gap: 8px;
     flex: 1;
+    overflow: hidden;
+}
+
+.playlist-item-content span {
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
 }
 
 .delete-button {
@@ -127,6 +145,7 @@ button:hover {
 
 .delete-button:hover {
     background: rgba(220, 53, 69, 0.1);
+    transform: none;
 }
 
 .playlist-actions {
@@ -144,6 +163,7 @@ button:hover {
 .token-hint {
     font-size: 0.9rem;
     color: rgba(255, 255, 255, 0.7);
+    margin-top: 10px;
 }
 
 .token-hint a {
@@ -153,6 +173,17 @@ button:hover {
 
 .token-hint a:hover {
     text-decoration: underline;
+}
+
+.github-section.token-set .token-input {
+    display: none;
+}
+
+.empty-playlist {
+    padding: 20px;
+    text-align: center;
+    color: rgba(255, 255, 255, 0.5);
+    font-style: italic;
 }
 
 @media (max-width: 768px) {
