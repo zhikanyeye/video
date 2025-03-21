@@ -26,6 +26,16 @@
                         <i class="material-icons">playlist_play</i>
                         播放列表
                     </button>
+                    <button id="prevVideo" class="control-button" onclick="videoPlayer.playPrevious()">
+                        <i class="material-icons">skip_previous</i>
+                    </button>
+                    <button id="nextVideo" class="control-button" onclick="videoPlayer.playNext()">
+                        <i class="material-icons">skip_next</i>
+                    </button>
+                    <div class="auto-fullscreen-option">
+                        <input type="checkbox" id="autoFullscreen" />
+                        <label for="autoFullscreen">自动全屏</label>
+                    </div>
                 </div>
                 <h1 id="videoTitle">加载中...</h1>
             </div>
