@@ -1,105 +1,130 @@
 class VideoPlayer {
     constructor() {
-        this.player = document.getElementById('player');
+        this.artInstance = null;
         this.playlist = [];
         this.currentVideoIndex = -1;
-        this.tempIndex = null;
         this.isFullscreen = false;
         this.loadPlaylist();
         this.setupEventListeners();
     }
 
     async loadPlaylist() {
-        // 从 URL 获取 Gist ID
         const urlParams = new URLSearchParams(window.location.search);
         const gistId = urlParams.get('gist');
 
         if (gistId) {
             try {
                 await this.loadFromGist(gistId);
-                // 如果有播放列表，自动播放第一个视频
                 if (this.playlist.length > 0) {
                     this.play(0);
                 }
             } catch (error) {
-                console.error('Failed to load playlist:', error);
-                this.showError('加载播放列表失败，请检查链接是否正确！');
+                this.showError('加载播放列表失败，请检查链接！');
             }
         } else {
-            this.showError('未找到播放列表，请检查链接是否正确！');
+            this.showError('无效的播放列表链接！');
         }
     }
 
     async loadFromGist(gistId) {
         try {
             const response = await fetch(`https://api.github.com/gists/${gistId}`);
-            if (!response.ok) {
-                throw new Error('Failed to fetch Gist');
-            }
             const data = await response.json();
-            const content = data.files['playlist.json'].content;
-            this.playlist = JSON.parse(content);
+            this.playlist = JSON.parse(data.files['playlist.json'].content);
             this.renderPlaylist();
         } catch (error) {
-            console.error('Failed to load from Gist:', error);
-            throw error;
+            throw new Error('Gist加载失败');
         }
     }
 
     setupEventListeners() {
-        // 侧边栏切换按钮
-        document.getElementById('toggleSidebar').addEventListener('click', () => {
-            this.toggleSidebar();
-        });
+        // 侧边栏切换
+        document.getElementById('toggleSidebar').addEventListener('click', () => this.toggleSidebar());
+        document.getElementById('showSidebar').addEventListener('click', () => this.showSidebar());
 
-        // 显示侧边栏按钮
-        document.getElementById('showSidebar').addEventListener('click', () => {
-            this.showSidebar();
-        });
-
-        // 上一个视频
-        document.getElementById('prevVideo').addEventListener('click', () => {
-            if (this.currentVideoIndex > 0) {
-                this.play(this.currentVideoIndex - 1);
-            }
-        });
-
-        // 下一个视频
-        document.getElementById('nextVideo').addEventListener('click', () => {
-            if (this.currentVideoIndex < this.playlist.length - 1) {
-                this.play(this.currentVideoIndex + 1);
-            }
-        });
-
-        // 全屏切换
-        document.getElementById('toggleFullscreen').addEventListener('click', () => {
-            this.toggleFullscreen();
-        });
+        // 视频控制
+        document.getElementById('prevVideo').addEventListener('click', () => this.prev());
+        document.getElementById('nextVideo').addEventListener('click', () => this.next());
+        document.getElementById('toggleFullscreen').addEventListener('click', () => this.toggleFullscreen());
 
         // 键盘控制
         document.addEventListener('keydown', (e) => {
             switch(e.key) {
-                case 'ArrowLeft':
-                    document.getElementById('prevVideo').click();
-                    break;
-                case 'ArrowRight':
-                    document.getElementById('nextVideo').click();
-                    break;
-                case 'f':
-                    this.toggleFullscreen();
-                    break;
-                case 'Escape':
-                    if (this.isFullscreen) {
-                        this.exitFullscreen();
-                    }
-                    break;
+                case 'ArrowLeft': this.seek(-5); break;
+                case 'ArrowRight': this.seek(5); break;
+                case 'f': this.toggleFullscreen(); break;
+                case 'Escape': this.exitFullscreen(); break;
             }
         });
+    }
 
-        // 监听全屏变化
-        document.addEventListener('fullscreenchange', () => {
-            this.isFullscreen = !!document.fullscreenElement;
+    initArtPlayer(url, title) {
+        if (this.artInstance) this.artInstance.destroy();
+        
+        this.artInstance = new Artplayer({
+            container: '#player',
+            url: url,
+            title: title,
+            volume: 0.7,
+            autoplay: true,
+            theme: '#2196F3',
+            pip: true,
+            autoSize: true,
+            setting: true,
+            playbackRate: true,
+            aspectRatio: true,
+            fullscreen: true,
+            mutex: true,
+            plugins: [
+                ArtplayerPluginHls((url) => {
+                    return url.includes('m3u8');
+                })
+            ]
         });
+
+        // 监听播放结束事件
+        this.artInstance.on('video:ended', () => this.next());
+    }
+
+    play(index) {
+        if (index >= 0 && index < this.playlist.length) {
+            this.currentVideoIndex = index;
+            const video = this.playlist[index];
+            this.initArtPlayer(video.url, video.title);
+            this.updateVideoTitle(video.title);
+            this.updateActiveItem();
+            this.updateNavigationButtons();
+        }
+    }
+
+    prev() {
+        if (this.currentVideoIndex > 0) {
+            this.play(this.currentVideoIndex - 1);
+        }
+    }
+
+    next() {
+        if (this.currentVideoIndex < this.playlist.length - 1) {
+            this.play(this.currentVideoIndex + 1);
+        }
+    }
+
+    seek(seconds) {
+        if (this.artInstance) {
+            this.artInstance.seek = this.artInstance.currentTime + seconds;
+        }
+    }
+
+    toggleFullscreen() {
+        if (this.artInstance) {
+            this.artInstance.fullscreen = !this.artInstance.fullscreen;
+        }
+    }
+
+    exitFullscreen() {
+        if (this.artInstance && this.artInstance.fullscreen) {
+            this.artInstance.fullscreen = false;
+        }
     }
 
     toggleSidebar() {
@@ -138,12 +163,8 @@ class VideoPlayer {
         }
     }
 
-    toggleFullscreen() {
-        if (!document.fullscreenElement) {
-            this.enterFullscreen();
-        } else {
-            this.exitFullscreen();
-        }
+    isMobileDevice() {
+        return window.innerWidth <= 768;
     }
 
     enterFullscreen() {
@@ -160,44 +181,6 @@ class VideoPlayer {
         this.isFullscreen = true;
     }
 
-    exitFullscreen() {
-        if (document.exitFullscreen) {
-            document.exitFullscreen();
-        } else if (document.mozCancelFullScreen) {
-            document.mozCancelFullScreen();
-        } else if (document.webkitExitFullscreen) {
-            document.webkitExitFullscreen();
-        } else if (document.msExitFullscreen) {
-            document.msExitFullscreen();
-        }
-        this.isFullscreen = false;
-    }
-
-    isMobileDevice() {
-        return window.innerWidth <= 768;
-    }
-
-    showError(message) {
-        this.player.innerHTML = `
-            <div class="no-video">
-                <i class="material-icons">error_outline</i>
-                <p>${message}</p>
-            </div>
-        `;
-    }
-
-    play(index) {
-        if (index >= 0 && index < this.playlist.length) {
-            const video = this.playlist[index];
-            this.currentVideoIndex = index;
-            let embedCode = this.createEmbedCode(video.url);
-            this.player.innerHTML = embedCode;
-            this.updateActiveItem();
-            this.updateVideoTitle(video.title);
-            this.updateNavigationButtons();
-        }
-    }
-
     updateVideoTitle(title) {
         document.getElementById('currentVideoTitle').textContent = title;
     }
@@ -205,37 +188,6 @@ class VideoPlayer {
     updateNavigationButtons() {
         document.getElementById('prevVideo').disabled = this.currentVideoIndex <= 0;
         document.getElementById('nextVideo').disabled = this.currentVideoIndex >= this.playlist.length - 1;
-    }
-
-    createEmbedCode(url) {
-        if (url.includes('youtube.com') || url.includes('youtu.be')) {
-            let videoId = this.getYouTubeVideoId(url);
-            return `<iframe src="https://www.youtube.com/embed/${videoId}" allowfullscreen></iframe>`;
-        } else if (url.includes('bilibili.com')) {
-            let bvid = this.getBilibiliVideoId(url);
-            return `<iframe src="//player.bilibili.com/player.html?bvid=${bvid}" allowfullscreen></iframe>`;
-        } else {
-            return `<video src="${url}" controls autoplay></video>`;
-        }
-    }
-
-    getYouTubeVideoId(url) {
-        let videoId = '';
-        let match = url.match(/[?&]v=([^&]+)/);
-        if (match) {
-            videoId = match[1];
-        } else {
-            match = url.match(/youtu\.be\/([^?]+)/);
-            if (match) {
-                videoId = match[1];
-            }
-        }
-        return videoId;
-    }
-
-    getBilibiliVideoId(url) {
-        let match = url.match(/BV\w+/);
-        return match ? match[0] : '';
     }
 
     updateActiveItem() {
@@ -268,6 +220,13 @@ class VideoPlayer {
 
         // 更新视频数量显示
         document.querySelector('.video-count').textContent = `${this.playlist.length} 个视频`;
+    }
+
+    showError(message) {
+        document.querySelector('.no-video').innerHTML = `
+            <i class="material-icons">error_outline</i>
+            <p>${message}</p>
+        `;
     }
 }
 
