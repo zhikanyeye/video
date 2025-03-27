@@ -7,7 +7,6 @@
     <link href="https://fonts.googleapis.com/icon?family=Material+Icons" rel="stylesheet">
     <link rel="stylesheet" href="style.css">
     <link rel="stylesheet" href="player.css">
-    <!-- 新增 ArtPlayer 样式 -->
     <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/artplayer@latest/dist/artplayer.css">
 </head>
 <body class="player-page">
@@ -23,9 +22,6 @@
             <div class="playlist-container">
                 <div class="playlist-header">
                     <span class="video-count">0 个视频</span>
-                    <button class="clear-playlist" onclick="videoPlayer.clearPlaylist()">
-                        <i class="material-icons">delete_sweep</i>
-                    </button>
                 </div>
                 <div id="playerPlaylist" class="playlist-items"></div>
             </div>
@@ -51,10 +47,10 @@
             <div class="video-info">
                 <h1 id="currentVideoTitle">加载中...</h1>
                 <div class="video-controls">
-                    <button id="prevVideo" class="control-button">
+                    <button id="prevVideo" class="control-button" disabled>
                         <i class="material-icons">skip_previous</i>
                     </button>
-                    <button id="nextVideo" class="control-button">
+                    <button id="nextVideo" class="control-button" disabled>
                         <i class="material-icons">skip_next</i>
                     </button>
                     <button id="toggleFullscreen" class="control-button">
@@ -65,7 +61,7 @@
         </main>
     </div>
     
-    <!-- 新增 ArtPlayer 依赖 -->
+    <!-- JavaScript依赖 -->
     <script src="https://cdn.jsdelivr.net/npm/artplayer@latest/dist/artplayer.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/artplayer-plugin-hls@latest/dist/artplayer-plugin-hls.js"></script>
     <script src="player.js"></script>
