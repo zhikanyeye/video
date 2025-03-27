@@ -93,38 +93,6 @@ function addBatchVideos() {
     showAlert(`成功添加 ${addedCount} 个视频！`);
 }
 
-// 清空播放列表
-function clearPlaylist() {
-    if (confirm('确定要清空播放列表吗？')) {
-        playlist = [];
-        updatePlaylistDisplay();
-        saveToLocalStorage();
-        showAlert('播放列表已清空！');
-    }
-}
-
-// 生成播放页面
-async function generatePlayerPage() {
-    if (playlist.length === 0) {
-        showAlert('播放列表为空！', 'error');
-        return;
-    }
-
-    if (!githubToken) {
-        showAlert('请先设置 GitHub Token！', 'error');
-        return;
-    }
-
-    try {
-        const gist = await createGist();
-        const playerUrl = `${window.location.origin}/player.html?gist=${gist.id}`;
-        window.open(playerUrl, '_blank');
-    } catch (error) {
-        showAlert('创建播放页面失败！', 'error');
-        console.error(error);
-    }
-}
-
 // 创建 Gist
 async function createGist() {
     const response = await fetch('https://api.github.com/gists', {
@@ -151,6 +119,30 @@ async function createGist() {
     return response.json();
 }
 
+// 生成播放页面
+async function generatePlayerPage() {
+    if (playlist.length === 0) {
+        showAlert('播放列表为空！', 'error');
+        return;
+    }
+
+    if (!githubToken) {
+        showAlert('请先设置 GitHub Token！', 'error');
+        return;
+    }
+
+    try {
+        const gist = await createGist();
+        const baseUrl = window.location.href.substring(0, window.location.href.lastIndexOf('/') + 1);
+        const playerUrl = `${baseUrl}player.html?gist=${gist.id}`;
+        window.open(playerUrl, '_blank');
+        showAlert('播放列表创建成功！');
+    } catch (error) {
+        showAlert('创建播放列表失败！请检查GitHub Token是否有效', 'error');
+        console.error(error);
+    }
+}
+
 // 复制分享链接
 async function copyShareableLink() {
     if (playlist.length === 0) {
@@ -158,14 +150,20 @@ async function copyShareableLink() {
         return;
     }
 
+    if (!githubToken) {
+        showAlert('请先设置 GitHub Token！', 'error');
+        return;
+    }
+
     try {
         const gist = await createGist();
-        const shareableLink = `${window.location.origin}/player.html?gist=${gist.id}`;
+        const baseUrl = window.location.href.substring(0, window.location.href.lastIndexOf('/') + 1);
+        const shareableLink = `${baseUrl}player.html?gist=${gist.id}`;
         
         await navigator.clipboard.writeText(shareableLink);
         showAlert('分享链接已复制到剪贴板！');
     } catch (error) {
-        showAlert('生成分享链接失败！', 'error');
+        showAlert('生成分享链接失败！请检查GitHub Token是否有效', 'error');
         console.error(error);
     }
 }
@@ -277,6 +275,16 @@ function removeVideo(index) {
     updatePlaylistDisplay();
     saveToLocalStorage();
     showAlert('视频已移除！');
+}
+
+// 清空播放列表
+function clearPlaylist() {
+    if (confirm('确定要清空播放列表吗？')) {
+        playlist = [];
+        updatePlaylistDisplay();
+        saveToLocalStorage();
+        showAlert('播放列表已清空！');
+    }
 }
 
 // 保存到本地存储
