@@ -9,6 +9,7 @@
 </head>
 <body>
     <div class="container">
+        <!-- 视频添加区域 -->
         <div class="panel input-section">
             <h2>
                 <i class="material-icons">add_circle_outline</i>
@@ -16,7 +17,12 @@
             </h2>
             <div class="single-input">
                 <input type="text" id="videoTitle" placeholder="视频标题">
-                <input type="text" id="videoUrl" placeholder="视频链接">
+                <input type="text" id="videoUrl" placeholder="视频链接 (支持B站和YouTube)">
+                <select id="videoType">
+                    <option value="direct">直接链接</option>
+                    <option value="bilibili">哔哩哔哩</option>
+                    <option value="youtube">YouTube</option>
+                </select>
                 <button onclick="addVideo()">
                     <i class="material-icons">add</i>
                     添加视频
@@ -27,13 +33,14 @@
                 <i class="material-icons">playlist_add</i>
                 批量添加视频
             </h2>
-            <textarea id="batchInput" placeholder="格式：每行一个视频，标题和链接用逗号分隔&#10;例如：&#10;视频1,https://example.com/video1&#10;视频2,https://example.com/video2"></textarea>
+            <textarea id="batchInput" placeholder="格式：每行一个视频，格式为 标题,链接,类型(direct/bilibili/youtube)&#10;例如：&#10;示例视频1,https://example.com/video1,direct&#10;B站视频,https://www.bilibili.com/video/BV1xx411c7mD,bilibili"></textarea>
             <button onclick="addBatchVideos()">
                 <i class="material-icons">playlist_add_check</i>
                 批量添加
             </button>
         </div>
 
+        <!-- 播放列表管理区域 -->
         <div class="panel playlist-manager">
             <div class="playlist-header">
                 <h2>
@@ -55,9 +62,19 @@
                     <i class="material-icons">share</i>
                     复制分享链接
                 </button>
+                <button onclick="downloadPlaylist()">
+                    <i class="material-icons">download</i>
+                    下载播放列表
+                </button>
+                <input type="file" id="playlistUpload" accept=".json" style="display: none;" onchange="uploadPlaylist(event)">
+                <button onclick="document.getElementById('playlistUpload').click()">
+                    <i class="material-icons">upload</i>
+                    导入播放列表
+                </button>
             </div>
         </div>
 
+        <!-- GitHub设置区域 -->
         <div class="panel github-section">
             <h2>
                 <i class="material-icons">settings</i>
