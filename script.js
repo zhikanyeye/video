@@ -1,278 +1,322 @@
-class PlaylistManager {
-    constructor() {
-        this.playlist = [];
-        this.gistId = localStorage.getItem('playlistGistId');
-        this.loadPlaylist();
-    }
+// 播放列表数据
+let playlist = [];
+let githubToken = localStorage.getItem('githubToken');
 
-    async loadPlaylist() {
-        // 先尝试从 URL 加载 Gist ID
-        const urlParams = new URLSearchParams(window.location.search);
-        const gistId = urlParams.get('gist') || this.gistId;
-
-        if (gistId) {
-            try {
-                await this.loadFromGist(gistId);
-            } catch (error) {
-                console.error('Failed to load from Gist:', error);
-                // 如果加载失败，尝试从本地存储加载
-                this.loadFromLocalStorage();
-            }
-        } else {
-            this.loadFromLocalStorage();
+// 视频类型处理器
+const videoProcessors = {
+    bilibili: {
+        pattern: /(?:https?:\/\/)?(?:www\.)?bilibili\.com\/video\/([A-Za-z0-9]+)/,
+        process: (url, match) => {
+            return `//player.bilibili.com/player.html?bvid=${match[1]}&page=1`;
         }
-    }
-
-    loadFromLocalStorage() {
-        const saved = localStorage.getItem('videoPlaylist');
-        this.playlist = saved ? JSON.parse(saved) : [];
-        this.renderPlaylist();
-    }
-
-    async loadFromGist(gistId) {
-        try {
-            const response = await fetch(`https://api.github.com/gists/${gistId}`);
-            if (!response.ok) {
-                throw new Error('Failed to fetch Gist');
-            }
-            const data = await response.json();
-            const content = data.files['playlist.json'].content;
-            this.playlist = JSON.parse(content);
-            this.gistId = gistId;
-            localStorage.setItem('playlistGistId', gistId);
-            this.saveToLocalStorage();
-            this.renderPlaylist();
-            return true;
-        } catch (error) {
-            console.error('Failed to load playlist from Gist:', error);
-            throw error;
+    },
+    youtube: {
+        pattern: /(?:https?:\/\/)?(?:www\.)?(?:youtube\.com\/watch\?v=|youtu\.be\/)([A-Za-z0-9_-]+)/,
+        process: (url, match) => {
+            return `//www.youtube.com/embed/${match[1]}`;
         }
+    },
+    direct: {
+        pattern: /.*/,
+        process: (url) => url
     }
-
-    async saveToGist() {
-        const token = localStorage.getItem('githubToken');
-        if (!token) {
-            alert('请先设置 GitHub Token！');
-            return;
-        }
-
-        const gistData = {
-            description: "Video Playlist Data",
-            public: true,
-            files: {
-                "playlist.json": {
-                    content: JSON.stringify(this.playlist)
-                }
-            }
-        };
-
-        try {
-            let response;
-            let url;
-
-            if (this.gistId) {
-                // 更新现有的 Gist
-                response = await fetch(`https://api.github.com/gists/${this.gistId}`, {
-                    method: 'PATCH',
-                    headers: {
-                        'Authorization': `token ${token}`,
-                        'Content-Type': 'application/json',
-                    },
-                    body: JSON.stringify(gistData)
-                });
-                url = `player.html?gist=${this.gistId}`;
-            } else {
-                // 创建新的 Gist
-                response = await fetch('https://api.github.com/gists', {
-                    method: 'POST',
-                    headers: {
-                        'Authorization': `token ${token}`,
-                        'Content-Type': 'application/json',
-                    },
-                    body: JSON.stringify(gistData)
-                });
-                const data = await response.json();
-                this.gistId = data.id;
-                localStorage.setItem('playlistGistId', this.gistId);
-                url = `player.html?gist=${this.gistId}`;
-            }
-
-            if (!response.ok) {
-                throw new Error('Failed to save to Gist');
-            }
-
-            return url;
-        } catch (error) {
-            console.error('Failed to save playlist to Gist:', error);
-            throw error;
-        }
-    }
-
-    saveToLocalStorage() {
-        localStorage.setItem('videoPlaylist', JSON.stringify(this.playlist));
-    }
-
-    async addVideo(title, url) {
-        this.playlist.push({ title, url });
-        this.saveToLocalStorage();
-        this.renderPlaylist();
-        try {
-            await this.saveToGist();
-        } catch (error) {
-            console.error('Failed to save to Gist:', error);
-        }
-    }
-
-    async addBatchVideos(batchText) {
-        const lines = batchText.split('\n');
-        for (const line of lines) {
-            const [title, url] = line.split(',').map(item => item.trim());
-            if (title && url) {
-                this.playlist.push({ title, url });
-            }
-        }
-        this.saveToLocalStorage();
-        this.renderPlaylist();
-        try {
-            await this.saveToGist();
-        } catch (error) {
-            console.error('Failed to save to Gist:', error);
-        }
-    }
-
-    async removeVideo(index) {
-        this.playlist.splice(index, 1);
-        this.saveToLocalStorage();
-        this.renderPlaylist();
-        try {
-            await this.saveToGist();
-        } catch (error) {
-            console.error('Failed to save to Gist:', error);
-        }
-    }
-
-    async clearPlaylist() {
-        if (confirm('确定要清空整个播放列表吗？此操作无法撤销。')) {
-            this.playlist = [];
-            this.saveToLocalStorage();
-            this.renderPlaylist();
-            try {
-                await this.saveToGist();
-            } catch (error) {
-                console.error('Failed to save to Gist:', error);
-            }
-        }
-    }
-
-    renderPlaylist() {
-        const playlistElement = document.getElementById('playlist');
-        const clearButton = document.getElementById('clearPlaylistBtn');
-        
-        playlistElement.innerHTML = '';
-        
-        this.playlist.forEach((video, index) => {
-            const item = document.createElement('div');
-            item.className = 'playlist-item';
-            item.innerHTML = `
-                <div class="playlist-item-content">
-                    <i class="material-icons">play_circle_outline</i>
-                    <span>${video.title}</span>
-                </div>
-                <button class="delete-button" onclick="playlistManager.removeVideo(${index})">
-                    <i class="material-icons">delete</i>
-                </button>
-            `;
-            playlistElement.appendChild(item);
-        });
-
-        // 更新清空列表按钮的显示状态
-        if (clearButton) {
-            clearButton.style.display = this.playlist.length > 0 ? 'flex' : 'none';
-        }
-    }
-
-    async generatePlayerPage() {
-        try {
-            const url = await this.saveToGist();
-            window.open(url, '_blank');
-        } catch (error) {
-            alert('生成播放页面失败，请确认 GitHub Token 是否正确设置！');
-        }
-    }
-
-    getShareableLink() {
-        if (!this.gistId) {
-            return null;
-        }
-        return `player.html?gist=${this.gistId}`;
-    }
-}
-
-// 初始化播放列表管理器
-const playlistManager = new PlaylistManager();
-
-// 保存 GitHub Token
-function saveGitHubToken() {
-    const token = document.getElementById('githubToken').value;
-    if (token) {
-        localStorage.setItem('githubToken', token);
-        alert('GitHub Token 已保存！');
-        document.getElementById('githubToken').value = '';
-    } else {
-        alert('请输入 GitHub Token！');
-    }
-}
+};
 
 // 添加单个视频
-async function addVideo() {
-    const titleInput = document.getElementById('videoTitle');
-    const urlInput = document.getElementById('videoUrl');
-    
-    if (titleInput.value && urlInput.value) {
-        await playlistManager.addVideo(titleInput.value, urlInput.value);
-        titleInput.value = '';
-        urlInput.value = '';
-    } else {
-        alert('请输入视频标题和链接！');
+function addVideo() {
+    const title = document.getElementById('videoTitle').value.trim();
+    const url = document.getElementById('videoUrl').value.trim();
+    const type = document.getElementById('videoType').value;
+
+    if (!title || !url) {
+        showAlert('请填写视频标题和链接！', 'error');
+        return;
     }
+
+    const processor = videoProcessors[type];
+    const match = url.match(processor.pattern);
+    
+    if (!match && type !== 'direct') {
+        showAlert('无效的视频链接格式！', 'error');
+        return;
+    }
+
+    const processedUrl = processor.process(url, match);
+    
+    playlist.push({
+        title,
+        url: processedUrl,
+        type,
+        addedAt: new Date().toISOString()
+    });
+
+    updatePlaylistDisplay();
+    clearInputs();
+    saveToLocalStorage();
+    showAlert('视频添加成功！');
 }
 
 // 批量添加视频
-async function addBatchVideos() {
-    const batchInput = document.getElementById('batchInput');
-    if (batchInput.value) {
-        await playlistManager.addBatchVideos(batchInput.value);
-        batchInput.value = '';
-    } else {
-        alert('请输入批量添加的视频数据！');
+function addBatchVideos() {
+    const input = document.getElementById('batchInput').value.trim();
+    if (!input) {
+        showAlert('请输入视频信息！', 'error');
+        return;
+    }
+
+    const lines = input.split('\n');
+    let addedCount = 0;
+
+    lines.forEach(line => {
+        const [title, url, type = 'direct'] = line.split(',').map(item => item.trim());
+        if (title && url) {
+            const processor = videoProcessors[type];
+            if (processor) {
+                const match = url.match(processor.pattern);
+                if (match || type === 'direct') {
+                    const processedUrl = processor.process(url, match);
+                    playlist.push({
+                        title,
+                        url: processedUrl,
+                        type,
+                        addedAt: new Date().toISOString()
+                    });
+                    addedCount++;
+                }
+            }
+        }
+    });
+
+    updatePlaylistDisplay();
+    document.getElementById('batchInput').value = '';
+    saveToLocalStorage();
+    showAlert(`成功添加 ${addedCount} 个视频！`);
+}
+
+// 清空播放列表
+function clearPlaylist() {
+    if (confirm('确定要清空播放列表吗？')) {
+        playlist = [];
+        updatePlaylistDisplay();
+        saveToLocalStorage();
+        showAlert('播放列表已清空！');
     }
 }
 
 // 生成播放页面
-function generatePlayerPage() {
-    playlistManager.generatePlayerPage();
+async function generatePlayerPage() {
+    if (playlist.length === 0) {
+        showAlert('播放列表为空！', 'error');
+        return;
+    }
+
+    if (!githubToken) {
+        showAlert('请先设置 GitHub Token！', 'error');
+        return;
+    }
+
+    try {
+        const gist = await createGist();
+        const playerUrl = `${window.location.origin}/player.html?gist=${gist.id}`;
+        window.open(playerUrl, '_blank');
+    } catch (error) {
+        showAlert('创建播放页面失败！', 'error');
+        console.error(error);
+    }
+}
+
+// 创建 Gist
+async function createGist() {
+    const response = await fetch('https://api.github.com/gists', {
+        method: 'POST',
+        headers: {
+            'Authorization': `token ${githubToken}`,
+            'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+            description: 'Video Playlist',
+            public: true,
+            files: {
+                'playlist.json': {
+                    content: JSON.stringify(playlist, null, 2)
+                }
+            }
+        })
+    });
+
+    if (!response.ok) {
+        throw new Error('Failed to create gist');
+    }
+
+    return response.json();
 }
 
 // 复制分享链接
 async function copyShareableLink() {
+    if (playlist.length === 0) {
+        showAlert('播放列表为空！', 'error');
+        return;
+    }
+
     try {
-        const url = await playlistManager.saveToGist();
-        const fullUrl = new URL(url, window.location.href).href;
+        const gist = await createGist();
+        const shareableLink = `${window.location.origin}/player.html?gist=${gist.id}`;
         
-        try {
-            await navigator.clipboard.writeText(fullUrl);
-            alert('播放列表链接已复制到剪贴板！');
-        } catch (err) {
-            const tempInput = document.createElement('input');
-            tempInput.value = fullUrl;
-            document.body.appendChild(tempInput);
-            tempInput.select();
-            document.execCommand('copy');
-            document.body.removeChild(tempInput);
-            alert('播放列表链接已复制到剪贴板！');
-            }
-   
+        await navigator.clipboard.writeText(shareableLink);
+        showAlert('分享链接已复制到剪贴板！');
     } catch (error) {
-        alert('生成分享链接失败，请确认 GitHub Token 是否正确设置！');
+        showAlert('生成分享链接失败！', 'error');
+        console.error(error);
     }
 }
+
+// 下载播放列表
+function downloadPlaylist() {
+    if (playlist.length === 0) {
+        showAlert('播放列表为空！', 'error');
+        return;
+    }
+
+    const dataStr = JSON.stringify(playlist, null, 2);
+    const blob = new Blob([dataStr], { type: 'application/json' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = `playlist-${new Date().toISOString().slice(0, 10)}.json`;
+    document.body.appendChild(a);
+    a.click();
+    document.body.removeChild(a);
+    URL.revokeObjectURL(url);
+}
+
+// 上传播放列表
+function uploadPlaylist(event) {
+    const file = event.target.files[0];
+    if (file) {
+        const reader = new FileReader();
+        reader.onload = function(e) {
+            try {
+                const importedPlaylist = JSON.parse(e.target.result);
+                if (Array.isArray(importedPlaylist)) {
+                    playlist = importedPlaylist;
+                    updatePlaylistDisplay();
+                    saveToLocalStorage();
+                    showAlert('播放列表导入成功！');
+                } else {
+                    showAlert('无效的播放列表文件！', 'error');
+                }
+            } catch (error) {
+                showAlert('播放列表文件解析失败！', 'error');
+            }
+        };
+        reader.readAsText(file);
+    }
+}
+
+// 保存 GitHub Token
+function saveGitHubToken() {
+    const token = document.getElementById('githubToken').value.trim();
+    if (token) {
+        githubToken = token;
+        localStorage.setItem('githubToken', token);
+        document.getElementById('githubToken').value = '';
+        showAlert('Token 保存成功！');
+    } else {
+        showAlert('请输入有效的 Token！', 'error');
+    }
+}
+
+// 更新播放列表显示
+function updatePlaylistDisplay() {
+    const playlistElement = document.getElementById('playlist');
+    const clearButton = document.getElementById('clearPlaylistBtn');
+
+    if (playlist.length > 0) {
+        clearButton.style.display = 'block';
+        playlistElement.innerHTML = playlist.map((video, index) => `
+            <div class="playlist-item">
+                <div class="playlist-item-content">
+                    <i class="material-icons">play_circle_outline</i>
+                    <span>${video.title}</span>
+                    <span class="video-type">${video.type}</span>
+                </div>
+                <div class="playlist-item-actions">
+                    <button class="icon-button" onclick="moveVideo(${index}, -1)" ${index === 0 ? 'disabled' : ''}>
+                        <i class="material-icons">arrow_upward</i>
+                    </button>
+                    <button class="icon-button" onclick="moveVideo(${index}, 1)" ${index === playlist.length - 1 ? 'disabled' : ''}>
+                        <i class="material-icons">arrow_downward</i>
+                    </button>
+                    <button class="icon-button delete-button" onclick="removeVideo(${index})">
+                        <i class="material-icons">delete</i>
+                    </button>
+                </div>
+            </div>
+        `).join('');
+    } else {
+        clearButton.style.display = 'none';
+        playlistElement.innerHTML = '<div class="empty-playlist">播放列表为空</div>';
+    }
+}
+
+// 移动视频位置
+function moveVideo(index, direction) {
+    const newIndex = index + direction;
+    if (newIndex >= 0 && newIndex < playlist.length) {
+        const temp = playlist[index];
+        playlist[index] = playlist[newIndex];
+        playlist[newIndex] = temp;
+        updatePlaylistDisplay();
+        saveToLocalStorage();
+    }
+}
+
+// 移除视频
+function removeVideo(index) {
+    playlist.splice(index, 1);
+    updatePlaylistDisplay();
+    saveToLocalStorage();
+    showAlert('视频已移除！');
+}
+
+// 保存到本地存储
+function saveToLocalStorage() {
+    localStorage.setItem('playlist', JSON.stringify(playlist));
+}
+
+// 从本地存储加载
+function loadFromLocalStorage() {
+    const savedPlaylist = localStorage.getItem('playlist');
+    if (savedPlaylist) {
+        try {
+            playlist = JSON.parse(savedPlaylist);
+            updatePlaylistDisplay();
+        } catch (error) {
+            console.error('Failed to load playlist from localStorage:', error);
+        }
+    }
+}
+
+// 清空输入框
+function clearInputs() {
+    document.getElementById('videoTitle').value = '';
+    document.getElementById('videoUrl').value = '';
+    document.getElementById('videoType').value = 'direct';
+}
+
+// 显示提示信息
+function showAlert(message, type = 'success') {
+    const alert = document.createElement('div');
+    alert.className = `alert ${type}`;
+    alert.textContent = message;
+    document.body.appendChild(alert);
+
+    setTimeout(() => {
+        alert.remove();
+    }, 3000);
+}
+
+// 页面加载完成后初始化
+document.addEventListener('DOMContentLoaded', () => {
+    loadFromLocalStorage();
+});
