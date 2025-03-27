@@ -4,6 +4,7 @@ class VideoPlayer {
         this.playlist = [];
         this.currentVideoIndex = -1;
         this.isFullscreen = false;
+        this.currentIframe = null;
         this.loadPlaylist();
         this.setupEventListeners();
     }
@@ -29,10 +30,19 @@ class VideoPlayer {
     async loadFromGist(gistId) {
         try {
             const response = await fetch(`https://api.github.com/gists/${gistId}`);
+            if (!response.ok) {
+                throw new Error('Failed to load gist');
+            }
             const data = await response.json();
+            
+            if (!data.files['playlist.json']) {
+                throw new Error('Invalid playlist format');
+            }
+            
             this.playlist = JSON.parse(data.files['playlist.json'].content);
             this.renderPlaylist();
         } catch (error) {
+            console.error('Failed to load playlist:', error);
             throw new Error('Gist加载失败');
         }
     }
@@ -72,6 +82,9 @@ class VideoPlayer {
             this.artInstance.destroy();
             this.artInstance = null;
         }
+        if (this.currentIframe) {
+            this.currentIframe = null;
+        }
         playerContainer.innerHTML = '';
 
         // 根据视频类型初始化播放器
@@ -85,8 +98,6 @@ class VideoPlayer {
             iframe.allow = 'accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture';
             iframe.allowFullscreen = true;
             playerContainer.appendChild(iframe);
-
-            // 为iframe添加自定义全屏支持
             this.currentIframe = iframe;
         } else {
             // 使用Artplayer播放直接视频链接
