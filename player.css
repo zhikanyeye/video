@@ -22,7 +22,7 @@
 }
 
 .sidebar.collapsed {
-    transform: translateX(-100%);
+    transform: translateX(-300px);
 }
 
 .sidebar-header {
@@ -41,6 +41,10 @@
 .toggle-sidebar {
     background: none;
     padding: 8px;
+    color: #fff;
+    border: none;
+    cursor: pointer;
+    transition: background-color 0.3s;
 }
 
 .toggle-sidebar:hover {
@@ -77,7 +81,7 @@
     border-radius: 4px;
     background: rgba(255, 255, 255, 0.05);
     cursor: pointer;
-    transition: background-color 0.3s;
+    transition: all 0.3s;
 }
 
 .playlist-item:hover {
@@ -108,16 +112,37 @@
     flex-direction: column;
     position: relative;
     overflow: hidden;
+    transition: margin-left 0.3s ease;
+}
+
+.main-content.expanded {
+    margin-left: -300px;
+    width: calc(100% + 300px);
 }
 
 .show-sidebar-button {
-    position: absolute;
+    position: fixed;
     top: 20px;
     left: 20px;
     z-index: 100;
     background: rgba(0, 0, 0, 0.5);
     padding: 12px;
-    display: none;
+    border: none;
+    border-radius: 4px;
+    color: white;
+    cursor: pointer;
+    opacity: 0;
+    visibility: hidden;
+    transition: opacity 0.3s, visibility 0.3s;
+}
+
+.show-sidebar-button:hover {
+    background: rgba(0, 0, 0, 0.7);
+}
+
+.sidebar.collapsed ~ .main-content .show-sidebar-button {
+    opacity: 1;
+    visibility: visible;
 }
 
 /* 视频容器 */
@@ -184,7 +209,12 @@
 .control-button {
     background: none;
     padding: 8px;
+    border: none;
+    color: white;
+    cursor: pointer;
     position: relative;
+    border-radius: 4px;
+    transition: background-color 0.3s;
 }
 
 .control-button:hover {
@@ -267,29 +297,6 @@
     }
 }
 
-/* 响应式设计 */
-@media (max-width: 768px) {
-    .sidebar {
-        position: fixed;
-        top: 0;
-        left: 0;
-        bottom: 0;
-        width: 100%;
-    }
-
-    .show-sidebar-button {
-        display: block;
-    }
-
-    .video-info h1 {
-        font-size: 1rem;
-    }
-
-    .control-button[title]::after {
-        display: none;
-    }
-}
-
 /* Art-player自定义样式 */
 .art-video-player {
     --art-theme: var(--primary-color) !important;
@@ -325,4 +332,51 @@
 /* 迷你进度条样式 */
 .art-video-player .art-mini-progress {
     height: 3px !important;
+}
+
+/* 响应式设计 */
+@media (max-width: 768px) {
+    .sidebar {
+        position: fixed;
+        top: 0;
+        left: 0;
+        bottom: 0;
+        width: 100%;
+        transform: translateX(-100%);
+    }
+
+    .sidebar.collapsed {
+        transform: translateX(-100%);
+    }
+
+    .main-content {
+        margin-left: 0;
+    }
+
+    .main-content.expanded {
+        margin-left: 0;
+        width: 100%;
+    }
+
+    .show-sidebar-button {
+        display: block;
+        opacity: 1;
+        visibility: visible;
+    }
+
+    .video-info h1 {
+        font-size: 1rem;
+    }
+
+    .control-button[title]::after {
+        display: none;
+    }
+}
+
+/* 暗色主题变量 */
+:root {
+    --primary-color: #2196F3;
+    --primary-color-dark: #1976D2;
+    --background-color: #1a1a1a;
+    --sidebar-background: #242424;
 }
