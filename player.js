@@ -41,22 +41,94 @@ class VideoPlayer {
     }
 
     detectVideoType(url) {
-        // 增强视频类型检测
-        const urlObj = new URL(url);
-        const hostname = urlObj.hostname;
-        const pathname = urlObj.pathname;
-        
-        if (hostname.includes('bilibili.com')) return 'bilibili';
-        if (hostname.includes('youtube.com') || hostname.includes('youtu.be')) return 'youtube';
-        if (pathname.endsWith('.m3u8')) return 'm3u8';
-        if (pathname.endsWith('.flv')) return 'flv';
-        if (pathname.endsWith('.mp4')) return 'mp4';
-        
-        // 检查流媒体格式
-        if (url.includes('m3u8')) return 'm3u8';
-        if (url.includes('.flv')) return 'flv';
-        
-        return 'direct';
+        try {
+            const urlObj = new URL(url);
+            const hostname = urlObj.hostname;
+            const pathname = urlObj.pathname;
+            
+            if (hostname.includes('bilibili.com')) return 'bilibili';
+            if (hostname.includes('youtube.com') || hostname.includes('youtu.be')) return 'youtube';
+            if (pathname.endsWith('.m3u8')) return 'm3u8';
+            if (pathname.endsWith('.flv')) return 'flv';
+            if (pathname.endsWith('.mp4')) return 'mp4';
+            
+            // 检查流媒体格式
+            if (url.includes('m3u8')) return 'm3u8';
+            if (url.includes('.flv')) return 'flv';
+            
+            return 'direct';
+        } catch (error) {
+            return 'direct';
+        }
+    }
+
+    async loadFromGist(gistId) {
+        try {
+            const response = await fetch(`https://api.github.com/gists/${gistId}`);
+            if (!response.ok) {
+                throw new Error('Failed to load gist');
+            }
+            const data = await response.json();
+            
+            if (!data.files['playlist.json']) {
+                throw new Error('Invalid playlist format');
+            }
+            
+            this.playlist = JSON.parse(data.files['playlist.json'].content);
+            this.playlist = this.playlist.map(video => ({
+                ...video,
+                type: video.type || this.detectVideoType(video.url)
+            }));
+            this.renderPlaylist();
+        } catch (error) {
+            console.error('Failed to load playlist:', error);
+            throw new Error('播放列表加载失败');
+        }
+    }
+
+    setupEventListeners() {
+        // 侧边栏切换
+        document.getElementById('toggleSidebar').addEventListener('click', () => this.toggleSidebar());
+        document.getElementById('showSidebar').addEventListener('click', () => this.showSidebar());
+
+        // 视频控制
+        document.getElementById('prevVideo').addEventListener('click', () => this.prev());
+        document.getElementById('nextVideo').addEventListener('click', () => this.next());
+        document.getElementById('toggleFullscreen').addEventListener('click', () => this.toggleFullscreen());
+
+        // 键盘控制
+        document.addEventListener('keydown', (e) => {
+            if (e.target.tagName === 'INPUT') return; // 输入框中不触发快捷键
+
+            switch(e.key.toLowerCase()) {
+                case 'arrowleft': 
+                    if (e.ctrlKey) this.prev();
+                    else this.seek(-5);
+                    break;
+                case 'arrowright':
+                    if (e.ctrlKey) this.next();
+                    else this.seek(5);
+                    break;
+                case 'f': this.toggleFullscreen(); break;
+                case 'escape': this.exitFullscreen(); break;
+                case ' ': this.togglePlay(e); break;
+                case 'm': this.toggleMute(); break;
+                case 'arrowup': this.adjustVolume(0.1); break;
+                case 'arrowdown': this.adjustVolume(-0.1); break;
+            }
+        });
+
+        // 监听全屏变化
+        document.addEventListener('fullscreenchange', () => {
+            this.isFullscreen = !!document.fullscreenElement;
+        });
+
+        // 监听窗口大小变化
+        window.addEventListener('resize', () => {
+            if (this.artInstance) {
+                this.artInstance.autoSize();
+            }
+        });
     }
 
     initArtPlayer(url, title, type) {
@@ -151,7 +223,6 @@ class VideoPlayer {
 
     processVideoUrl(url, type) {
         if (type === 'bilibili') {
-            // 处理B站链接
             const bvMatch = url.match(/BV\w+/);
             if (bvMatch) {
                 return `//player.bilibili.com/player.html?bvid=${bvMatch[0]}&high_quality=1&danmaku=0`;
@@ -161,7 +232,6 @@ class VideoPlayer {
                 return `//player.bilibili.com/player.html?aid=${avMatch[1]}&high_quality=1&danmaku=0`;
             }
         } else if (type === 'youtube') {
-            // 处理YouTube链接
             const videoId = url.match(/(?:youtube\.com\/(?:[^\/]+\/.+\/|(?:v|e(?:mbed)?)\/|.*[?&]v=)|youtu\.be\/)([^"&?\/\s]{11})/);
             if (videoId) {
                 return `https://www.youtube.com/embed/${videoId[1]}?autoplay=1`;
@@ -171,7 +241,6 @@ class VideoPlayer {
     }
 
     initFallbackPlayer(url, title) {
-        // 使用原生HTML5播放器作为备用
         const video = document.createElement('video');
         video.src = url;
         video.controls = true;
@@ -189,88 +258,6 @@ class VideoPlayer {
         };
     }
 
-    async loadFromGist(gistId) {
-        try {
-            const response = await fetch(`https://api.github.com/gists/${gistId}`);
-            if (!response.ok) {
-                throw new Error('Failed to load gist');
-            }
-            const data = await response.json();
-            
-            if (!data.files['playlist.json']) {
-                throw new Error('Invalid playlist format');
-            }
-            
-            this.playlist = JSON.parse(data.files['playlist.json'].content);
-            this.playlist = this.playlist.map(video => ({
-                ...video,
-                type: video.type || this.detectVideoType(video.url)
-            }));
-            this.renderPlaylist();
-        } catch (error) {
-            console.error('Failed to load playlist:', error);
-            throw new Error('播放列表加载失败');
-        }
-    }
-
-    setupEventListeners() {
-        // 已有的事件监听保持不变...
-        document.getElementById('toggleSidebar').addEventListener('click', () => this.toggleSidebar());
-        document.getElementById('showSidebar').addEventListener('click', () => this.showSidebar());
-        document.getElementById('prevVideo').addEventListener('click', () => this.prev());
-        document.getElementById('nextVideo').addEventListener('click', () => this.next());
-        document.getElementById('toggleFullscreen').addEventListener('click', () => this.toggleFullscreen());
-
-        // 增加键盘快捷键
-        document.addEventListener('keydown', (e) => {
-            if (e.target.tagName === 'INPUT') return; // 输入框中不触发快捷键
-
-            switch(e.key.toLowerCase()) {
-                case 'arrowleft': 
-                    if (e.ctrlKey) this.prev();
-                    else this.seek(-5);
-                    break;
-                case 'arrowright':
-                    if (e.ctrlKey) this.next();
-                    else this.seek(5);
-                    break;
-                case 'f': this.toggleFullscreen(); break;
-                case 'escape': this.exitFullscreen(); break;
-                case ' ': this.togglePlay(e); break;
-                case 'm': this.toggleMute(); break;
-                case 'arrowup': this.adjustVolume(0.1); break;
-                case 'arrowdown': this.adjustVolume(-0.1); break;
-            }
-        });
-
-        // 监听全屏变化
-        document.addEventListener('fullscreenchange', () => {
-            this.isFullscreen = !!document.fullscreenElement;
-        });
-
-        // 监听窗口大小变化
-        window.addEventListener('resize', () => {
-            if (this.artInstance) {
-                this.artInstance.autoSize();
-            }
-        });
-    }
-
-    toggleMute() {
-        if (this.artInstance) {
-            this.muted = !this.muted;
-            this.artInstance.muted = this.muted;
-        }
-    }
-
-    adjustVolume(delta) {
-        if (this.artInstance) {
-            this.volume = Math.max(0, Math.min(1, this.volume + delta));
-            this.artInstance.volume = this.volume;
-        }
-    }
-
-    // 其他方法保持不变...
     play(index) {
         if (index >= 0 && index < this.playlist.length) {
             this.currentVideoIndex = index;
@@ -287,6 +274,132 @@ class VideoPlayer {
                 window.history.replaceState({}, '', url);
             }
         }
+    }
+
+    prev() {
+        if (this.currentVideoIndex > 0) {
+            this.play(this.currentVideoIndex - 1);
+        }
+    }
+
+    next() {
+        if (this.currentVideoIndex < this.playlist.length - 1) {
+            this.play(this.currentVideoIndex + 1);
+        }
+    }
+
+    seek(seconds) {
+        if (this.artInstance) {
+            this.artInstance.seek = this.artInstance.currentTime + seconds;
+        }
+    }
+
+    togglePlay(e) {
+        if (e) e.preventDefault();
+        if (this.artInstance) {
+            this.artInstance.playing = !this.artInstance.playing;
+        }
+    }
+
+    toggleMute() {
+        if (this.artInstance) {
+            this.muted = !this.muted;
+            this.artInstance.muted = this.muted;
+        }
+    }
+
+    adjustVolume(delta) {
+        if (this.artInstance) {
+            this.volume = Math.max(0, Math.min(1, this.volume + delta));
+            this.artInstance.volume = this.volume;
+        }
+    }
+
+    toggleFullscreen() {
+        if (this.currentIframe) {
+            this.currentIframe.classList.toggle('iframe-fullscreen');
+            this.isFullscreen = this.currentIframe.classList.contains('iframe-fullscreen');
+        } else if (this.artInstance) {
+            this.artInstance.fullscreen = !this.artInstance.fullscreen;
+        }
+    }
+
+    exitFullscreen() {
+        if (this.currentIframe && this.currentIframe.classList.contains('iframe-fullscreen')) {
+            this.currentIframe.classList.remove('iframe-fullscreen');
+            this.isFullscreen = false;
+        } else if (this.artInstance && this.artInstance.fullscreen) {
+            this.artInstance.fullscreen = false;
+        }
+    }
+
+    toggleSidebar() {
+        const sidebar = document.querySelector('.sidebar');
+        const icon = document.querySelector('#toggleSidebar i');
+        const isMobile = this.isMobileDevice();
+        
+        sidebar.classList.toggle('collapsed');
+        
+        if (isMobile) {
+            icon.textContent = sidebar.classList.contains('collapsed') ? 'menu' : 'close';
+        } else {
+            icon.textContent = sidebar.classList.contains('collapsed') ? 'chevron_right' : 'chevron_left';
+        }
+    }
+
+    showSidebar() {
+        const sidebar = document.querySelector('.sidebar');
+        const icon = document.querySelector('#toggleSidebar i');
+        const isMobile = this.isMobileDevice();
+        
+        sidebar.classList.remove('collapsed');
+        icon.textContent = isMobile ? 'close' : 'chevron_left';
+    }
+
+    isMobileDevice() {
+        return window.innerWidth <= 768;
+    }
+
+    updateVideoTitle(title) {
+        document.getElementById('currentVideoTitle').textContent = title;
+    }
+
+    updateNavigationButtons() {
+        document.getElementById('prevVideo').disabled = this.currentVideoIndex <= 0;
+        document.getElementById('nextVideo').disabled = this.currentVideoIndex >= this.playlist.length - 1;
+    }
+
+    updateActiveItem() {
+        const items = document.querySelectorAll('.playlist-item');
+        items.forEach((item, index) => {
+            if (index === this.currentVideoIndex) {
+                item.classList.add('active');
+                item.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+            } else {
+                item.classList.remove('active');
+            }
+        });
+    }
+
+    renderPlaylist() {
+        const playlistElement = document.getElementById('playerPlaylist');
+        playlistElement.innerHTML = '';
+        
+        this.playlist.forEach((video, index) => {
+            const item = document.createElement('div');
+            item.className = `playlist-item${index === this.currentVideoIndex ? ' active' : ''}`;
+            item.innerHTML = `
+                <div class="playlist-item-content" onclick="videoPlayer.play(${index})">
+                    <i class="material-icons">${index === this.currentVideoIndex ? 'play_arrow' : 'play_circle_outline'}</i>
+                    <span>${video.title}</span>
+                    <span class="video-type">${video.type}</span>
+                </div>
+            `;
+            playlistElement.appendChild(item);
+        });
+
+        // 更新视频数量显示
+        document.querySelector('.video-count').textContent = `${this.playlist.length} 个视频`;
     }
 
     showError(message) {
