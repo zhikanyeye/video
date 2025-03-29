@@ -213,11 +213,27 @@ class VideoPlayer {
             this.artInstance = new Artplayer(config);
 
             // 事件监听
+            this.artInstance.on('video:play', () => {
+                this.enterFullscreen();
+            });
             this.artInstance.on('video:ended', () => this.next());
             this.artInstance.on('error', () => {
                 this.showError('视频加载失败，尝试使用备用播放器...');
                 this.initFallbackPlayer(url, title);
             });
+        }
+    }
+
+    enterFullscreen() {
+        const playerContainer = document.getElementById('player');
+        if (playerContainer.requestFullscreen) {
+            playerContainer.requestFullscreen();
+        } else if (playerContainer.mozRequestFullScreen) {
+            playerContainer.mozRequestFullScreen();
+        } else if (playerContainer.webkitRequestFullscreen) {
+            playerContainer.webkitRequestFullscreen();
+        } else if (playerContainer.msRequestFullscreen) {
+            playerContainer.msRequestFullscreen();
         }
     }
 
@@ -345,6 +361,14 @@ class VideoPlayer {
         } else {
             icon.textContent = sidebar.classList.contains('collapsed') ? 'chevron_right' : 'chevron_left';
         }
+
+        // 调整视频容器的宽度以适应侧边栏的变化
+        const mainContent = document.querySelector('.main-content');
+        if (sidebar.classList.contains('collapsed')) {
+            mainContent.classList.add('expanded');
+        } else {
+            mainContent.classList.remove('expanded');
+        }
     }
 
     showSidebar() {
@@ -354,6 +378,9 @@ class VideoPlayer {
         
         sidebar.classList.remove('collapsed');
         icon.textContent = isMobile ? 'close' : 'chevron_left';
+
+        const mainContent = document.querySelector('.main-content');
+        mainContent.classList.remove('expanded');
     }
 
     isMobileDevice() {
