@@ -88,6 +88,19 @@
     background: var(--primary-color);
 }
 
+.playlist-item-content {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+}
+
+.video-type {
+    padding: 2px 8px;
+    background: rgba(255, 255, 255, 0.1);
+    border-radius: 12px;
+    font-size: 12px;
+}
+
 /* 主要内容区域 */
 .main-content {
     flex: 1;
@@ -121,11 +134,31 @@
     transform: translate(-50%, -50%);
     text-align: center;
     color: rgba(255, 255, 255, 0.7);
+    display: none;
+    flex-direction: column;
+    align-items: center;
 }
 
 .no-video i {
     font-size: 48px;
     margin-bottom: 16px;
+}
+
+.retry-button {
+    margin-top: 20px;
+    padding: 10px 20px;
+    background: var(--primary-color);
+    border: none;
+    border-radius: 4px;
+    color: white;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+}
+
+.retry-button:hover {
+    background: var(--primary-color-dark);
 }
 
 /* 视频信息区域 */
@@ -145,11 +178,13 @@
 .video-controls {
     display: flex;
     gap: 8px;
+    position: relative;
 }
 
 .control-button {
     background: none;
     padding: 8px;
+    position: relative;
 }
 
 .control-button:hover {
@@ -161,23 +196,27 @@
     cursor: not-allowed;
 }
 
-/* 响应式设计 */
-@media (max-width: 768px) {
-    .sidebar {
-        position: fixed;
-        top: 0;
-        left: 0;
-        bottom: 0;
-        width: 100%;
-    }
+/* 快捷键提示 */
+.control-button[title]::after {
+    content: attr(title);
+    position: absolute;
+    bottom: 100%;
+    left: 50%;
+    transform: translateX(-50%);
+    background: rgba(0, 0, 0, 0.8);
+    color: white;
+    padding: 4px 8px;
+    border-radius: 4px;
+    font-size: 12px;
+    white-space: nowrap;
+    opacity: 0;
+    visibility: hidden;
+    transition: opacity 0.2s, visibility 0.2s;
+}
 
-    .show-sidebar-button {
-        display: block;
-    }
-
-    .video-info h1 {
-        font-size: 1rem;
-    }
+.control-button[title]:hover::after {
+    opacity: 1;
+    visibility: visible;
 }
 
 /* 自定义滚动条 */
@@ -206,4 +245,84 @@
     width: 100vw !important;
     height: 100vh !important;
     z-index: 9999 !important;
+}
+
+/* 播放器加载动画 */
+.loading-spinner {
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%);
+    width: 50px;
+    height: 50px;
+    border: 3px solid rgba(255, 255, 255, 0.3);
+    border-radius: 50%;
+    border-top-color: var(--primary-color);
+    animation: spin 1s linear infinite;
+}
+
+@keyframes spin {
+    100% {
+        transform: translate(-50%, -50%) rotate(360deg);
+    }
+}
+
+/* 响应式设计 */
+@media (max-width: 768px) {
+    .sidebar {
+        position: fixed;
+        top: 0;
+        left: 0;
+        bottom: 0;
+        width: 100%;
+    }
+
+    .show-sidebar-button {
+        display: block;
+    }
+
+    .video-info h1 {
+        font-size: 1rem;
+    }
+
+    .control-button[title]::after {
+        display: none;
+    }
+}
+
+/* Art-player自定义样式 */
+.art-video-player {
+    --art-theme: var(--primary-color) !important;
+}
+
+.art-video-player .art-control {
+    height: 50px !important;
+}
+
+.art-video-player .art-control-progress {
+    bottom: 50px !important;
+}
+
+.art-video-player .art-control-progress:hover .art-control-progress-inner {
+    height: 6px !important;
+}
+
+.art-video-player .art-control-progress .art-control-progress-inner {
+    height: 3px !important;
+}
+
+/* 画中画模式样式 */
+.art-video-player[data-pip] {
+    position: fixed !important;
+    right: 20px;
+    bottom: 20px;
+    width: 300px !important;
+    height: 169px !important;
+    z-index: 9999;
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.4);
+}
+
+/* 迷你进度条样式 */
+.art-video-player .art-mini-progress {
+    height: 3px !important;
 }
