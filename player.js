@@ -7,8 +7,10 @@ class VideoPlayer {
         this.currentIframe = null;
         this.muted = false;
         this.volume = 0.7;
+        this.autoFullscreen = true; // 新增：自动全屏配置
         this.loadPlaylist();
         this.setupEventListeners();
+        this.setupOrientationListener();
     }
 
     async loadPlaylist() {
@@ -131,10 +133,34 @@ class VideoPlayer {
         });
     }
 
+    setupOrientationListener() {
+        if (this.isMobileDevice()) {
+            window.addEventListener('orientationchange', () => {
+                setTimeout(() => {
+                    if (window.orientation === 90 || window.orientation === -90) {
+                        if (this.artInstance) {
+                            this.artInstance.fullscreen = true;
+                        } else if (this.currentIframe) {
+                            this.currentIframe.classList.add('iframe-fullscreen');
+                            this.isFullscreen = true;
+                        }
+                    } else {
+                        if (this.artInstance) {
+                            this.artInstance.fullscreen = false;
+                        } else if (this.currentIframe) {
+                            this.currentIframe.classList.remove('iframe-fullscreen');
+                            this.isFullscreen = false;
+                        }
+                    }
+                }, 300);
+            });
+        }
+    }
+
     initArtPlayer(url, title, type) {
         const playerContainer = document.getElementById('player');
         
-        // 清理现有的播放器
+        // 清理现有播放器
         if (this.artInstance) {
             this.artInstance.destroy();
             this.artInstance = null;
@@ -145,7 +171,7 @@ class VideoPlayer {
         playerContainer.innerHTML = '';
 
         if (type === 'bilibili' || type === 'youtube') {
-            // 使用iframe播放B站和YouTube视频
+            // iframe播放器处理
             const iframe = document.createElement('iframe');
             iframe.src = this.processVideoUrl(url, type);
             iframe.frameBorder = '0';
@@ -155,8 +181,13 @@ class VideoPlayer {
             iframe.allowFullscreen = true;
             playerContainer.appendChild(iframe);
             this.currentIframe = iframe;
+            
+            // iframe自动全屏
+            if (this.autoFullscreen && !this.isMobileDevice()) {
+                setTimeout(() => this.toggleFullscreen(), 1000);
+            }
         } else {
-            // 使用Artplayer播放其他格式视频
+            // Artplayer配置
             const config = {
                 container: playerContainer,
                 url: url,
@@ -187,6 +218,7 @@ class VideoPlayer {
                 whitelist: ['*'],
                 moreVideoAttr: {
                     crossOrigin: 'anonymous',
+                    preload: 'auto'
                 },
                 controls: [
                     {
@@ -203,7 +235,7 @@ class VideoPlayer {
                 plugins: []
             };
 
-            // 根据视频类型添加对应的插件
+            // 添加对应格式的插件
             if (type === 'm3u8') {
                 config.plugins.push(ArtplayerPluginHls());
             } else if (type === 'flv') {
@@ -212,28 +244,38 @@ class VideoPlayer {
 
             this.artInstance = new Artplayer(config);
 
-            // 事件监听
-            this.artInstance.on('video:play', () => {
-                this.enterFullscreen();
+            // 视频加载完成后的处理
+            this.artInstance.on('ready', () => {
+                const video = this.artInstance.video;
+                
+                // 自动播放
+                this.artInstance.play().catch(() => {
+                    console.log('自动播放失败，需要用户交互');
+                });
+
+                // 检测视频尺寸并决定是否全屏
+                if (video) {
+                    video.addEventListener('loadedmetadata', () => {
+                        const videoRatio = video.videoWidth / video.videoHeight;
+                        const screenRatio = window.innerWidth / window.innerHeight;
+                        
+                        if (this.autoFullscreen && videoRatio > screenRatio && !this.isMobileDevice()) {
+                            setTimeout(() => {
+                                this.artInstance.fullscreen = true;
+                            }, 1000);
+                        }
+                    });
+                }
             });
+
+            // 视频结束时播放下一个
             this.artInstance.on('video:ended', () => this.next());
+            
+            // 错误处理
             this.artInstance.on('error', () => {
                 this.showError('视频加载失败，尝试使用备用播放器...');
                 this.initFallbackPlayer(url, title);
             });
-        }
-    }
-
-    enterFullscreen() {
-        const playerContainer = document.getElementById('player');
-        if (playerContainer.requestFullscreen) {
-            playerContainer.requestFullscreen();
-        } else if (playerContainer.mozRequestFullScreen) {
-            playerContainer.mozRequestFullScreen();
-        } else if (playerContainer.webkitRequestFullscreen) {
-            playerContainer.webkitRequestFullscreen();
-        } else if (playerContainer.msRequestFullscreen) {
-            playerContainer.msRequestFullscreen();
         }
     }
 
@@ -362,7 +404,6 @@ class VideoPlayer {
             icon.textContent = sidebar.classList.contains('collapsed') ? 'chevron_right' : 'chevron_left';
         }
 
-        // 调整视频容器的宽度以适应侧边栏的变化
         const mainContent = document.querySelector('.main-content');
         if (sidebar.classList.contains('collapsed')) {
             mainContent.classList.add('expanded');
@@ -384,7 +425,8 @@ class VideoPlayer {
     }
 
     isMobileDevice() {
-        return window.innerWidth <= 768;
+        return (window.innerWidth <= 768) || 
+               (/Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent));
     }
 
     updateVideoTitle(title) {
