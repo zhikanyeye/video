@@ -18,7 +18,7 @@
             <div class="single-input">
                 <input type="text" id="videoTitle" placeholder="视频标题">
                 <input type="text" id="videoUrl" placeholder="视频链接 (支持B站和YouTube)">
-                <select id="videoType">
+                <select id="videoType" aria-label="视频类型">
                     <option value="direct">直接链接</option>
                     <option value="bilibili">哔哩哔哩</option>
                     <option value="youtube">YouTube</option>
@@ -47,7 +47,7 @@
                     <i class="material-icons">playlist_play</i>
                     当前播放列表
                 </h2>
-                <button class="danger-button" onclick="clearPlaylist()" id="clearPlaylistBtn" style="display: none;">
+                <button class="danger-button" onclick="clearPlaylist()" id="clearPlaylistBtn">
                     <i class="material-icons">delete_sweep</i>
                     清空列表
                 </button>
@@ -66,7 +66,7 @@
                     <i class="material-icons">download</i>
                     下载播放列表
                 </button>
-                <input type="file" id="playlistUpload" accept=".json" style="display: none;" onchange="uploadPlaylist(event)">
+                <input type="file" id="playlistUpload" accept=".json" onchange="uploadPlaylist(event)" aria-label="选择播放列表文件">
                 <button onclick="document.getElementById('playlistUpload').click()">
                     <i class="material-icons">upload</i>
                     导入播放列表
@@ -88,7 +88,7 @@
                 </button>
             </div>
             <p class="token-hint">
-                请在 <a href="https://github.com/settings/tokens" target="_blank">GitHub Token 设置页面</a> 
+                请在 <a href="https://github.com/settings/tokens" target="_blank" rel="noopener">GitHub Token 设置页面</a> 
                 创建一个具有 gist 权限的 Token（至少需要 gist 权限）
             </p>
         </div>

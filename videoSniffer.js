@@ -16,16 +16,22 @@ class VideoSniffer {
             'm3u8': 'application/x-mpegURL',
             'flv': 'video/x-flv'
         };
-    }
-
-    /**
+    }    /**
      * 嗅探视频URL
      * @param {string} url - 要嗅探的URL
      * @returns {Promise<{url: string, type: string}>} - 返回视频URL和类型
      */
     async sniffVideoUrl(url) {
         try {
-            // 如果URL已经是视频格式，直接返回
+            // 简单检测常见的直接视频URL特征
+            if (url.includes('.mp4') || url.includes('.m3u8') || url.includes('.flv') || url.includes('.webm')) {
+                const extension = url.includes('.mp4') ? 'mp4' : 
+                                 url.includes('.m3u8') ? 'm3u8' : 
+                                 url.includes('.flv') ? 'flv' : 'webm';
+                return { url, type: extension };
+            }
+            
+            // 如果URL已经是常见视频格式，直接返回
             const extension = this.getExtensionFromUrl(url);
             if (extension && this.videoExtensions.includes(extension)) {
                 return { url, type: extension };
