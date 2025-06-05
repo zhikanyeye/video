@@ -32,13 +32,25 @@ class VideoPlayer {
 
     async initArtPlayer(url, title, type) {
         try {
+            console.log(`开始初始化播放器: URL=${url}, 类型=${type}`);
             // 显示加载状态
             this.showLoading();
             
             // 首先尝试直接播放
             await this.tryPlayVideo(url, type);
+            
+            // 播放成功后隐藏加载状态
+            this.hideLoading();
+            
+            // 更新页面标题
+            document.title = `${title} - 增强版视频播放器`;
+            // 更新当前视频标题
+            document.getElementById('currentVideoTitle').textContent = title;
+            
+            // 重置重试计数
+            this.retryCount = 0;
         } catch (error) {
-            console.warn('Direct playback failed, trying to sniff video:', error);
+            console.warn('直接播放失败，尝试嗅探视频:', error);
             
             if (this.retryCount < this.maxRetries) {
                 this.retryCount++;
@@ -54,10 +66,13 @@ class VideoPlayer {
     async tryPlayVideo(url, type) {
         const container = document.querySelector(this.options.container);
         
-        // 清除现有播放器
+        // 清除现有播放器和错误信息
         if (this.artInstance) {
             this.artInstance.destroy();
         }
+        this.hideError();
+
+        console.log(`尝试播放视频: ${type} 类型，URL: ${url}`);
 
         // 基础配置
         const config = {
@@ -105,56 +120,130 @@ class VideoPlayer {
             plugins: []
         };
 
-        // 根据视频类型添加对应插件
-        if (type === 'm3u8') {
+        // 处理不同视频类型
+        if (type === 'direct') {
+            // 对于直链，尝试自动检测类型
+            console.log('尝试自动检测视频类型');
+            const extension = this.getExtensionFromUrl(url);
+            if (extension) {
+                console.log(`从URL检测到文件扩展名: ${extension}`);
+                if (extension === 'm3u8') {
+                    config.plugins.push(ArtplayerPluginHls());
+                    console.log('添加HLS插件');
+                } else if (extension === 'flv') {
+                    config.plugins.push(ArtplayerPluginFlv());
+                    console.log('添加FLV插件');
+                }
+            }
+        }
+        // 根据明确的视频类型添加对应插件
+        else if (type === 'm3u8') {
             config.plugins.push(ArtplayerPluginHls());
+            console.log('添加HLS插件');
         } else if (type === 'flv') {
             config.plugins.push(ArtplayerPluginFlv());
+            console.log('添加FLV插件');
+        } else if (type === 'iframe') {
+            // iframe类型的视频使用iframe播放
+            return this.playIframe(url);
         }
-
+        
+        // 创建Artplayer实例
         this.artInstance = new Artplayer(config);
-
-        // 事件处理
-        this.artInstance.on('ready', () => {
-            this.hideLoading();
-            const video = this.artInstance.video;
+        
+        // 事件监听
+        this.artInstance.on('error', () => {
+            console.error('播放器报告错误');
+            throw new Error('Video playback error');
+        });
+    }
+    
+    // 辅助方法：从URL中获取文件扩展名
+    getExtensionFromUrl(url) {
+        try {
+            if (url.includes('.mp4')) return 'mp4';
+            if (url.includes('.m3u8')) return 'm3u8';
+            if (url.includes('.flv')) return 'flv';
+            if (url.includes('.webm')) return 'webm';
             
-            if (video) {
-                video.addEventListener('loadedmetadata', () => {
-                    const videoRatio = video.videoWidth / video.videoHeight;
-                    const screenRatio = window.innerWidth / window.innerHeight;
-                    
-                    if (this.options.autoFullscreen && videoRatio > screenRatio && !this.isMobileDevice()) {
-                        setTimeout(() => {
-                            this.artInstance.fullscreen = true;
-                        }, 1000);
-                    }
-                });
-            }
-        });
-
-        this.artInstance.on('error', async () => {
-            if (this.retryCount < this.maxRetries) {
-                this.retryCount++;
-                await this.sniffAndPlay(url, title);
-            } else {
-                this.showError('视频加载失败，请尝试使用其他播放源');
-                this.retryCount = 0;
-            }
-        });
+            // 尝试解析URL并从路径中获取扩展名
+            const parsedUrl = new URL(url);
+            const match = parsedUrl.pathname.match(/\.([a-zA-Z0-9]+)(?:\?|#|$)/);
+            return match ? match[1].toLowerCase() : null;
+        } catch (e) {
+            console.warn('解析URL获取扩展名失败:', e);
+            return null;
+        }
+    }
+    
+    /**
+     * 快速检查是否为常见视频URL格式
+     * 在嗅探器之前运行，确保最基本的视频链接能被识别
+     */
+    checkSimpleVideoUrl(url) {
+        if (!url) return null;
+        
+        // 检查常见视频后缀
+        const urlLower = url.toLowerCase();
+        
+        if (urlLower.includes('.mp4')) {
+            return { url, type: 'mp4' };
+        }
+        if (urlLower.includes('.m3u8')) {
+            return { url, type: 'm3u8' };
+        }
+        if (urlLower.includes('.flv')) {
+            return { url, type: 'flv' };
+        }
+        if (urlLower.includes('.webm')) {
+            return { url, type: 'webm' };
+        }
+        
+        // B站和YouTube链接
+        if (urlLower.includes('bilibili.com') || urlLower.includes('b23.tv')) {
+            return { url, type: 'iframe' };
+        }
+        if (urlLower.includes('youtube.com') || urlLower.includes('youtu.be')) {
+            return { url, type: 'iframe' };
+        }
+        
+        return null;
     }
 
     async sniffAndPlay(url, title) {
         try {
             this.showLoading('正在尝试读取视频源...');
+            console.log(`嗅探视频URL: ${url}`);
+            
+            // 先尝试最简单直接的检测 - 防止其他复杂逻辑导致识别失败
+            const simpleCheck = this.checkSimpleVideoUrl(url);
+            if (simpleCheck) {
+                console.log('通过简单检查识别到视频:', simpleCheck);
+                await this.tryPlayVideo(simpleCheck.url, simpleCheck.type);
+                
+                // 成功播放后，隐藏加载状态并更新标题
+                this.hideLoading();
+                document.title = `${title} - 增强版视频播放器`;
+                document.getElementById('currentVideoTitle').textContent = title;
+                return;
+            }
+            
+            // 如果简单检查失败，再使用嗅探器进行复杂检测
+            console.log('简单检查失败，使用嗅探器检测');
             const result = await this.sniffer.sniffVideoUrl(url);
             if (result) {
+                console.log('嗅探器检测结果:', result);
                 await this.tryPlayVideo(result.url, result.type);
+                
+                // 成功播放后，隐藏加载状态并更新标题
+                this.hideLoading();
+                document.title = `${title} - 增强版视频播放器`;
+                document.getElementById('currentVideoTitle').textContent = title;
             } else {
                 throw new Error('No video found');
             }
         } catch (error) {
-            console.error('Sniffing failed:', error);
+            console.error('嗅探失败:', error);
             this.showError('无法找到可播放的视频源');
             throw error;
         }
@@ -195,6 +284,37 @@ class VideoPlayer {
         const container = document.querySelector(this.options.container);
         container.innerHTML = '';
         container.appendChild(errorContainer);
+    }
+    
+    hideError() {
+        const errorElements = document.querySelectorAll('.video-error');
+        errorElements.forEach(element => element.remove());
+    }
+    
+    /**
+     * 播放iframe类型的视频（B站、YouTube等）
+     */
+    playIframe(url) {
+        console.log('使用iframe播放:', url);
+        const container = document.querySelector(this.options.container);
+        
+        // 清空播放器容器
+        container.innerHTML = '';
+        
+        // 创建iframe
+        const iframe = document.createElement('iframe');
+        iframe.src = url;
+        iframe.width = '100%';
+        iframe.height = '100%';
+        iframe.frameBorder = '0';
+        iframe.allowFullscreen = true;
+        iframe.allow = 'accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture';
+        
+        // 添加到容器
+        container.appendChild(iframe);
+        
+        // 隐藏加载状态
+        this.hideLoading();
     }
 
     bindEvents() {
