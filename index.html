@@ -1,0 +1,98 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>视频列表管理</title>
+    <link href="https://fonts.googleapis.com/icon?family=Material+Icons" rel="stylesheet">
+    <link rel="stylesheet" href="style.css">
+</head>
+<body>
+    <div class="container">
+        <!-- 视频添加区域 -->
+        <div class="panel input-section">
+            <h2>
+                <i class="material-icons">add_circle_outline</i>
+                添加视频
+            </h2>
+            <div class="single-input">
+                <input type="text" id="videoTitle" placeholder="视频标题">
+                <input type="text" id="videoUrl" placeholder="视频链接 (支持B站和YouTube)">
+                <select id="videoType">
+                    <option value="direct">直接链接</option>
+                    <option value="bilibili">哔哩哔哩</option>
+                    <option value="youtube">YouTube</option>
+                </select>
+                <button onclick="addVideo()">
+                    <i class="material-icons">add</i>
+                    添加视频
+                </button>
+            </div>
+            
+            <h2>
+                <i class="material-icons">playlist_add</i>
+                批量添加视频
+            </h2>
+            <textarea id="batchInput" placeholder="格式：每行一个视频，格式为 标题,链接,类型(direct/bilibili/youtube)&#10;例如：&#10;示例视频1,https://example.com/video1.mp4,direct&#10;B站视频,https://www.bilibili.com/video/BV1xx411c7mD,bilibili"></textarea>
+            <button onclick="addBatchVideos()">
+                <i class="material-icons">playlist_add_check</i>
+                批量添加
+            </button>
+        </div>
+
+        <!-- 播放列表管理区域 -->
+        <div class="panel playlist-manager">
+            <div class="playlist-header">
+                <h2>
+                    <i class="material-icons">playlist_play</i>
+                    当前播放列表
+                </h2>
+                <button class="danger-button" onclick="clearPlaylist()" id="clearPlaylistBtn" style="display: none;">
+                    <i class="material-icons">delete_sweep</i>
+                    清空列表
+                </button>
+            </div>
+            <div id="playlist"></div>
+            <div class="playlist-actions">
+                <button onclick="generatePlayerPage()">
+                    <i class="material-icons">play_circle_filled</i>
+                    生成播放页面
+                </button>
+                <button onclick="copyShareableLink()">
+                    <i class="material-icons">share</i>
+                    复制分享链接
+                </button>
+                <button onclick="downloadPlaylist()">
+                    <i class="material-icons">download</i>
+                    下载播放列表
+                </button>
+                <input type="file" id="playlistUpload" accept=".json" style="display: none;" onchange="uploadPlaylist(event)">
+                <button onclick="document.getElementById('playlistUpload').click()">
+                    <i class="material-icons">upload</i>
+                    导入播放列表
+                </button>
+            </div>
+        </div>
+
+        <!-- GitHub设置区域 -->
+        <div class="panel github-section">
+            <h2>
+                <i class="material-icons">settings</i>
+                GitHub 设置
+            </h2>
+            <div class="token-input">
+                <input type="password" id="githubToken" placeholder="输入 GitHub Token">
+                <button onclick="saveGitHubToken()">
+                    <i class="material-icons">save</i>
+                    保存 Token
+                </button>
+            </div>
+            <p class="token-hint">
+                请在 <a href="https://github.com/settings/tokens" target="_blank">GitHub Token 设置页面</a> 
+                创建一个具有 gist 权限的 Token（至少需要 gist 权限）
+            </p>
+        </div>
+    </div>
+    <script src="script.js"></script>
+</body>
+</html>

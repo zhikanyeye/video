@@ -1,0 +1,299 @@
+:root {
+    --primary-color: #2196F3;
+    --background-color: #1a1a1a;
+    --text-color: #ffffff;
+    --sidebar-background: #242424;
+    --item-hover-color: #2c2c2c;
+    --danger-color: #dc3545;
+    --success-color: #28a745;
+}
+
+* {
+    box-sizing: border-box;
+    margin: 0;
+    padding: 0;
+}
+
+body {
+    margin: 0;
+    padding: 20px;
+    background: var(--background-color);
+    color: var(--text-color);
+    font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, 'Open Sans', 'Helvetica Neue', sans-serif;
+    line-height: 1.5;
+}
+
+.container {
+    max-width: 1200px;
+    margin: 0 auto;
+    padding: 20px;
+}
+
+.panel {
+    background: var(--sidebar-background);
+    border-radius: 8px;
+    padding: 20px;
+    margin-bottom: 20px;
+}
+
+h2 {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    margin: 0 0 20px 0;
+    color: var(--text-color);
+    font-size: 1.5rem;
+}
+
+h2 i {
+    color: var(--primary-color);
+}
+
+/* 输入区域样式 */
+.input-section {
+    margin-bottom: 30px;
+}
+
+.single-input {
+    display: flex;
+    gap: 10px;
+    margin-bottom: 20px;
+}
+
+input[type="text"],
+input[type="password"],
+textarea,
+select {
+    background: rgba(255, 255, 255, 0.1);
+    border: 1px solid rgba(255, 255, 255, 0.2);
+    border-radius: 4px;
+    padding: 10px;
+    color: var(--text-color);
+    font-size: 14px;
+}
+
+input[type="text"],
+input[type="password"] {
+    flex: 1;
+}
+
+input[type="text"]:focus,
+input[type="password"]:focus,
+textarea:focus,
+select:focus {
+    outline: none;
+    border-color: var(--primary-color);
+}
+
+textarea {
+    width: 100%;
+    height: 100px;
+    resize: vertical;
+    margin-bottom: 10px;
+    font-family: inherit;
+}
+
+/* 按钮样式 */
+button {
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    background: var(--primary-color);
+    color: white;
+    border: none;
+    border-radius: 4px;
+    padding: 8px 16px;
+    cursor: pointer;
+    font-size: 14px;
+    transition: background-color 0.3s;
+}
+
+button:hover {
+    background: #1976D2;
+}
+
+button i {
+    font-size: 20px;
+}
+
+.danger-button {
+    background: var(--danger-color);
+}
+
+.danger-button:hover {
+    background: #c82333;
+}
+
+/* 播放列表样式 */
+.playlist-manager {
+    position: relative;
+}
+
+.playlist-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 20px;
+}
+
+.playlist-item {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 12px;
+    background: rgba(255, 255, 255, 0.05);
+    border-radius: 4px;
+    margin-bottom: 8px;
+    transition: background-color 0.3s;
+}
+
+.playlist-item:hover {
+    background: var(--item-hover-color);
+}
+
+.playlist-item-content {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    flex: 1;
+}
+
+.playlist-item-actions {
+    display: flex;
+    gap: 4px;
+}
+
+.icon-button {
+    background: none;
+    padding: 4px;
+}
+
+.icon-button:hover {
+    background: rgba(255, 255, 255, 0.1);
+}
+
+.delete-button {
+    color: var(--danger-color);
+}
+
+.delete-button:hover {
+    background: rgba(220, 53, 69, 0.2);
+}
+
+/* GitHub 设置区域 */
+.github-section {
+    margin-top: 30px;
+}
+
+.token-input {
+    display: flex;
+    gap: 10px;
+    margin: 20px 0;
+}
+
+.token-input input {
+    flex: 1;
+}
+
+.token-hint {
+    color: rgba(255, 255, 255, 0.7);
+    font-size: 14px;
+    margin-top: 10px;
+}
+
+.token-hint a {
+    color: var(--primary-color);
+    text-decoration: none;
+}
+
+.token-hint a:hover {
+    text-decoration: underline;
+}
+
+/* 播放列表操作按钮 */
+.playlist-actions {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 10px;
+    margin-top: 20px;
+}
+
+/* 提示消息样式 */
+.alert {
+    position: fixed;
+    top: 20px;
+    right: 20px;
+    padding: 12px 20px;
+    border-radius: 4px;
+    background: var(--success-color);
+    color: white;
+    z-index: 1000;
+    animation: slideIn 0.3s ease-out;
+}
+
+.alert.error {
+    background: var(--danger-color);
+}
+
+@keyframes slideIn {
+    from {
+        transform: translateX(100%);
+        opacity: 0;
+    }
+    to {
+        transform: translateX(0);
+        opacity: 1;
+    }
+}
+
+/* 响应式设计 */
+@media (max-width: 768px) {
+    body {
+        padding: 10px;
+    }
+
+    .container {
+        padding: 10px;
+    }
+
+    .single-input {
+        flex-direction: column;
+    }
+
+    .playlist-actions {
+        flex-direction: column;
+    }
+
+    button {
+        width: 100%;
+        justify-content: center;
+    }
+
+    .token-input {
+        flex-direction: column;
+    }
+}
+
+/* 空列表提示 */
+.empty-playlist {
+    text-align: center;
+    padding: 40px;
+    color: rgba(255, 255, 255, 0.5);
+    background: rgba(255, 255, 255, 0.05);
+    border-radius: 4px;
+}
+
+/* 视频类型标签 */
+.video-type {
+    font-size: 12px;
+    padding: 2px 6px;
+    border-radius: 3px;
+    background: rgba(255, 255, 255, 0.1);
+    color: rgba(255, 255, 255, 0.7);
+    margin-left: 8px;
+}
+
+/* 文件上传按钮 */
+input[type="file"] {
+    display: none;
+}

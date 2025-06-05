@@ -1,0 +1,69 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <meta name="mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <title>增强版视频播放器</title>
+    <link href="https://fonts.googleapis.com/icon?family=Material+Icons" rel="stylesheet">
+    <link rel="stylesheet" href="style.css">
+    <link rel="stylesheet" href="player.css">
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/artplayer@latest/dist/artplayer.css">
+    <script src="https://cdn.jsdelivr.net/npm/artplayer@latest/dist/artplayer.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/artplayer-plugin-hls@latest/dist/artplayer-plugin-hls.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/artplayer-plugin-flv@latest/dist/artplayer-plugin-flv.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/flv.js@latest"></script>
+    <script src="https://cdn.jsdelivr.net/npm/hls.js@latest"></script>
+    <!-- 添加视频嗅探器脚本 -->
+    <script src="videoSniffer.js"></script>
+</head>
+<body class="player-page">
+    <div class="player-layout">
+        <aside class="sidebar">
+            <div class="sidebar-header">
+                <h2><i class="material-icons">playlist_play</i> 播放列表</h2>
+                <button id="toggleSidebar" class="toggle-sidebar">
+                    <i class="material-icons">chevron_left</i>
+                </button>
+            </div>
+            <div class="playlist-container">
+                <div class="playlist-header">
+                    <span class="video-count">0 个视频</span>
+                </div>
+                <div id="playerPlaylist" class="playlist-items"></div>
+            </div>
+        </aside>
+
+        <main class="main-content">
+            <button id="showSidebar" class="show-sidebar-button">
+                <i class="material-icons">menu</i>
+            </button>
+
+            <div class="video-container">
+                <div id="player" style="width:100%;height:100%"></div>
+                <div class="no-video">
+                    <i class="material-icons">play_circle_outline</i>
+                    <p>正在加载视频...</p>
+                </div>
+            </div>
+
+            <div class="video-info">
+                <h1 id="currentVideoTitle">加载中...</h1>
+                <div class="video-controls">
+                    <button id="prevVideo" class="control-button" disabled title="上一个 (Ctrl+←)">
+                        <i class="material-icons">skip_previous</i>
+                    </button>
+                    <button id="nextVideo" class="control-button" disabled title="下一个 (Ctrl+→)">
+                        <i class="material-icons">skip_next</i>
+                    </button>
+                    <button id="toggleFullscreen" class="control-button" title="全屏 (F)">
+                        <i class="material-icons">fullscreen</i>
+                    </button>
+                </div>
+            </div>
+        </main>
+    </div>
+    <script src="player.js"></script>
+</body>
+</html>
