@@ -406,3 +406,79 @@ export function validateVideoUrl(url) {
 
 // 导出视频类型常量
 export { VIDEO_TYPES as VideoTypes };
+
+/**
+ * 视频代理功能 - 用于解决跨域问题和请求转发
+ */
+
+// 可用的视频代理服务列表
+const VIDEO_PROXIES = [
+    'https://cors-anywhere.herokuapp.com/',
+    'https://api.allorigins.win/raw?url=',
+    'https://corsproxy.io/?'
+];
+
+// 检查URL是否需要跨域代理
+export function needsProxy(url) {
+    if (!url || typeof url !== 'string') return false;
+    
+    try {
+        const urlObj = new URL(url);
+        // 检查是否是外部域名
+        return urlObj.hostname !== window.location.hostname && 
+               !url.startsWith('blob:') && 
+               !url.startsWith('data:');
+    } catch (e) {
+        console.warn('URL解析失败:', e);
+        return false;
+    }
+}
+
+// 用代理包装视频URL，解决跨域问题
+export function proxyVideoUrl(url, proxyIndex = 0) {
+    if (!needsProxy(url)) return url;
+    
+    // 确保索引在有效范围内
+    const validProxyIndex = proxyIndex % VIDEO_PROXIES.length;
+    const proxyUrl = VIDEO_PROXIES[validProxyIndex];
+    
+    // 构建代理URL
+    return `${proxyUrl}${encodeURIComponent(url)}`;
+}
+
+// 尝试使用不同的代理服务器加载视频
+export async function tryProxyVideo(url, callback = null, maxAttempts = 2) {
+    let attempts = 0;
+    let error = null;
+    
+    while (attempts < maxAttempts) {
+        try {
+            const proxiedUrl = proxyVideoUrl(url, attempts);
+            console.log(`尝试使用代理[${attempts}]加载视频: ${proxiedUrl}`);
+            
+            // 如果提供了回调，则调用回调
+            if (typeof callback === 'function') {
+                return await callback(proxiedUrl);
+            } else {
+                // 否则仅返回代理URL
+                return proxiedUrl;
+            }
+        } catch (e) {
+            error = e;
+            attempts++;
+            console.warn(`代理尝试${attempts}失败:`, e);
+        }
+    }
+    
+    // 所有尝试都失败
+    console.error(`所有代理尝试(${maxAttempts})都失败:`, error);
+    throw new Error('无法通过代理加载视频');
+}
+
+// 导出视频代理功能
+export const videoProxy = {
+    needsProxy,
+    proxyVideoUrl,
+    tryProxyVideo,
+    getProxies: () => [...VIDEO_PROXIES]
+};

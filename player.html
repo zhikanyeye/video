@@ -165,16 +165,15 @@
                         <button id="volumeBtn" class="control-btn" title="静音 (M)">
                             <i class="material-icons">volume_up</i>
                         </button>
-                        <div class="volume-slider">
-                            <input 
-                                type="range" 
-                                id="volumeSlider" 
-                                min="0" 
-                                max="100" 
-                                value="70"
-                                aria-label="音量控制"
-                            >
-                        </div>
+                        <input 
+                            type="range" 
+                            id="volumeSlider"
+                            class="volume-slider"
+                            min="0" 
+                            max="100" 
+                            value="70"
+                            aria-label="音量控制"
+                        >
                     </div>
                 </div>
                 
@@ -283,5 +282,17 @@
 
     <!-- 加载脚本 -->
     <script type="module" src="scripts/player.js"></script>
+    
+    <!-- 临时调试脚本 -->
+    <script src="debug.js"></script>
+    <script>
+        // 页面加载完成后运行调试检查
+        window.addEventListener('load', () => {
+            setTimeout(() => {
+                console.log('🔍 自动运行调试检查...');
+                runAllChecks();
+            }, 1000);
+        });
+    </script>
 </body>
 </html>

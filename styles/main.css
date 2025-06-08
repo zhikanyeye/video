@@ -41,14 +41,31 @@
     --radius-medium: 8px;
     --radius-large: 12px;
     --radius-round: 50%;
-    
-    /* 间距 */
+      /* 间距 */
     --space-xs: 4px;
     --space-sm: 8px;
     --space-md: 16px;
     --space-lg: 24px;
     --space-xl: 32px;
     --space-xxl: 48px;
+    
+    /* 字体大小 */
+    --font-xs: 12px;
+    --font-sm: 14px;
+    --font-md: 16px;
+    --font-lg: 18px;
+    --font-xl: 20px;
+    --font-xxl: 24px;
+    
+    /* 过渡 */
+    --transition-fast: 0.15s ease;
+    --transition-normal: 0.3s ease;
+    --transition-slow: 0.5s ease;
+    
+    /* 其他 */
+    --border-radius: var(--radius-medium);
+    --primary-hover: var(--primary-dark);
+    --danger-color: var(--error-color);
     
     /* 字体大小 */
     --font-xs: 12px;
