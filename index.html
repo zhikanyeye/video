@@ -3,96 +3,344 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>视频列表管理</title>
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+    <meta name="format-detection" content="telephone=no">
+    <!-- 网站元信息 -->
+    <meta name="description" content="青云播 - 功能丰富的在线视频播放器，支持多种视频格式和播放列表管理">
+    <meta name="keywords" content="视频播放器,在线播放,播放列表,青云播">
+    <meta name="author" content="青云播团队">
+    <title>青云播 - 视频播放列表管理器</title>
+    <!-- 图标支持 -->
+    <link rel="apple-touch-icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='%232196F3'><path d='M17 10.5V7c0-.55-.45-1-1-1H4c-.55 0-1 .45-1 1v10c0 .55.45 1 1 1h12c.55 0 1-.45 1-1v-3.5l4 4v-11l-4 4z'/></svg>">
     <link href="https://fonts.googleapis.com/icon?family=Material+Icons" rel="stylesheet">
-    <link rel="stylesheet" href="style.css">
+    <link rel="stylesheet" href="styles/main.css">
 </head>
 <body>
-    <div class="container">
-        <!-- 视频添加区域 -->
-        <div class="panel input-section">
-            <h2>
-                <i class="material-icons">add_circle_outline</i>
-                添加视频
-            </h2>
-            <div class="single-input">
-                <input type="text" id="videoTitle" placeholder="视频标题">
-                <input type="text" id="videoUrl" placeholder="视频链接 (支持B站和YouTube)">
-                <select id="videoType" aria-label="视频类型">
-                    <option value="direct">直接链接</option>
-                    <option value="bilibili">哔哩哔哩</option>
-                    <option value="youtube">YouTube</option>
-                </select>
-                <button onclick="addVideo()">
-                    <i class="material-icons">add</i>
-                    添加视频
+    <div class="app-container">
+        <!-- 头部导航 -->
+        <header class="app-header">
+            <div class="header-content">
+                <h1 class="app-title">
+                    <i class="material-icons">videocam</i>
+                    青云播
+                </h1>
+                <div class="header-actions">
+                    <button id="settingsBtn" class="header-btn" title="设置">
+                        <i class="material-icons">settings</i>
+                    </button>
+                    <button id="helpBtn" class="header-btn" title="帮助">
+                        <i class="material-icons">help_outline</i>
+                    </button>
+                </div>
+            </div>
+        </header>
+
+        <main class="main-content">
+            <!-- 左侧：操作面板 -->
+            <aside class="control-panel">
+                <!-- 视频添加区域 -->
+                <section class="panel video-add-panel">
+                    <h2 class="panel-title">
+                        <i class="material-icons">add_circle</i>
+                        添加视频
+                    </h2>
+                    
+                    <form id="addVideoForm" class="add-video-form">
+                        <div class="form-group">
+                            <label for="videoTitle">视频标题*</label>
+                            <input 
+                                type="text" 
+                                id="videoTitle" 
+                                name="videoTitle" 
+                                placeholder="请输入视频标题"
+                                required
+                                aria-label="视频标题"
+                            >
+                        </div>
+                        
+                        <div class="form-group">
+                            <label for="videoUrl">视频链接*</label>
+                            <input 
+                                type="url" 
+                                id="videoUrl" 
+                                name="videoUrl" 
+                                placeholder="支持 MP4、M3U8、B站、YouTube 等"
+                                required
+                                aria-label="视频链接"
+                            >
+                        </div>
+                        
+                        <div class="form-group">
+                            <label for="videoType">视频类型</label>
+                            <select id="videoType" name="videoType" aria-label="选择视频类型">
+                                <option value="auto">自动检测</option>
+                                <option value="mp4">MP4 视频</option>
+                                <option value="m3u8">HLS 流媒体</option>
+                                <option value="flv">FLV 视频</option>
+                                <option value="bilibili">哔哩哔哩</option>
+                                <option value="youtube">YouTube</option>
+                            </select>
+                        </div>
+                        
+                        <button type="submit" class="btn btn-primary">
+                            <i class="material-icons">add</i>
+                            添加到列表
+                        </button>
+                    </form>
+                </section>
+
+                <!-- 批量导入区域 -->
+                <section class="panel batch-import-panel">
+                    <h2 class="panel-title">
+                        <i class="material-icons">playlist_add</i>
+                        批量导入
+                    </h2>
+                    
+                    <div class="batch-import-tabs">
+                        <button class="tab-btn active" data-tab="text">文本导入</button>
+                        <button class="tab-btn" data-tab="file">文件导入</button>
+                    </div>
+                    
+                    <div class="tab-content" id="textImport">
+                        <textarea 
+                            id="batchTextarea"
+                            placeholder="每行一个视频，格式：标题,链接,类型&#10;例如：&#10;精彩视频1,https://example.com/video1.mp4,mp4&#10;B站视频,https://www.bilibili.com/video/BV1xx411c7mD,bilibili"
+                            rows="6"
+                            aria-label="批量导入文本"
+                        ></textarea>
+                        <button id="batchImportBtn" class="btn btn-secondary">
+                            <i class="material-icons">upload</i>
+                            批量导入
+                        </button>
+                    </div>
+                    
+                    <div class="tab-content hidden" id="fileImport">
+                        <div class="file-upload-area" id="fileUploadArea">
+                            <i class="material-icons">cloud_upload</i>
+                            <p>拖拽JSON文件到此处或点击选择</p>
+                            <input 
+                                type="file" 
+                                id="fileInput" 
+                                accept=".json"
+                                aria-label="选择播放列表文件"
+                            >
+                        </div>
+                    </div>
+                </section>
+
+                <!-- 播放列表操作 -->
+                <section class="panel playlist-actions-panel">
+                    <h2 class="panel-title">
+                        <i class="material-icons">play_circle</i>
+                        播放列表操作
+                    </h2>
+                    
+                    <div class="action-buttons">
+                        <button id="playAllBtn" class="btn btn-success" disabled>
+                            <i class="material-icons">play_arrow</i>
+                            开始播放
+                        </button>
+                        
+                        <button id="shareBtn" class="btn btn-info" disabled>
+                            <i class="material-icons">share</i>
+                            分享列表
+                        </button>
+                        
+                        <button id="exportBtn" class="btn btn-secondary" disabled>
+                            <i class="material-icons">download</i>
+                            导出列表
+                        </button>
+                        
+                        <button id="clearAllBtn" class="btn btn-danger" disabled>
+                            <i class="material-icons">clear_all</i>
+                            清空列表
+                        </button>
+                    </div>
+                </section>
+            </aside>
+
+            <!-- 右侧：播放列表显示 -->
+            <section class="playlist-section">
+                <div class="playlist-header">
+                    <h2 class="playlist-title">
+                        <i class="material-icons">queue_music</i>
+                        当前播放列表
+                        <span class="playlist-count" id="playlistCount">0 个视频</span>
+                    </h2>
+                    
+                    <div class="playlist-controls">
+                        <div class="search-box">
+                            <i class="material-icons">search</i>
+                            <input 
+                                type="text" 
+                                id="searchInput" 
+                                placeholder="搜索视频..."
+                                aria-label="搜索视频"
+                            >
+                        </div>
+                        
+                        <select id="sortSelect" aria-label="排序方式">
+                            <option value="index">默认顺序</option>
+                            <option value="title">按标题排序</option>
+                            <option value="type">按类型排序</option>
+                            <option value="date">按添加时间排序</option>
+                        </select>
+                    </div>
+                </div>
+
+                <div class="playlist-container" id="playlistContainer">
+                    <div class="empty-state" id="emptyState">
+                        <i class="material-icons">playlist_add_circle</i>
+                        <h3>播放列表为空</h3>
+                        <p>添加一些精彩的视频开始吧！</p>
+                    </div>
+                    
+                    <div class="playlist-items" id="playlistItems">
+                        <!-- 播放列表项将在这里动态生成 -->
+                    </div>
+                </div>
+            </section>
+        </main>
+    </div>
+
+    <!-- 设置弹窗 -->
+    <div class="modal" id="settingsModal">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h3>设置</h3>
+                <button class="modal-close" id="closeSettingsModal">
+                    <i class="material-icons">close</i>
                 </button>
             </div>
             
-            <h2>
-                <i class="material-icons">playlist_add</i>
-                批量添加视频
-            </h2>
-            <textarea id="batchInput" placeholder="格式：每行一个视频，格式为 标题,链接,类型(direct/bilibili/youtube)&#10;例如：&#10;示例视频1,https://example.com/video1.mp4,direct&#10;B站视频,https://www.bilibili.com/video/BV1xx411c7mD,bilibili"></textarea>
-            <button onclick="addBatchVideos()">
-                <i class="material-icons">playlist_add_check</i>
-                批量添加
-            </button>
-        </div>
-
-        <!-- 播放列表管理区域 -->
-        <div class="panel playlist-manager">
-            <div class="playlist-header">
-                <h2>
-                    <i class="material-icons">playlist_play</i>
-                    当前播放列表
-                </h2>
-                <button class="danger-button" onclick="clearPlaylist()" id="clearPlaylistBtn">
-                    <i class="material-icons">delete_sweep</i>
-                    清空列表
-                </button>
+            <div class="modal-body">
+                <div class="settings-section">
+                    <h4>GitHub 配置</h4>
+                    <p class="settings-description">
+                        用于保存和分享播放列表到 GitHub Gist
+                    </p>
+                    
+                    <div class="form-group">
+                        <label for="githubToken">GitHub Personal Access Token</label>
+                        <div class="token-input-group">
+                            <input 
+                                type="password" 
+                                id="githubToken" 
+                                placeholder="请输入 GitHub Token"
+                                aria-label="GitHub Token"
+                            >
+                            <button type="button" id="toggleTokenVisibility" class="btn-icon">
+                                <i class="material-icons">visibility</i>
+                            </button>
+                        </div>
+                        <small class="form-hint">
+                            前往 <a href="https://github.com/settings/tokens" target="_blank" rel="noopener">GitHub Settings</a> 
+                            创建新的 Token，确保选择 'gist' 权限
+                        </small>
+                    </div>
+                    
+                    <button id="saveTokenBtn" class="btn btn-primary">
+                        <i class="material-icons">save</i>
+                        保存配置
+                    </button>
+                </div>
+                
+                <div class="settings-section">
+                    <h4>播放器设置</h4>
+                    
+                    <div class="form-group">
+                        <label>
+                            <input type="checkbox" id="autoplayEnabled" checked>
+                            自动播放视频
+                        </label>
+                    </div>
+                    
+                    <div class="form-group">
+                        <label>
+                            <input type="checkbox" id="loopPlaylist">
+                            循环播放列表
+                        </label>
+                    </div>
+                    
+                    <div class="form-group">
+                        <label for="defaultVolume">默认音量</label>
+                        <input 
+                            type="range" 
+                            id="defaultVolume" 
+                            min="0" 
+                            max="100" 
+                            value="70"
+                            aria-label="默认音量"
+                        >
+                        <span id="volumeValue">70%</span>
+                    </div>
+                </div>
             </div>
-            <div id="playlist"></div>
-            <div class="playlist-actions">
-                <button onclick="generatePlayerPage()">
-                    <i class="material-icons">play_circle_filled</i>
-                    生成播放页面
-                </button>
-                <button onclick="copyShareableLink()">
-                    <i class="material-icons">share</i>
-                    复制分享链接
-                </button>
-                <button onclick="downloadPlaylist()">
-                    <i class="material-icons">download</i>
-                    下载播放列表
-                </button>
-                <input type="file" id="playlistUpload" accept=".json" onchange="uploadPlaylist(event)" aria-label="选择播放列表文件">
-                <button onclick="document.getElementById('playlistUpload').click()">
-                    <i class="material-icons">upload</i>
-                    导入播放列表
-                </button>
-            </div>
-        </div>
-
-        <!-- GitHub设置区域 -->
-        <div class="panel github-section">
-            <h2>
-                <i class="material-icons">settings</i>
-                GitHub 设置
-            </h2>
-            <div class="token-input">
-                <input type="password" id="githubToken" placeholder="输入 GitHub Token">
-                <button onclick="saveGitHubToken()">
-                    <i class="material-icons">save</i>
-                    保存 Token
-                </button>
-            </div>
-            <p class="token-hint">
-                请在 <a href="https://github.com/settings/tokens" target="_blank" rel="noopener">GitHub Token 设置页面</a> 
-                创建一个具有 gist 权限的 Token（至少需要 gist 权限）
-            </p>
         </div>
     </div>
-    <script src="script.js"></script>
+
+    <!-- 帮助弹窗 -->
+    <div class="modal" id="helpModal">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h3>使用帮助</h3>
+                <button class="modal-close" id="closeHelpModal">
+                    <i class="material-icons">close</i>
+                </button>
+            </div>
+            
+            <div class="modal-body">
+                <div class="help-section">
+                    <h4>支持的视频格式</h4>
+                    <ul>
+                        <li><strong>MP4:</strong> 标准视频文件</li>
+                        <li><strong>M3U8:</strong> HLS 直播流</li>
+                        <li><strong>FLV:</strong> Flash 视频格式</li>
+                        <li><strong>哔哩哔哩:</strong> B站视频链接</li>
+                        <li><strong>YouTube:</strong> YouTube 视频链接</li>
+                    </ul>
+                </div>
+                
+                <div class="help-section">
+                    <h4>如何添加视频</h4>
+                    <ol>
+                        <li>填写视频标题和链接</li>
+                        <li>选择正确的视频类型（可选择自动检测）</li>
+                        <li>点击"添加到列表"按钮</li>
+                    </ol>
+                </div>
+                
+                <div class="help-section">
+                    <h4>批量导入格式</h4>
+                    <p>每行一个视频，使用逗号分隔：</p>
+                    <code>视频标题,视频链接,视频类型</code>
+                    <p>视频类型可选：mp4, m3u8, flv, bilibili, youtube</p>
+                </div>
+                
+                <div class="help-section">
+                    <h4>键盘快捷键</h4>
+                    <ul>
+                        <li><kbd>Space</kbd> - 播放/暂停</li>
+                        <li><kbd>←/→</kbd> - 快退/快进</li>
+                        <li><kbd>Ctrl + ←/→</kbd> - 上一个/下一个视频</li>
+                        <li><kbd>F</kbd> - 全屏</li>
+                        <li><kbd>M</kbd> - 静音</li>
+                    </ul>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- 通知提示 -->
+    <div class="toast-container" id="toastContainer"></div>
+
+    <!-- 加载脚本 -->
+    <script src="scripts/utils.js"></script>
+    <script src="scripts/storage.js"></script>
+    <script src="scripts/videoDetector.js"></script>
+    <script src="scripts/playlistManager.js"></script>
+    <script src="scripts/githubService.js"></script>
+    <script src="scripts/app.js"></script>
 </body>
 </html>
