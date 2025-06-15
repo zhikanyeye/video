@@ -11,22 +11,23 @@ class VideoPlayer {
         this.isMuted = false;
         this.shuffleMode = false;
         this.repeatMode = 0; // 0=不循环, 1=单曲循环, 2=列表循环
+        this.enableProgressInTitle = false; // 是否在标题中显示进度
         
         this.init();
-    }
-
-    async init() {
+    }    async init() {
         try {
             this.loadPlaylist();
             this.bindEvents();
             await this.initPlayer();
             this.updateUI();
             this.showLoadingMessage(false);
+            // 应用保存的设置
+            this.applySettings(this.getSettings());
         } catch (error) {
             console.error('播放器初始化失败:', error);
             this.showErrorMessage('播放器初始化失败: ' + error.message);
         }
-    }    // 加载播放列表
+    }// 加载播放列表
     loadPlaylist() {
         try {
             const playlistData = localStorage.getItem('currentPlaylist');
@@ -73,13 +74,31 @@ class VideoPlayer {
         const backBtn = document.getElementById('backBtn');
         if (backBtn) {
             backBtn.addEventListener('click', () => this.goBack());
-        }
-
-        // 播放列表按钮
+        }        // 播放列表按钮
         const playlistBtn = document.getElementById('playlistBtn');
         if (playlistBtn) {
             playlistBtn.addEventListener('click', () => this.togglePlaylist());
-        }        // 播放控制按钮
+        }
+
+        // 设置按钮
+        const playerSettingsBtn = document.getElementById('playerSettingsBtn');
+        if (playerSettingsBtn) {
+            playerSettingsBtn.addEventListener('click', () => this.toggleSettings());
+        }        // 设置模态框关闭按钮
+        const closePlayerSettingsModal = document.getElementById('closePlayerSettingsModal');
+        if (closePlayerSettingsModal) {
+            closePlayerSettingsModal.addEventListener('click', () => this.toggleSettings());
+        }
+
+        // 点击模态框外部关闭
+        const playerSettingsModal = document.getElementById('playerSettingsModal');
+        if (playerSettingsModal) {
+            playerSettingsModal.addEventListener('click', (e) => {
+                if (e.target === playerSettingsModal) {
+                    this.toggleSettings();
+                }
+            });
+        }// 播放控制按钮
         const playPauseBtn = document.getElementById('playerPlayPauseBtn');
         if (playPauseBtn) {
             playPauseBtn.addEventListener('click', () => this.togglePlayPause());
@@ -322,10 +341,13 @@ class VideoPlayer {
             this.currentTime = this.player.currentTime;
             this.duration = this.player.duration;
             this.updateProgress();
-        });
-
-        this.player.on('video:ended', () => {
-            this.playNext();
+        });        this.player.on('video:ended', () => {
+            const settings = this.getSettings();
+            if (settings.autoplayNext) {
+                this.playNext();
+            } else {
+                this.showToast('视频播放完成');
+            }
         });
 
         this.player.on('video:error', (error) => {
@@ -341,12 +363,17 @@ class VideoPlayer {
         this.player.on('pause', () => {
             this.isPlaying = false;
             this.updatePlayButton();
-        });
-
-        this.player.on('video:volumechange', () => {
+        });        this.player.on('video:volumechange', () => {
             this.volume = this.player.volume;
             this.isMuted = this.player.muted;
             this.updateVolumeUI();
+            
+            // 保存音量设置
+            const settings = this.getSettings();
+            if (settings.rememberVolume) {
+                localStorage.setItem('playerVolume', this.volume.toString());
+                localStorage.setItem('playerMuted', this.isMuted.toString());
+            }
         });
     }
 
@@ -679,6 +706,11 @@ class VideoPlayer {
         if (durationEl) {
             durationEl.textContent = this.formatTime(this.duration);
         }
+
+        // 更新标题显示进度
+        if (this.enableProgressInTitle) {
+            document.title = `${this.formatTime(this.currentTime)} - ${this.playlist[this.currentIndex]?.title} - 青云播`;
+        }
     }
 
     // 更新音量UI
@@ -828,6 +860,117 @@ class VideoPlayer {
             this.player.destroy();
             this.player = null;
         }
+    }
+
+    // 切换设置面板显示/隐藏
+    toggleSettings() {
+        const modal = document.getElementById('playerSettingsModal');
+        if (modal) {
+            const isVisible = modal.style.display === 'block';
+            modal.style.display = isVisible ? 'none' : 'block';
+            
+            if (!isVisible) {
+                // 加载当前设置
+                this.loadSettings();
+            }
+        }
+    }
+
+    // 加载设置
+    loadSettings() {
+        const settings = this.getSettings();
+        
+        // 设置复选框状态
+        const autoplayNext = document.getElementById('autoplayNext');
+        if (autoplayNext) autoplayNext.checked = settings.autoplayNext;
+        
+        const rememberVolume = document.getElementById('rememberVolume');
+        if (rememberVolume) rememberVolume.checked = settings.rememberVolume;
+        
+        const showNotifications = document.getElementById('showNotifications');
+        if (showNotifications) showNotifications.checked = settings.showNotifications;
+        
+        const showProgressOnTitle = document.getElementById('showProgressOnTitle');
+        if (showProgressOnTitle) showProgressOnTitle.checked = settings.showProgressOnTitle;
+        
+        const defaultQuality = document.getElementById('defaultQuality');
+        if (defaultQuality) defaultQuality.value = settings.defaultQuality;
+        
+        // 绑定设置项变更事件
+        this.bindSettingsEvents();
+    }
+
+    // 绑定设置项事件
+    bindSettingsEvents() {
+        const settingInputs = document.querySelectorAll('#playerSettingsModal input, #playerSettingsModal select');
+        settingInputs.forEach(input => {
+            input.addEventListener('change', () => this.saveSettings());
+        });
+    }
+
+    // 获取设置
+    getSettings() {
+        const defaultSettings = {
+            autoplayNext: true,
+            rememberVolume: true,
+            showNotifications: true,
+            showProgressOnTitle: false,
+            defaultQuality: 'auto'
+        };
+        
+        try {
+            const saved = localStorage.getItem('playerSettings');
+            return saved ? { ...defaultSettings, ...JSON.parse(saved) } : defaultSettings;
+        } catch (error) {
+            console.error('获取设置失败:', error);
+            return defaultSettings;
+        }
+    }
+
+    // 保存设置
+    saveSettings() {
+        try {
+            const settings = {
+                autoplayNext: document.getElementById('autoplayNext')?.checked || false,
+                rememberVolume: document.getElementById('rememberVolume')?.checked || false,
+                showNotifications: document.getElementById('showNotifications')?.checked || false,
+                showProgressOnTitle: document.getElementById('showProgressOnTitle')?.checked || false,
+                defaultQuality: document.getElementById('defaultQuality')?.value || 'auto'
+            };
+            
+            localStorage.setItem('playerSettings', JSON.stringify(settings));
+            this.showToast('设置已保存');
+            
+            // 应用设置
+            this.applySettings(settings);
+        } catch (error) {
+            console.error('保存设置失败:', error);
+            this.showToast('保存设置失败', 'error');
+        }
+    }    // 应用设置
+    applySettings(settings) {
+        // 应用记住音量设置
+        if (settings.rememberVolume && this.player) {
+            const savedVolume = localStorage.getItem('playerVolume');
+            const savedMuted = localStorage.getItem('playerMuted');
+            if (savedVolume) {
+                this.player.volume = parseFloat(savedVolume);
+            }
+            if (savedMuted) {
+                this.player.muted = savedMuted === 'true';
+            }
+        }
+        
+        // 应用标题进度显示
+        if (settings.showProgressOnTitle) {
+            this.enableProgressInTitle = true;
+        } else {
+            this.enableProgressInTitle = false;
+            document.title = '青云播 - 视频播放器';
+        }
+        
+        // 存储设置以供其他方法使用
+        this.currentSettings = settings;
     }
 }
 
