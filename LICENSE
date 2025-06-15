@@ -1,0 +1,37 @@
+MIT License
+
+Copyright (c) 2025 青云播开发团队
+
+Permission is hereby granted, free of charge, to any person obtaining a copy
+of this software and associated documentation files (the "Software"), to deal
+in the Software without restriction, including without limitation the rights
+to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
+copies of the Software, and to permit persons to whom the Software is
+furnished to do so, subject to the following conditions:
+
+The above copyright notice and this permission notice shall be included in all
+copies or substantial portions of the Software.
+
+THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
+SOFTWARE.
+
+=============================================================================
+
+青云播 (Qingyun Player)
+
+一款现代化的在线视频播放器，致力于为用户提供优质的视频观看体验。
+
+特色功能：
+• 多格式视频支持 - 兼容MP4、HLS、FLV等主流格式
+• 智能播放列表 - 支持批量管理、排序和搜索
+• 云端同步 - 通过GitHub Gist实现跨设备数据同步
+• 响应式设计 - 完美适配桌面端和移动端
+• 键盘快捷键 - 提供便捷的操作体验
+• 现代化界面 - 采用Material Design设计语言
+
+本项目完全开源，欢迎社区贡献代码和建议。

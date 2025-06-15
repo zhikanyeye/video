@@ -1,0 +1,181 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>青云播 - 视频播放器</title>
+    <link href="https://fonts.googleapis.com/icon?family=Material+Icons" rel="stylesheet">
+    <link rel="stylesheet" href="styles/main.css">
+    <link rel="stylesheet" href="styles/player.css">
+    
+    <!-- ArtPlayer 视频播放器 -->
+    <script src="https://cdn.jsdelivr.net/npm/artplayer@5/dist/artplayer.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/hls.js@1/dist/hls.min.js"></script>
+    
+    <!-- 备用CDN -->
+    <script>
+        // 检查ArtPlayer是否加载成功，如果失败则使用备用CDN
+        window.addEventListener('load', function() {
+            if (typeof Artplayer === 'undefined') {
+                console.warn('主CDN加载失败，尝试备用CDN...');
+                var script1 = document.createElement('script');
+                script1.src = 'https://unpkg.com/artplayer@5/dist/artplayer.js';
+                script1.onload = function() {
+                    var script2 = document.createElement('script');
+                    script2.src = 'https://unpkg.com/hls.js@1/dist/hls.min.js';
+                    document.head.appendChild(script2);
+                };
+                document.head.appendChild(script1);
+            }
+        });
+    </script>
+</head>
+<body class="player-page">
+    <div class="player-container">
+        <!-- 顶部控制栏 -->
+        <header class="player-header">
+            <div class="header-left">
+                <button id="backBtn" class="header-btn" title="返回列表">
+                    <i class="material-icons">arrow_back</i>
+                </button>
+                <div class="video-info">
+                    <h1 id="videoTitle" class="video-title">加载中...</h1>
+                    <div class="video-meta">
+                        <span id="videoIndex" class="video-index">1/1</span>
+                        <span id="videoType" class="video-type">unknown</span>
+                    </div>
+                </div>
+            </div>
+            
+            <div class="header-right">
+                <button id="playlistBtn" class="header-btn" title="播放列表">
+                    <i class="material-icons">queue_music</i>
+                </button>
+                <button id="playerSettingsBtn" class="header-btn" title="设置">
+                    <i class="material-icons">settings</i>
+                </button>
+            </div>
+        </header>
+
+        <!-- 主播放区域 -->
+        <main class="player-main">
+            <div id="videoPlayer" class="player-video">
+                <!-- 视频播放器将在这里初始化 -->
+                <div id="loadingIndicator" class="loading-indicator">
+                    <div class="loading-spinner"></div>
+                    <p>正在初始化播放器...</p>
+                </div>
+            </div>
+            
+
+        </main>
+
+        <!-- 播放列表侧边栏 -->
+        <aside id="playlistSidebar" class="playlist-sidebar">
+            <div class="sidebar-header">
+                <h3>播放列表</h3>
+                <button id="closeSidebar" class="sidebar-close">
+                    <i class="material-icons">close</i>
+                </button>
+            </div>
+            
+            <div class="sidebar-content">
+                <div id="sidebarVideoList" class="sidebar-video-list">
+                    <!-- 播放列表项将在这里显示 -->
+                </div>
+            </div>
+        </aside>
+    </div>
+
+    <!-- 错误提示 -->
+    <div id="errorMessage" class="error-message">
+        <div class="error-content">
+            <i class="material-icons">error</i>
+            <h3>播放出错</h3>
+            <p id="errorText">无法播放视频，请检查链接是否有效</p>
+            <div class="error-actions">
+                <button id="playerRetryBtn" class="btn btn-primary">重试</button>
+                <button id="backToListBtn" class="btn btn-secondary">返回列表</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- 加载提示 -->
+    <div id="loadingMessage" class="loading-message">
+        <div class="loading-content">
+            <div class="spinner"></div>
+            <p>正在加载视频...</p>
+        </div>
+    </div>
+
+    <!-- 消息提示 -->
+    <div id="toast" class="toast"></div>
+
+    <!-- 设置弹窗 -->
+    <div class="modal" id="playerSettingsModal">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h3>播放器设置</h3>
+                <button class="modal-close" id="closePlayerSettingsModal">
+                    <i class="material-icons">close</i>
+                </button>
+            </div>
+            
+            <div class="modal-body">
+                <div class="settings-section">
+                    <h4>播放设置</h4>
+                    
+                    <div class="setting-item">
+                        <label>
+                            <input type="checkbox" id="autoplayNext" checked>
+                            自动播放下一个视频
+                        </label>
+                    </div>
+                    
+                    <div class="setting-item">
+                        <label>
+                            <input type="checkbox" id="rememberVolume" checked>
+                            记住音量设置
+                        </label>
+                    </div>
+                    
+                    <div class="setting-item">
+                        <label>
+                            <input type="checkbox" id="showNotifications" checked>
+                            显示播放通知
+                        </label>
+                    </div>
+                </div>
+                
+                <div class="settings-section">
+                    <h4>显示设置</h4>
+                    
+                    <div class="setting-item">
+                        <label>
+                            <input type="checkbox" id="showProgressOnTitle">
+                            在标题中显示播放进度
+                        </label>
+                    </div>
+                    
+                    <div class="setting-item">
+                        <label for="defaultQuality">默认画质</label>
+                        <select id="defaultQuality">
+                            <option value="auto">自动</option>
+                            <option value="1080p">1080p</option>
+                            <option value="720p">720p</option>
+                            <option value="480p">480p</option>
+                            <option value="360p">360p</option>
+                        </select>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- 核心脚本文件 -->
+    <script src="scripts/github-auth.js"></script>
+    <script src="scripts/improved-gist-manager.js"></script>
+    <script src="scripts/gist-manager.js"></script>
+    <script src="scripts/player.js"></script>
+</body>
+</html>

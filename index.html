@@ -1,0 +1,359 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>青云播 - 视频管理</title>
+    <link href="https://fonts.googleapis.com/icon?family=Material+Icons" rel="stylesheet">
+    <link rel="stylesheet" href="styles/main.css">
+</head>
+<body>
+    <div class="app-container">
+        <!-- 分享方式选择提示 -->
+        <div id="methodSelector" class="method-selector" style="display: none;">
+            <div class="method-selector-content">
+                <h3>🚀 选择分享方式</h3>
+                <p>选择您偏好的云端分享方案：</p>
+                <div class="method-buttons">
+                    <button onclick="setShareMethod('selfhosted')" class="btn btn-primary">
+                        🏠 自建数据库 (推荐)
+                    </button>
+                    <button onclick="setShareMethod('github')" class="btn btn-secondary">
+                        🐙 GitHub Gists
+                    </button>
+                </div>
+                <div class="method-note">
+                    <small>💡 可在设置中随时更改分享方式</small>
+                </div>
+            </div>
+        </div>
+
+        <!-- 头部 -->
+        <header class="header">
+            <div class="header-content">
+                <h1 class="logo">
+                    <i class="material-icons">videocam</i>
+                    青云播
+                </h1>
+                <div class="header-actions">
+                    <!-- 分享方式状态显示 -->
+                    <div id="shareMethodStatus" class="share-method-status">
+                        <span class="method-label">分享方式:</span>
+                        <span id="currentMethod" class="method-name">未设置</span>
+                        <button id="changeMethodBtn" class="btn-link">更改</button>
+                    </div>
+                    
+                    <!-- GitHub用户信息显示 -->
+                    <div id="githubUserInfo" class="github-user-info" style="display: none;"></div>
+                    
+                    <button id="clearAllBtn" class="btn btn-danger">
+                        <i class="material-icons">delete_sweep</i>
+                        清空列表
+                    </button>
+                </div>
+            </div>
+        </header>
+
+        <main class="main-content">
+            <!-- 添加视频区域 -->
+            <section class="add-video-section">
+                <h2>
+                    <i class="material-icons">add_circle</i>
+                    添加视频
+                </h2>
+                
+                <form id="addVideoForm" class="add-form">
+                    <div class="form-group">
+                        <label for="videoTitle">视频标题</label>
+                        <input type="text" id="videoTitle" placeholder="请输入视频标题" required>
+                    </div>
+                    
+                    <div class="form-group">
+                        <label for="videoUrl">视频链接</label>
+                        <input type="url" id="videoUrl" placeholder="请输入视频链接（支持多种格式）" required>
+                        <div class="url-help">
+                            支持：MP4、M3U8、FLV、RTMP等格式
+                        </div>
+                    </div>
+                    
+                    <!-- 批量添加功能 -->
+                    <div class="form-group">
+                        <label for="bulkUrls">批量添加（每行一个链接）</label>
+                        <textarea 
+                            id="bulkUrls" 
+                            class="bulk-textarea"
+                            placeholder="可以在这里粘贴多个视频链接，每行一个&#10;例如：&#10;https://example.com/video1.mp4&#10;https://example.com/video2.m3u8&#10;https://example.com/video3.flv"
+                            rows="4"
+                        ></textarea>
+                        <div class="bulk-help">
+                            <small>批量添加时，视频标题将自动从链接中提取</small>
+                            <button type="button" id="clearBulkTextBtn" class="btn-link">清空</button>
+                        </div>
+                    </div>
+                    
+                    <div class="form-group">
+                        <label for="videoType">视频类型</label>
+                        <select id="videoType">
+                            <option value="auto">自动检测</option>
+                            <option value="mp4">MP4</option>
+                            <option value="m3u8">M3U8 (HLS)</option>
+                            <option value="flv">FLV</option>
+                            <option value="rtmp">RTMP</option>
+                        </select>
+                    </div>
+
+                    <!-- 从分享链接导入 -->
+                    <div class="form-group">
+                        <label for="gistUrl">从分享链接导入</label>
+                        <div class="import-group">
+                            <input type="text" id="gistUrl" placeholder="粘贴分享链接或Gist ID">
+                            <button type="button" id="importFromGistBtn" class="btn btn-secondary">
+                                <i class="material-icons">cloud_download</i>
+                                导入
+                            </button>
+                        </div>
+                        <div class="import-help">
+                            <small>可以导入其他人分享的播放列表</small>
+                        </div>
+                    </div>
+                    
+                    <div class="form-actions">
+                        <button type="submit" class="btn btn-primary">
+                            <i class="material-icons">add</i>
+                            添加到播放列表
+                        </button>
+                        <button type="button" id="bulkAddBtn" class="btn btn-secondary">
+                            <i class="material-icons">playlist_add</i>
+                            批量添加
+                        </button>
+                    </div>
+                </form>
+            </section>
+
+            <!-- 播放列表区域 -->
+            <section class="playlist-section">
+                <div class="section-header">
+                    <h2>
+                        <i class="material-icons">queue_music</i>
+                        播放列表 (<span id="videoCount">0</span>)
+                    </h2>
+                    <div class="section-actions">
+                        <button id="playAllBtn" class="btn btn-success">
+                            <i class="material-icons">play_arrow</i>
+                            播放全部
+                        </button>
+                        <button id="shareBtn" class="btn btn-primary">
+                            <i class="material-icons">share</i>
+                            分享列表
+                        </button>
+                        <button id="exportBtn" class="btn btn-secondary">
+                            <i class="material-icons">download</i>
+                            导出列表
+                        </button>
+                    </div>
+                </div>
+                
+                <div class="playlist-container">
+                    <div id="emptyState" class="empty-state">
+                        <i class="material-icons">video_library</i>
+                        <h3>暂无视频</h3>
+                        <p>请添加视频到播放列表</p>
+                    </div>
+                    
+                    <div id="videoList" class="video-list"></div>
+                </div>
+            </section>
+        </main>
+    </div>
+
+    <!-- 弹窗 -->
+    <div id="modal" class="modal">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h3 id="modalTitle">确认操作</h3>
+                <button id="modalClose" class="modal-close">
+                    <i class="material-icons">close</i>
+                </button>
+            </div>
+            <div class="modal-body">
+                <p id="modalMessage">确定要执行此操作吗？</p>
+            </div>
+            <div class="modal-footer">
+                <button id="modalCancel" class="btn btn-secondary">取消</button>
+                <button id="modalConfirm" class="btn btn-primary">确定</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- 消息提示 -->
+    <div id="toast" class="toast"></div>
+
+    <!-- 分享模态框 -->
+    <div id="shareModal" class="modal">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h3 id="modalTitle">分享播放列表</h3>
+                <button id="shareModalClose" class="modal-close">
+                    <i class="material-icons">close</i>
+                </button>
+            </div>
+            <div class="modal-body">
+                <div class="share-content">
+                    <p>您的播放列表已成功创建分享链接！</p>
+                    
+                    <div class="share-url-section">
+                        <label for="shareUrl">分享链接</label>
+                        <div class="url-input-group">
+                            <input type="text" id="shareUrl" readonly />
+                            <button id="copyUrlBtn" class="btn btn-primary">
+                                <i class="material-icons">content_copy</i>
+                                复制
+                            </button>
+                        </div>
+                    </div>
+                    
+                    <div class="share-qr-section">
+                        <label>二维码分享</label>
+                        <div class="qr-container">
+                            <img id="shareQR" alt="分享二维码" />
+                        </div>
+                        <p class="qr-hint">扫描二维码快速分享给好友</p>
+                    </div>
+                    
+                    <div class="share-tips">
+                        <h4>使用说明：</h4>
+                        <ul>
+                            <li>分享链接永久有效，可以随时访问</li>
+                            <li>接收者打开链接即可直接播放视频</li>
+                            <li>视频数据存储在GitHub Gists中</li>
+                        </ul>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- 核心脚本文件 -->
+    <script src="scripts/github-auth.js"></script>
+    <script src="scripts/improved-gist-manager.js"></script>
+    <script src="scripts/gist-manager.js"></script>
+    <script src="scripts/main.js"></script>
+    
+    <script>
+        // 初始化分享方式选择
+        document.addEventListener('DOMContentLoaded', function() {
+            initializeShareMethod();
+        });
+        
+        // 根据URL参数设置分享方式
+        function initializeShareMethod() {
+            const urlParams = new URLSearchParams(window.location.search);
+            const method = urlParams.get('method');
+            
+            if (method) {
+                setShareMethod(method);
+            } else {
+                // 检查是否已有设置
+                const savedMethod = localStorage.getItem('shareMethod');
+                if (savedMethod) {
+                    setShareMethod(savedMethod);
+                } else {
+                    // 显示选择界面
+                    showMethodSelector();
+                }
+            }
+        }
+        
+        // 显示分享方式选择器
+        function showMethodSelector() {
+            document.getElementById('methodSelector').style.display = 'flex';
+        }
+        
+        // 设置分享方式
+        function setShareMethod(method) {
+            localStorage.setItem('shareMethod', method);
+            document.getElementById('methodSelector').style.display = 'none';
+            
+            // 更新UI显示
+            updateMethodStatus(method);
+            
+            // 根据方式初始化相应的管理器
+            if (method === 'github') {
+                initializeGitHubMethod();
+            } else if (method === 'selfhosted') {
+                initializeSelfHostedMethod();
+            }
+        }
+        
+        // 更新方式状态显示
+        function updateMethodStatus(method) {
+            const methodNames = {
+                'github': '🐙 GitHub Gists',
+                'selfhosted': '🏠 自建数据库'
+            };
+            
+            document.getElementById('currentMethod').textContent = methodNames[method] || '未设置';
+        }
+        
+        // 初始化GitHub方式
+        function initializeGitHubMethod() {
+            const userInfoDiv = document.getElementById('githubUserInfo');
+            userInfoDiv.style.display = 'block';
+            
+            if (gitHubAuth.isAuthenticated()) {
+                gitHubAuth.renderUserInfo(userInfoDiv);
+            } else {
+                userInfoDiv.innerHTML = `
+                    <div class="auth-prompt">
+                        <span>GitHub未授权</span>
+                        <button onclick="gitHubAuth.showAuthGuide()" class="btn btn-primary btn-sm">
+                            授权登录
+                        </button>
+                    </div>
+                `;
+            }
+        }
+        
+        // 初始化自建后端方式
+        function initializeSelfHostedMethod() {
+            document.getElementById('githubUserInfo').style.display = 'none';
+            
+            // 检查后端服务是否可用
+            checkBackendStatus();
+        }
+        
+        // 检查后端服务状态
+        async function checkBackendStatus() {
+            try {
+                const response = await fetch('http://localhost:8090/api/health');
+                if (response.ok) {
+                    console.log('后端服务正常运行');
+                } else {
+                    showBackendWarning();
+                }
+            } catch (error) {
+                showBackendWarning();
+            }
+        }
+        
+        // 显示后端服务警告
+        function showBackendWarning() {
+            const warning = document.createElement('div');
+            warning.className = 'backend-warning';
+            warning.innerHTML = `
+                <div class="warning-content">
+                    <i class="material-icons">warning</i>
+                    <span>后端服务未启动，请先运行服务器</span>
+                    <button onclick="this.parentNode.parentNode.remove()" class="btn-close">×</button>
+                </div>
+            `;
+            document.body.appendChild(warning);
+        }
+        
+        // 更改分享方式
+        document.getElementById('changeMethodBtn').addEventListener('click', function() {
+            showMethodSelector();
+        });
+    </script>
+</body>
+</html>

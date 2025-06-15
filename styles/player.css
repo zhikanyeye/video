@@ -1,0 +1,718 @@
+/* 播放器页面专用样式 */
+.player-page {
+    margin: 0;
+    padding: 0;
+    height: 100vh;
+    overflow: hidden;
+    background: #000;
+}
+
+.player-container {
+    display: flex;
+    flex-direction: column;
+    height: 100vh;
+    position: relative;
+}
+
+/* 播放器头部 */
+.player-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: var(--space-md) var(--space-lg);    background: rgba(30, 30, 30, 0.95);
+    border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+    -webkit-backdrop-filter: blur(10px);
+    backdrop-filter: blur(10px);
+    z-index: 20;
+    position: relative;
+}
+
+.header-left {
+    display: flex;
+    align-items: center;
+    gap: var(--space-md);
+    flex: 1;
+    min-width: 0;
+}
+
+.header-right {
+    display: flex;
+    gap: var(--space-sm);
+}
+
+.header-btn {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 40px;
+    height: 40px;
+    border: none;
+    background: transparent;
+    color: var(--text-secondary);
+    border-radius: var(--radius-medium);
+    cursor: pointer;
+    transition: all var(--transition-fast);
+}
+
+.header-btn:hover {
+    background: var(--bg-hover);
+    color: var(--text-primary);
+}
+
+.video-info {
+    flex: 1;
+    min-width: 0;
+}
+
+.video-title {
+    font-size: var(--font-lg);
+    font-weight: 600;
+    color: var(--text-primary);
+    margin-bottom: var(--space-xs);
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+.video-meta {
+    display: flex;
+    gap: var(--space-md);
+    font-size: var(--font-sm);
+    color: var(--text-secondary);
+}
+
+.video-index {
+    font-weight: 500;
+}
+
+.video-type {
+    padding: 2px var(--space-sm);
+    background: var(--primary-color);
+    color: white;
+    border-radius: var(--radius-small);
+    font-size: 12px;
+    text-transform: uppercase;
+    font-weight: 600;
+}
+
+/* 主播放区域 */
+.player-main {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    background: #000;
+    position: relative;
+}
+
+.player-video {
+    flex: 1;
+    position: relative;
+    background: #000;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+#playerContainer {
+    width: 100%;
+    height: 100%;
+}
+
+/* 移除了多余的底部控制栏样式，因为ArtPlayer已经提供了完整的控件 */
+
+/* 播放列表侧边栏 */
+.playlist-sidebar {
+    position: fixed;
+    top: 0;
+    right: -400px;
+    width: 400px;
+    height: 100vh;
+    background: var(--bg-secondary);
+    border-left: 1px solid var(--border-color);
+    z-index: 30;
+    transition: transform var(--transition-normal);
+    display: flex;
+    flex-direction: column;
+}
+
+.playlist-sidebar.show {
+    transform: translateX(-400px);
+}
+
+.sidebar-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: var(--space-lg);
+    border-bottom: 1px solid var(--border-color);
+    background: var(--bg-tertiary);
+}
+
+.sidebar-header h3 {
+    color: var(--text-primary);
+    font-size: var(--font-lg);
+}
+
+.sidebar-close {
+    width: 32px;
+    height: 32px;
+    border: none;
+    background: transparent;
+    color: var(--text-secondary);
+    cursor: pointer;
+    border-radius: var(--radius-medium);
+    transition: all var(--transition-fast);
+}
+
+.sidebar-close:hover {
+    background: var(--bg-hover);
+    color: var(--text-primary);
+}
+
+.sidebar-content {
+    flex: 1;
+    overflow-y: auto;
+}
+
+.sidebar-video-list {
+    padding: var(--space-md);
+}
+
+.sidebar-video-item {
+    display: flex;
+    align-items: center;
+    gap: var(--space-md);
+    padding: var(--space-md);
+    border-radius: var(--radius-medium);
+    cursor: pointer;
+    transition: all var(--transition-fast);
+    margin-bottom: var(--space-sm);
+}
+
+.sidebar-video-item:hover {
+    background: var(--bg-hover);
+}
+
+.sidebar-video-item.active {
+    background: rgba(33, 150, 243, 0.2);
+    border: 1px solid var(--primary-color);
+}
+
+.sidebar-video-index {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 32px;
+    height: 32px;
+    background: var(--bg-tertiary);
+    color: var(--text-secondary);
+    border-radius: 50%;
+    font-weight: 600;
+    font-size: var(--font-sm);
+    flex-shrink: 0;
+}
+
+.sidebar-video-item.active .sidebar-video-index {
+    background: var(--primary-color);
+    color: white;
+}
+
+.sidebar-video-info {
+    flex: 1;
+    min-width: 0;
+}
+
+.sidebar-video-title {
+    font-weight: 500;
+    color: var(--text-primary);
+    margin-bottom: var(--space-xs);
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+.sidebar-video-meta {
+    font-size: var(--font-sm);
+    color: var(--text-secondary);
+}
+
+/* 错误和加载状态 */
+.error-message {
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    background: rgba(0, 0, 0, 0.9);
+    display: none;
+    align-items: center;
+    justify-content: center;
+    z-index: 40;
+}
+
+.error-message.show {
+    display: flex;
+}
+
+.error-content {
+    text-align: center;
+    color: var(--text-primary);
+    max-width: 400px;
+    padding: var(--space-xl);
+}
+
+.error-content i {
+    font-size: 64px;
+    color: var(--danger-color);
+    margin-bottom: var(--space-lg);
+}
+
+.error-content h3 {
+    margin-bottom: var(--space-md);
+    font-size: var(--font-xl);
+}
+
+.error-content p {
+    margin-bottom: var(--space-lg);
+    color: var(--text-secondary);
+    line-height: 1.6;
+}
+
+.error-actions {
+    display: flex;
+    gap: var(--space-md);
+    justify-content: center;
+}
+
+.loading-message {
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    background: rgba(0, 0, 0, 0.9);
+    display: none;
+    align-items: center;
+    justify-content: center;
+    z-index: 35;
+}
+
+.loading-message.show {
+    display: flex;
+}
+
+.loading-content {
+    text-align: center;
+    color: var(--text-primary);
+}
+
+.loading-content p {
+    margin-top: var(--space-md);
+    color: var(--text-secondary);
+}
+
+/* 加载指示器 */
+.loading-indicator {
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%);
+    text-align: center;
+    color: var(--text-primary);
+    z-index: 10;
+}
+
+.loading-spinner {
+    width: 40px;
+    height: 40px;
+    border: 3px solid rgba(255, 255, 255, 0.3);
+    border-top: 3px solid var(--primary-color);
+    border-radius: 50%;
+    animation: spin 1s linear infinite;
+    margin: 0 auto 1rem;
+}
+
+@keyframes spin {
+    0% { transform: rotate(0deg); }
+    100% { transform: rotate(360deg); }
+}
+
+/* Toast 消息提示样式 */
+.toast-container {
+    position: fixed;
+    top: 20px;
+    right: 20px;
+    z-index: 10000;
+    display: flex;
+    flex-direction: column;
+    gap: var(--space-xs);
+}
+
+.toast {
+    background: rgba(0, 0, 0, 0.9);
+    color: white;
+    padding: var(--space-sm) var(--space-md);
+    border-radius: var(--border-radius);
+    font-size: 14px;
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3);
+    transform: translateX(100%);
+    opacity: 0;
+    transition: all 0.3s ease;
+    max-width: 300px;
+    word-wrap: break-word;
+}
+
+.toast.show {
+    transform: translateX(0);
+    opacity: 1;
+}
+
+.toast-info {
+    border-left: 4px solid var(--primary-color);
+}
+
+.toast-success {
+    border-left: 4px solid #4caf50;
+    background: rgba(76, 175, 80, 0.1);
+    color: #4caf50;
+}
+
+.toast-warning {
+    border-left: 4px solid #ff9800;
+    background: rgba(255, 152, 0, 0.1);
+    color: #ff9800;
+}
+
+.toast-error {
+    border-left: 4px solid #f44336;
+    background: rgba(244, 67, 54, 0.1);
+    color: #f44336;
+}
+
+/* 模态框样式 */
+.modal {
+    display: none;
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    background: rgba(0, 0, 0, 0.8);
+    z-index: 1000;
+    -webkit-backdrop-filter: blur(5px);
+    backdrop-filter: blur(5px);
+}
+
+.modal-content {
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%);
+    background: var(--bg-secondary);
+    border-radius: var(--border-radius);
+    box-shadow: 0 10px 30px rgba(0, 0, 0, 0.3);
+    max-width: 500px;
+    width: 90%;
+    max-height: 80vh;
+    overflow-y: auto;
+}
+
+.modal-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: var(--space-lg);
+    border-bottom: 1px solid var(--border-color);
+}
+
+.modal-header h3 {
+    margin: 0;
+    color: var(--text-primary);
+    font-size: 1.2rem;
+}
+
+.modal-close {
+    background: none;
+    border: none;
+    color: var(--text-secondary);
+    cursor: pointer;
+    padding: var(--space-sm);
+    border-radius: var(--border-radius);
+    transition: all var(--transition-normal);
+}
+
+.modal-close:hover {
+    background: var(--bg-hover);
+    color: var(--text-primary);
+}
+
+.modal-body {
+    padding: var(--space-lg);
+}
+
+.settings-section {
+    margin-bottom: var(--space-lg);
+}
+
+.settings-section:last-child {
+    margin-bottom: 0;
+}
+
+.settings-section h4 {
+    color: var(--text-primary);
+    margin: 0 0 var(--space-md) 0;
+    font-size: 1rem;
+    font-weight: 600;
+}
+
+.setting-item {
+    margin-bottom: var(--space-md);
+}
+
+.setting-item:last-child {
+    margin-bottom: 0;
+}
+
+.setting-item label {
+    display: flex;
+    align-items: center;
+    color: var(--text-secondary);
+    cursor: pointer;
+    gap: var(--space-sm);
+}
+
+.setting-item input[type="checkbox"] {
+    margin: 0;
+    accent-color: var(--primary-color);
+}
+
+.setting-item select {
+    background: var(--bg-primary);
+    color: var(--text-primary);
+    border: 1px solid var(--border-color);
+    border-radius: var(--border-radius);
+    padding: var(--space-sm);
+    min-width: 120px;
+    margin-left: auto;
+}
+
+.setting-item select:focus {
+    outline: none;
+    border-color: var(--primary-color);
+}
+
+/* 新播放器布局样式 */
+.player-layout {
+    display: flex;
+    height: 100vh;
+    background: #000;
+}
+
+.player-main {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    position: relative;
+}
+
+.player-topbar {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: var(--space-md) var(--space-lg);
+    background: rgba(30, 30, 30, 0.95);
+    border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+    backdrop-filter: blur(10px);
+    z-index: 20;
+}
+
+.topbar-btn {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 40px;
+    height: 40px;
+    border: none;
+    background: transparent;
+    color: var(--text-secondary);
+    border-radius: var(--radius-medium);
+    cursor: pointer;
+    transition: all var(--transition-fast);
+}
+
+.topbar-btn:hover {
+    background: var(--bg-hover);
+    color: var(--text-primary);
+}
+
+.topbar-btn.hidden {
+    display: none;
+}
+
+.video-container {
+    flex: 1;
+    position: relative;
+    background: #000;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+.video-player {
+    width: 100%;
+    height: 100%;
+}
+
+/* 播放列表侧边栏（新版本） */
+.playlist-sidebar {
+    width: 300px;
+    background: var(--bg-secondary);
+    border-left: 1px solid var(--border-color);
+    display: flex;
+    flex-direction: column;
+    transition: margin-right var(--transition-normal);
+}
+
+.playlist-sidebar.collapsed {
+    margin-right: -300px;
+}
+
+.sidebar-title {
+    display: flex;
+    align-items: center;
+    gap: var(--space-sm);
+    color: var(--text-primary);
+    font-size: var(--font-lg);
+    font-weight: 600;
+}
+
+.sidebar-controls {
+    display: flex;
+    gap: var(--space-xs);
+}
+
+.playlist-info {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 0 var(--space-lg) var(--space-md);
+    font-size: var(--font-sm);
+    color: var(--text-secondary);
+}
+
+.playlist-search {
+    padding: 0 var(--space-lg) var(--space-md);
+}
+
+.search-input-group {
+    position: relative;
+    display: flex;
+    align-items: center;
+}
+
+.search-input-group i {
+    position: absolute;
+    left: var(--space-sm);
+    color: var(--text-secondary);
+    font-size: 18px;
+}
+
+.search-input-group input {
+    width: 100%;
+    padding: var(--space-sm) var(--space-sm) var(--space-sm) 40px;
+    border: 1px solid var(--border-color);
+    border-radius: var(--radius-medium);
+    background: var(--bg-tertiary);
+    color: var(--text-primary);
+    font-size: var(--font-sm);
+    transition: border-color var(--transition-fast);
+}
+
+.search-input-group input:focus {
+    outline: none;
+    border-color: var(--primary-color);
+}
+
+.playlist-content {
+    flex: 1;
+    overflow-y: auto;
+    padding: 0 var(--space-lg);
+}
+
+/* 覆盖层样式 */
+.loading-overlay,
+.error-overlay,
+.empty-overlay {
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    background: rgba(0, 0, 0, 0.8);
+    z-index: 10;
+}
+
+.loading-overlay .loading-spinner,
+.error-overlay .error-content,
+.empty-overlay .empty-content {
+    text-align: center;
+    color: var(--text-primary);
+}
+
+.loading-spinner .spinner {
+    width: 40px;
+    height: 40px;
+    border: 3px solid rgba(255, 255, 255, 0.3);
+    border-top: 3px solid var(--primary-color);
+    border-radius: 50%;
+    animation: spin 1s linear infinite;
+    margin: 0 auto var(--space-md);
+}
+
+@keyframes spin {
+    0% { transform: rotate(0deg); }
+    100% { transform: rotate(360deg); }
+}
+
+.error-icon,
+.empty-icon {
+    font-size: 48px;
+    color: var(--text-secondary);
+    margin-bottom: var(--space-md);
+}
+
+.error-title,
+.empty-title {
+    font-size: var(--font-lg);
+    margin-bottom: var(--space-sm);
+}
+
+.error-message,
+.empty-message {
+    font-size: var(--font-sm);
+    color: var(--text-secondary);
+    margin-bottom: var(--space-lg);
+}
+
+.error-actions {
+    display: flex;
+    gap: var(--space-md);
+    justify-content: center;
+}
+
+/* 影院模式 */
+.player-container.theater-mode .playlist-sidebar {
+    display: none;
+}
+
+.player-container.theater-mode .player-main {
+    width: 100%;
+}
+
+/* 隐藏类 */
+.hidden {
+    display: none !important;
+}
