@@ -26,9 +26,7 @@ class VideoPlayer {
             console.error('播放器初始化失败:', error);
             this.showErrorMessage('播放器初始化失败: ' + error.message);
         }
-    }
-
-    // 加载播放列表
+    }    // 加载播放列表
     loadPlaylist() {
         try {
             const playlistData = localStorage.getItem('currentPlaylist');
@@ -46,11 +44,26 @@ class VideoPlayer {
                     this.currentIndex = 0;
                 }
             } else {
-                throw new Error('没有找到播放列表数据');
+                // 如果没有播放列表数据，使用测试数据
+                console.warn('没有找到播放列表数据，使用测试视频');
+                this.playlist = [{
+                    title: '测试视频 - Big Buck Bunny',
+                    url: 'https://commondatastorage.googleapis.com/gtv-videos-bucket/sample/BigBuckBunny.mp4',
+                    type: 'mp4'
+                }];
+                this.currentIndex = 0;
+                this.showToast('使用测试视频，请从主页添加您的视频', 'warning');
             }
         } catch (error) {
             console.error('加载播放列表失败:', error);
-            this.showErrorMessage('加载播放列表失败，请返回重新选择视频');
+            // 使用测试数据作为后备
+            this.playlist = [{
+                title: '测试视频 - Big Buck Bunny',
+                url: 'https://commondatastorage.googleapis.com/gtv-videos-bucket/sample/BigBuckBunny.mp4',
+                type: 'mp4'
+            }];
+            this.currentIndex = 0;
+            this.showToast('加载播放列表失败，使用测试视频', 'error');
         }
     }
 
@@ -67,29 +80,29 @@ class VideoPlayer {
         if (playlistBtn) {
             playlistBtn.addEventListener('click', () => this.togglePlaylist());
         }        // 播放控制按钮
-        const playPauseBtn = document.getElementById('playPauseBtn');
+        const playPauseBtn = document.getElementById('playerPlayPauseBtn');
         if (playPauseBtn) {
             playPauseBtn.addEventListener('click', () => this.togglePlayPause());
         }
 
-        const prevBtn = document.getElementById('prevBtn');
+        const prevBtn = document.getElementById('playerPrevBtn');
         if (prevBtn) {
             prevBtn.addEventListener('click', () => this.playPrevious());
         }
 
-        const nextBtn = document.getElementById('nextBtn');
+        const nextBtn = document.getElementById('playerNextBtn');
         if (nextBtn) {
             nextBtn.addEventListener('click', () => this.playNext());
         }
 
         // 全屏按钮
-        const fullscreenBtn = document.getElementById('fullscreenBtn');
+        const fullscreenBtn = document.getElementById('playerFullscreenBtn');
         if (fullscreenBtn) {
             fullscreenBtn.addEventListener('click', () => this.toggleFullscreen());
         }
 
         // 静音按钮
-        const volumeBtn = document.getElementById('volumeBtn');
+        const volumeBtn = document.getElementById('muteBtn');
         if (volumeBtn) {
             volumeBtn.addEventListener('click', () => this.toggleMute());
         }
@@ -195,17 +208,30 @@ class VideoPlayer {
                     break;
             }
         });
-    }
-
-    // 初始化播放器
+    }    // 初始化播放器
     async initPlayer() {
         this.showLoadingMessage(true);
         
         try {
+            // 检查ArtPlayer是否可用
+            if (typeof Artplayer === 'undefined') {
+                throw new Error('ArtPlayer库未加载，请检查网络连接');
+            }
+
             const currentVideo = this.playlist[this.currentIndex];
             if (!currentVideo) {
                 throw new Error('当前视频不存在');
-            }            // 创建ArtPlayer实例
+            }
+
+            console.log('正在初始化播放器，当前视频:', currentVideo);
+
+            // 检查容器是否存在
+            const container = document.querySelector('#videoPlayer');
+            if (!container) {
+                throw new Error('找不到视频播放器容器');
+            }
+
+            // 创建ArtPlayer实例
             this.player = new Artplayer({
                 container: '#videoPlayer',
                 url: currentVideo.url,
@@ -240,8 +266,13 @@ class VideoPlayer {
                 ],
             });
 
+            console.log('ArtPlayer实例创建成功:', this.player);
+
             // 绑定播放器事件
             this.bindPlayerEvents();
+            
+            // 显示成功消息
+            this.showToast('播放器初始化成功');
             
         } catch (error) {
             console.error('初始化播放器失败:', error);
@@ -684,15 +715,15 @@ class VideoPlayer {
         }
     }    // 显示/隐藏加载信息
     showLoadingMessage(show) {
-        const loadingOverlay = document.getElementById('loadingOverlay');
-        const errorOverlay = document.getElementById('errorOverlay');
+        const loadingIndicator = document.getElementById('loadingIndicator');
+        const errorMessage = document.getElementById('errorMessage');
         
-        if (loadingOverlay) {
+        if (loadingIndicator) {
             if (show) {
-                loadingOverlay.classList.remove('hidden');
-                if (errorOverlay) errorOverlay.classList.add('hidden');
+                loadingIndicator.style.display = 'block';
+                if (errorMessage) errorMessage.style.display = 'none';
             } else {
-                loadingOverlay.classList.add('hidden');
+                loadingIndicator.style.display = 'none';
             }
         }
     }

@@ -11,6 +11,24 @@
     <!-- ArtPlayer 视频播放器 -->
     <script src="https://cdn.jsdelivr.net/npm/artplayer@5/dist/artplayer.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/hls.js@1/dist/hls.min.js"></script>
+    
+    <!-- 备用CDN -->
+    <script>
+        // 检查ArtPlayer是否加载成功，如果失败则使用备用CDN
+        window.addEventListener('load', function() {
+            if (typeof Artplayer === 'undefined') {
+                console.warn('主CDN加载失败，尝试备用CDN...');
+                var script1 = document.createElement('script');
+                script1.src = 'https://unpkg.com/artplayer@5/dist/artplayer.js';
+                script1.onload = function() {
+                    var script2 = document.createElement('script');
+                    script2.src = 'https://unpkg.com/hls.js@1/dist/hls.min.js';
+                    document.head.appendChild(script2);
+                };
+                document.head.appendChild(script1);
+            }
+        });
+    </script>
 </head>
 <body class="player-page">
     <div class="player-container">
@@ -41,8 +59,12 @@
 
         <!-- 主播放区域 -->
         <main class="player-main">
-            <div id="playerContainer" class="player-video">
+            <div id="videoPlayer" class="player-video">
                 <!-- 视频播放器将在这里初始化 -->
+                <div id="loadingIndicator" class="loading-indicator">
+                    <div class="loading-spinner"></div>
+                    <p>正在初始化播放器...</p>
+                </div>
             </div>
             
             <!-- 播放控制栏 -->
