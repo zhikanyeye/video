@@ -12,7 +12,7 @@ class VideoPlayer {
         this.shuffleMode = false;
         this.repeatMode = 0; // 0=不循环, 1=单曲循环, 2=列表循环
         this.enableProgressInTitle = false; // 是否在标题中显示进度
-        this.shareManager = new ShareManager(); // 修正类名
+        this.gistManager = improvedGistManager; // 使用改进的Gist管理器
         
         this.init();
     }    async init() {
@@ -31,53 +31,54 @@ class VideoPlayer {
     }    // 加载播放列表
     async loadPlaylist() {
         try {
-            // 首先检查URL参数
-            const shareMethod = localStorage.getItem('shareMethod');
+            // 首先检查URL参数，优先处理分享链接
+            const urlParams = new URLSearchParams(window.location.search);
+            const gistId = urlParams.get('gist');
+            const shareId = urlParams.get('share');
             
-            if (shareMethod === 'github') {
-                // GitHub Gists方式
-                const urlParams = new URLSearchParams(window.location.search);
-                const gistId = urlParams.get('gist');
-                if (gistId) {
-                    await this.loadFromGitHub(gistId);
-                } else {
-                    this.loadFromLocalStorage();
-                }
-            } else if (shareMethod === 'selfhosted') {
-                // 自建后端方式
-                const shareId = this.shareManager.getShareIdFromUrl();
-                if (shareId) {
-                    await this.loadFromShare(shareId);
-                } else {
-                    this.loadFromLocalStorage();
-                }
-            } else {
-                // 兼容旧版本，检查所有可能的参数
-                const urlParams = new URLSearchParams(window.location.search);
-                const gistId = urlParams.get('gist');
-                const shareId = urlParams.get('share');
-                
-                if (gistId) {
-                    await this.loadFromGitHub(gistId);
-                } else if (shareId) {
-                    await this.loadFromShare(shareId);
-                } else {
-                    this.loadFromLocalStorage();
-                }
+            if (gistId) {
+                // 有Gist参数，直接从GitHub加载
+                await this.loadFromGitHub(gistId);
+                return;
             }
+            
+            if (shareId) {
+                // 有分享参数，从自建后端加载
+                await this.loadFromShare(shareId);
+                return;
+            }            
+            // 没有URL参数，从本地存储加载
+            this.loadFromLocalStorage();
             
         } catch (error) {
             console.error('加载播放列表失败:', error);
             this.loadFromLocalStorage(); // 降级到本地存储
         }
-    }
-
-    // 从自建后端分享加载播放列表
+    }    // 从Gist或自建后端加载播放列表（智能判断）
     async loadFromShare(shareId) {
         try {
             this.showToast('正在从分享链接加载播放列表...', 'info');
+              // 判断是Gist ID还是自建后端的share ID
+            const isBackendId = /^[a-f0-9]{8}-[a-f0-9]{4}-[a-f0-9]{4}-[a-f0-9]{4}-[a-f0-9]{12}$/i.test(shareId); // UUID格式
+            const isGistId = !isBackendId && shareId.length > 10; // Gist ID通常比较长，且不是UUID格式
             
-            const shareData = await this.shareManager.loadFromShare(shareId);
+            let shareData;
+            
+            if (isGistId) {
+                // 使用GitHub Gist API
+                shareData = await this.gistManager.loadPlaylist(shareId);
+            } else if (isBackendId) {
+                // 使用自建后端API
+                shareData = await this.loadFromBackend(shareId);
+            } else {
+                // 尝试两种方式，优先GitHub Gist
+                try {
+                    shareData = await this.gistManager.loadPlaylist(shareId);
+                } catch (gistError) {
+                    console.warn('GitHub Gist加载失败，尝试自建后端:', gistError.message);
+                    shareData = await this.loadFromBackend(shareId);
+                }
+            }
             
             if (shareData && shareData.videos && shareData.videos.length > 0) {
                 this.playlist = shareData.videos;
@@ -95,6 +96,31 @@ class VideoPlayer {
             
         } catch (error) {
             console.error('从分享链接加载失败:', error);
+            throw error;
+        }
+    }
+
+    // 从自建后端加载播放列表
+    async loadFromBackend(shareId) {
+        try {
+            const response = await fetch(`/api/playlist/${shareId}`);
+            
+            if (!response.ok) {
+                if (response.status === 404) {
+                    throw new Error('分享链接已过期或不存在');
+                } else {
+                    throw new Error(`加载失败: ${response.status}`);
+                }
+            }
+            
+            const data = await response.json();
+            return {
+                title: data.title,
+                description: data.description,
+                videos: JSON.parse(data.videos)
+            };
+        } catch (error) {
+            console.error('从自建后端加载失败:', error);
             throw error;
         }
     }
@@ -801,14 +827,26 @@ class VideoPlayer {
         if (playlistStats) {
             playlistStats.textContent = `${this.currentIndex + 1}/${this.playlist.length}`;
         }
-    }
-
-    // 播放指定视频
+    }    // 播放指定视频
     playVideo(index) {
         if (index >= 0 && index < this.playlist.length) {
             this.currentIndex = index;
             this.loadCurrentVideo();
         }
+    }
+
+    // 加载当前视频
+    loadCurrentVideo() {
+        if (this.playlist.length === 0) {
+            this.showErrorMessage('播放列表为空');
+            return;
+        }
+        
+        if (this.currentIndex >= this.playlist.length) {
+            this.currentIndex = 0;
+        }
+        
+        this.switchVideo();
     }
 
     // 从播放列表中移除视频

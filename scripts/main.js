@@ -2,15 +2,18 @@
 class VideoManager {
     constructor() {
         this.videos = [];
-        this.shareManager = new ShareManager(); // 修正类名
+        this.gistManager = improvedGistManager; // 使用改进的Gist管理器
         this.init();
-    }
-
-    init() {
+    }    init() {
         this.loadFromStorage();
         this.bindEvents();
         this.renderVideoList();
         this.updateUI();
+        
+        // 监听GitHub授权成功事件
+        window.addEventListener('github-auth-success', () => {
+            this.handleAuthSuccess();
+        });
     }
 
     // 绑定事件监听器
@@ -202,6 +205,22 @@ class VideoManager {
                 this.showToast('视频删除成功', 'success');
             }
         );
+    }    // 处理GitHub授权成功
+    handleAuthSuccess() {
+        // 隐藏授权相关的UI
+        if (gitHubAuth && gitHubAuth.hideAuthUI) {
+            gitHubAuth.hideAuthUI();
+        }
+        
+        // 显示成功提示
+        this.showToast('GitHub授权成功！现在可以分享播放列表了', 'success');
+        
+        // 如果有视频，提示可以分享
+        if (this.videos.length > 0) {
+            setTimeout(() => {
+                this.showToast('点击"分享列表"按钮即可创建分享链接', 'info');
+            }, 2000);
+        }
     }
 
     // 播放单个视频
@@ -209,6 +228,21 @@ class VideoManager {
         const video = this.videos.find(v => v.id === id);
         if (video) {
             this.openPlayer([video], 0);
+        }
+    }
+
+    // 打开播放器页面
+    openPlayer(playlist, startIndex = 0) {
+        try {
+            // 保存播放列表到localStorage
+            localStorage.setItem('currentPlaylist', JSON.stringify(playlist));
+            localStorage.setItem('currentIndex', startIndex.toString());
+            
+            // 打开播放器页面
+            window.open('player.html', '_blank');
+        } catch (error) {
+            console.error('打开播放器失败:', error);
+            this.showToast('打开播放器失败，请重试', 'error');
         }
     }
 
@@ -303,12 +337,12 @@ class VideoManager {
                     `青云播放列表 - ${new Date().toLocaleString()}`,
                     `包含${this.videos.length}个视频的播放列表`
                 );
-                
-            } else if (shareMethod === 'selfhosted') {
+                  } else if (shareMethod === 'selfhosted') {
                 // 使用自建后端
-                shareResult = await this.shareManager.createShare(
+                shareResult = await this.shareToBackend(
                     this.videos, 
-                    `青云播放列表 - ${new Date().toLocaleString()}`
+                    `青云播放列表 - ${new Date().toLocaleString()}`,
+                    `包含${this.videos.length}个视频的播放列表`
                 );
             }
 
@@ -344,7 +378,7 @@ class VideoManager {
         }
 
         if (shareQR) {
-            shareQR.src = this.shareManager.generateQRCode(gistResult.shareUrl);
+            shareQR.src = this.generateQRCode(gistResult.shareUrl);
         }
 
         if (copyUrlBtn) {
@@ -371,6 +405,11 @@ class VideoManager {
             document.body.removeChild(textArea);
             this.showToast('链接已复制到剪贴板', 'success');
         }
+    }
+
+    // 生成二维码
+    generateQRCode(url) {
+        return `https://api.qrserver.com/v1/create-qr-code/?size=200x200&data=${encodeURIComponent(url)}`;
     }
 
     // 渲染视频列表
@@ -629,7 +668,7 @@ class VideoManager {
                     return;
                 }
                 
-                gistData = await this.shareManager.loadFromShare(shareId);
+                gistData = await this.gistManager.loadPlaylist(shareId);
             }
             
             if (gistData && gistData.videos && gistData.videos.length > 0) {
@@ -742,6 +781,39 @@ class VideoManager {
         this.updateUI();
         
         this.showToast(`成功导入 ${videos.length} 个视频`, 'success');
+    }
+
+    // 分享到自建后端
+    async shareToBackend(videos, title, description = '') {
+        try {
+            const response = await fetch('/api/share', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                },
+                body: JSON.stringify({
+                    title: title,
+                    description: description,
+                    videos: videos
+                })
+            });
+
+            if (!response.ok) {
+                const errorData = await response.json();
+                throw new Error(errorData.error || `分享失败: ${response.status}`);
+            }
+
+            const result = await response.json();
+            return {
+                id: result.shareId,
+                shareUrl: result.shareUrl,
+                title: result.title,
+                videoCount: result.videoCount
+            };
+        } catch (error) {
+            console.error('分享到自建后端失败:', error);
+            throw error;
+        }
     }
 }
 

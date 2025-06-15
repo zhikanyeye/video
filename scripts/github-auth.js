@@ -111,9 +111,7 @@ class GitHubAuthManager {
             if (e.target === modal) {
                 document.body.removeChild(modal);
             }
-        });
-
-        saveBtn.addEventListener('click', async () => {
+        });        saveBtn.addEventListener('click', async () => {
             const token = tokenInput.value.trim();
             if (!token) {
                 alert('请输入GitHub Token');
@@ -132,6 +130,9 @@ class GitHubAuthManager {
                 // 触发授权成功事件
                 window.dispatchEvent(new Event('github-auth-success'));
                 
+                // 隐藏授权相关的UI元素
+                this.hideAuthUI();
+                
             } catch (error) {
                 alert(error.message);
             } finally {
@@ -141,6 +142,33 @@ class GitHubAuthManager {
         });
 
         return modal;
+    }    // 隐藏授权相关的UI元素
+    hideAuthUI() {
+        // 如果有授权引导弹窗，隐藏它
+        const authModal = document.querySelector('.auth-modal');
+        if (authModal) {
+            authModal.style.display = 'none';
+        }
+        
+        // 隐藏任何可能的Token输入界面
+        const tokenInputs = document.querySelectorAll('[id*="token"], [id*="Token"]');
+        tokenInputs.forEach(input => {
+            const parent = input.closest('.form-group, .auth-input-group, .input-group');
+            if (parent) {
+                parent.classList.add('auth-hidden');
+            }
+        });
+        
+        // 隐藏GitHub相关的设置按钮
+        const githubButtons = document.querySelectorAll('[class*="github"], [id*="github"]');
+        githubButtons.forEach(btn => {
+            if (btn.textContent.includes('Token') || btn.textContent.includes('授权')) {
+                btn.classList.add('auth-hidden');
+            }
+        });
+        
+        // 给body添加授权成功状态类
+        document.body.classList.add('auth-success-state');
     }
 
     // 显示用户信息

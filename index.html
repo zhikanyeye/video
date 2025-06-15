@@ -1,9 +1,20 @@
 <!DOCTYPE html>
 <html lang="zh-CN">
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta charset="UTF-8">    <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>青云播 - 视频管理</title>
+      <!-- Favicon -->
+    <link rel="icon" type="image/svg+xml" href="assets/favicon.svg">
+    <link rel="icon" type="image/svg+xml" sizes="16x16" href="assets/favicon-16.svg">
+    <link rel="alternate icon" href="assets/favicon.svg">
+    <link rel="apple-touch-icon" href="assets/favicon.svg">
+    <link rel="shortcut icon" href="assets/favicon.svg">
+    
+    <!-- Meta Tags -->
+    <meta name="description" content="青云播 - 现代化云端视频播放器，支持多格式播放和智能分享">
+    <meta name="keywords" content="视频播放器,云端分享,在线播放,青云播">
+    <meta name="author" content="青云播团队">
+    
     <link href="https://fonts.googleapis.com/icon?family=Material+Icons" rel="stylesheet">
     <link rel="stylesheet" href="styles/main.css">
 </head>
@@ -30,10 +41,11 @@
 
         <!-- 头部 -->
         <header class="header">
-            <div class="header-content">
-                <h1 class="logo">
-                    <i class="material-icons">videocam</i>
-                    青云播
+            <div class="header-content">                <h1 class="logo">
+                    <div class="logo-container">
+                        <img src="assets/favicon.svg" alt="青云播" class="logo-icon">
+                        <span class="logo-text">青云播</span>
+                    </div>
                 </h1>
                 <div class="header-actions">
                     <!-- 分享方式状态显示 -->
@@ -233,10 +245,8 @@
         </div>
     </div>
 
-    <!-- 核心脚本文件 -->
-    <script src="scripts/github-auth.js"></script>
+    <!-- 核心脚本文件 -->    <script src="scripts/github-auth.js"></script>
     <script src="scripts/improved-gist-manager.js"></script>
-    <script src="scripts/gist-manager.js"></script>
     <script src="scripts/main.js"></script>
     
     <script>

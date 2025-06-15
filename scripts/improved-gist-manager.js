@@ -18,7 +18,8 @@ class ImprovedGistManager {
         }
 
         try {
-            const gistData = {
+            // 先创建基本的gist结构
+            const tempGistData = {
                 description: description || `${title} - 共${videos.length}个视频`,
                 public: true,
                 files: {
@@ -30,9 +31,6 @@ class ImprovedGistManager {
                             videos: videos,
                             player_url: window.location.origin + '/player.html'
                         }, null, 2)
-                    },
-                    "README.md": {
-                        content: this.generateReadme(title, description, videos)
                     }
                 }
             };
@@ -44,7 +42,7 @@ class ImprovedGistManager {
                     'Accept': 'application/vnd.github.v3+json',
                     'Content-Type': 'application/json'
                 },
-                body: JSON.stringify(gistData)
+                body: JSON.stringify(tempGistData)
             });
 
             if (!response.ok) {
@@ -53,6 +51,25 @@ class ImprovedGistManager {
             }
 
             const gist = await response.json();
+            
+            // 更新gist，添加包含正确链接的README
+            const updatedGistData = {
+                files: {
+                    "README.md": {
+                        content: this.generateReadme(title, description, videos, gist.id)
+                    }
+                }
+            };
+
+            await fetch(`${this.baseUrl}/${gist.id}`, {
+                method: 'PATCH',
+                headers: {
+                    'Authorization': `token ${this.authManager.getToken()}`,
+                    'Accept': 'application/vnd.github.v3+json',
+                    'Content-Type': 'application/json'
+                },
+                body: JSON.stringify(updatedGistData)
+            });
             
             return {
                 id: gist.id,
@@ -114,7 +131,7 @@ class ImprovedGistManager {
                         }, null, 2)
                     },
                     "README.md": {
-                        content: this.generateReadme(title, description, videos)
+                        content: this.generateReadme(title, description, videos, gistId)
                     }
                 }
             };
@@ -142,7 +159,7 @@ class ImprovedGistManager {
     }
 
     // 生成README文档
-    generateReadme(title, description, videos) {
+    generateReadme(title, description, videos, gistId) {
         const playerUrl = window.location.origin + '/player.html';
         
         return `# ${title}
@@ -159,11 +176,11 @@ ${videos.map((video, index) =>
 
 ## 🚀 如何播放
 
-1. **在线播放**: [点击这里直接播放](${playerUrl}?gist=${this.lastGistId})
+1. **在线播放**: [点击这里直接播放](${playerUrl}?gist=${gistId})
 2. **手动播放**: 复制上方视频链接到青云播放器
 
 ---
-*由青云播生成 - ${window.location.origin}*`;
+*由青云播放器生成 - ${window.location.origin}*`;
     }
 
     // 获取用户的所有播放列表Gists
@@ -190,7 +207,7 @@ ${videos.map((video, index) =>
             // 过滤出包含playlist.json的Gist
             return gists.filter(gist => 
                 gist.files['playlist.json'] && 
-                gist.description.includes('青云播') || gist.description.includes('播放列表')
+                (gist.description.includes('青云播') || gist.description.includes('播放列表'))
             ).map(gist => ({
                 id: gist.id,
                 title: gist.description,

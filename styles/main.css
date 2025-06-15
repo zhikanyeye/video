@@ -98,6 +98,32 @@ body {
     color: var(--primary-color);
 }
 
+.logo-container {
+    display: flex;
+    align-items: center;
+    gap: var(--space-sm);
+}
+
+.logo-icon {
+    width: 32px;
+    height: 32px;
+    filter: drop-shadow(0 2px 4px rgba(0, 0, 0, 0.3));
+    transition: transform var(--transition-fast);
+}
+
+.logo-icon:hover {
+    transform: scale(1.1);
+}
+
+.logo-text {
+    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+    background-clip: text;
+    font-weight: 700;
+    letter-spacing: 0.5px;
+}
+
 /* 按钮样式 */
 .btn {
     display: inline-flex;
@@ -1120,6 +1146,20 @@ body {
     border-color: #4CAF50;
     background: rgba(255, 255, 255, 0.15);
     box-shadow: 0 0 0 3px rgba(76, 175, 80, 0.2);
+}
+
+/* 隐藏授权相关UI的样式 */
+.auth-hidden {
+    display: none !important;
+}
+
+.auth-success-state .auth-modal {
+    display: none;
+}
+
+.auth-success-state .github-token-input,
+.auth-success-state .github-auth-controls {
+    display: none;
 }
 
 .auth-input-group input::placeholder {

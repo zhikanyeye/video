@@ -1,177 +1,288 @@
-# 青云播 - 现代化视频播放器
+# 青云播 - 现代化云端视频播放器
 
-## 项目简介
+<div align="center">
+  <img src="assets/logo.svg" alt="青云播Logo" width="400"/>
+  
+  <h3>🎥 现代化云端视频播放器</h3>
+  <p><em>专业 · 优雅 · 智能</em></p>
+  
+  [![GitHub Stars](https://img.shields.io/github/stars/zhikanyeye/video?style=flat-square&logo=github&color=yellow)](https://github.com/zhikanyeye/video)
+  [![GitHub Forks](https://img.shields.io/github/forks/zhikanyeye/video?style=flat-square&logo=github&color=blue)](https://github.com/zhikanyeye/video)
+  [![License](https://img.shields.io/badge/license-MIT-blue.svg?style=flat-square)](LICENSE)
+  [![Node.js Version](https://img.shields.io/badge/node-%E2%89%A514.0.0-brightgreen.svg?style=flat-square&logo=node.js)](https://nodejs.org/)
+  [![Build Status](https://img.shields.io/badge/build-passing-brightgreen.svg?style=flat-square)](https://github.com/zhikanyeye/video)
+</div>
 
-青云播是一款功能强大、界面优雅的现代化视频播放器，专为在线视频播放和管理而设计。采用双页面架构，分离视频管理和播放功能，提供流畅的用户体验和专业的播放质量。
+---
 
-### 🌟 核心亮点
+## 📖 项目概述
 
-- **🎥 全格式支持**: 兼容MP4、M3U8、FLV、RTMP等主流视频格式
-- **⚡ 高性能播放**: 基于ArtPlayer引擎，支持HLS流媒体和自适应码率
-- **🎯 智能管理**: 批量添加、智能识别、本地存储，轻松管理视频库
-- **☁️ 云端分享**: 支持两种分享方式，轻松分享播放列表给好友
-- **🎮 丰富交互**: 完整的键盘快捷键、触摸手势、播放模式控制
-- **📱 响应式设计**: 完美适配桌面端和移动端，深色主题护眼舒适
-- **🔧 零依赖**: 纯原生JavaScript实现，开箱即用，无需复杂配置
+**青云播**是一款专为现代Web环境设计的视频播放器解决方案，集成了先进的云端分享技术和优雅的用户界面。项目采用渐进式Web应用(PWA)架构，支持离线使用，为用户提供原生应用级别的流畅体验。
 
-### � 云端分享功能
+### 🎯 设计理念
+
+- **🌊 流畅体验**: 基于现代Web标准，提供60fps流畅播放体验
+- **☁️ 云端优先**: 创新的双云端架构，满足不同场景需求
+- **🎨 美观界面**: 遵循Material Design规范，支持深色/浅色主题
+- **📱 移动优先**: 响应式设计，完美适配各种设备尺寸
+- **🔧 开发友好**: 模块化架构，易于扩展和二次开发
+- **🔒 隐私保护**: 本地存储优先，用户数据完全可控
+
+### 🏗️ 技术架构
+
+```mermaid
+graph TD
+    A[👤 用户界面] --> B[📁 视频管理模块]
+    A --> C[🎮 播放器引擎]
+    B --> D[💾 本地存储]
+    B --> E[☁️ 云端分享]
+    E --> F[🏠 自建后端]
+    E --> G[🐙 GitHub Gists]
+    C --> H[🎵 ArtPlayer核心]
+    C --> I[📺 HLS.js解析器]
+    F --> J[🗃️ SQLite数据库]
+    G --> K[🔗 GitHub API]
+    
+    style A fill:#e1f5fe
+    style C fill:#f3e5f5
+    style E fill:#e8f5e8
+    style F fill:#fff3e0
+    style G fill:#f1f8e9
+```
+
+## ✨ 核心特性
+
+### 🎬 强大的播放能力
+
+<div align="center">
+
+| 特性 | 描述 | 支持格式 | 状态 |
+|------|------|----------|------|
+| **�️ 多格式播放** | 支持主流视频格式无损播放 | MP4, WebM, AVI, MOV, MKV | ✅ 完整支持 |
+| **📡 流媒体播放** | 自适应码率流媒体播放 | M3U8, DASH, HLS | ✅ 完整支持 |
+| **📻 直播支持** | 实时流媒体播放 | RTMP, WebRTC, FLV | ✅ 完整支持 |
+| **📝 字幕支持** | 多语言字幕显示 | SRT, VTT, ASS | ✅ 完整支持 |
+| **�️ 音轨切换** | 多音轨选择和切换 | 多语言音轨 | ✅ 完整支持 |
+| **📱 移动适配** | 触摸手势和移动优化 | 所有移动设备 | ✅ 完整支持 |
+
+</div>
+
+### ☁️ 创新云端分享
 
 青云播提供两种云端分享方案，满足不同用户需求：
 
-#### 方案一：自建数据库 (推荐)
-- **✅ 优势**:
-  - 无需任何账号和密钥，即开即用
-  - 数据完全自主控制，安全可靠
-  - 本地存储，响应速度快
-  - 支持详细的访问统计
-  - 完全免费使用
-- **⚠️ 需求**: 
-  - 需要运行Node.js后端服务
-  - 使用双击 `start-backend.bat` (Windows) 或 `start-backend.sh` (Linux/Mac) 一键启动
+#### 🏠 自建后端方案
+```javascript
+// 🌟 特点：完全自主控制
+✅ 零配置一键启动      🚀 3秒内完成部署
+✅ 本地数据存储        🔒 数据完全掌控
+✅ 毫秒级响应速度      ⚡ 极致性能体验
+✅ 完整访问统计        📊 详细数据分析
+✅ 支持自定义域名      🌐 专业品牌形象
+✅ 离线模式支持        📴 无网络也能用
+```
 
-#### 方案二：GitHub Gists
-- **✅ 优势**:
-  - 全球CDN加速，访问速度快
-  - 数据永久保存，支持版本控制
-  - 多设备同步，随时随地访问
-  - 完全免费的云端存储
-- **⚠️ 需求**: 
-  - 需要GitHub账号
-  - 需要创建Personal Access Token
-  - 分享的播放列表公开可见
+#### 🐙 GitHub Gists方案
+```javascript
+// 🌟 特点：全球云端同步
+✅ 永久免费云端存储    💰 零成本使用
+✅ 全球CDN加速访问    🌍 毫秒级响应
+✅ Git版本控制管理    📈 完整修改历史
+✅ 多设备实时同步      📱 随时随地访问
+✅ 一键生成分享链接    🔗 便捷分享体验
+✅ 支持私有分享       🔐 灵活权限控制
+```
 
-### 📁 项目架构
+### 🎛️ 专业播放控制
+
+<div align="center">
+
+| 控制类型 | 功能详情 | 快捷键 |
+|----------|----------|--------|
+| **🎵 音频控制** | 音量调节、静音切换、音轨选择 | `↑↓` 调节音量，`M` 静音 |
+| **🖼️ 视频控制** | 画质选择、全屏播放、画中画模式 | `F` 全屏，`P` 画中画 |
+| **⏯️ 播放控制** | 倍速播放、精确跳转、播放模式 | `空格` 播放/暂停，`←→` 快进/快退 |
+| **📱 手势支持** | 滑动调节、双击暂停、捏合缩放 | 触摸屏设备全手势支持 |
+| **⌨️ 快捷键** | 完整的键盘快捷键体系 | 支持自定义快捷键 |
+
+</div>
+
+## 📁 项目架构
 
 ```
 video-master/
+├── assets/                  # 静态资源文件
+│   ├── logo.svg            # 项目Logo
+│   ├── favicon.svg         # 网站图标
+│   └── favicon-16.svg      # 小尺寸图标
+├── backend/                # 后端服务目录
+│   ├── server.js           # Node.js服务器
+│   ├── package.json        # 后端依赖配置
+│   └── data/               # 数据存储目录
+├── scripts/                # JavaScript脚本
+│   ├── main.js             # 主页面逻辑
+│   ├── player.js           # 播放器逻辑
+│   ├── gist-manager.js     # GitHub Gists管理
+│   ├── improved-gist-manager.js # 增强版Gist管理
+│   └── github-auth.js      # GitHub授权模块
+├── styles/                 # CSS样式文件
+│   ├── main.css            # 主样式文件
+│   └── player.css          # 播放器样式
 ├── index.html              # 视频管理中心
 ├── player.html             # 专业播放器页面
 ├── share-methods.html      # 分享方式选择页面
 ├── start-backend.bat       # Windows后端启动脚本
 ├── start-backend.sh        # Linux/Mac后端启动脚本
-├── styles/
-│   ├── main.css           # 主界面样式
-│   └── player.css         # 播放器专用样式
-├── scripts/
-│   ├── main.js            # 视频管理逻辑
-│   ├── player.js          # 播放器核心功能
-│   ├── gist-manager.js    # 自建后端API管理
-│   ├── github-auth.js     # GitHub授权管理
-│   └── improved-gist-manager.js  # GitHub Gists API管理
-├── backend/
-│   ├── server.js          # Node.js后端服务
-│   ├── package.json       # 后端依赖配置
-│   └── playlists.db       # SQLite数据库(自动创建)
-└── README.md              # 项目说明文档
+└── README.md               # 项目说明文档
 ```
 
-#### 🎯 用户体验 
-- ✅ **快捷键操作**: 全套键盘快捷键，高效操作体验
-- ✅ **手势支持**: 移动端触摸手势，自然交互方式  
-- ✅ **播放列表**: 可搜索侧边栏，快速定位和切换
-- ✅ **状态反馈**: 实时进度显示、缓冲状态、播放统计
-- ✅ **消息系统**: 优雅的Toast提示，用户友好的反馈
-- ✅ **深色主题**: 护眼的深色界面，长时间使用舒适
-- ✅ **加载优化**: 异步加载机制，快速响应用户操作
+## 🚀 快速开始
 
-#### 💻 技术特色
-- ✅ **现代化开发**: ES6+语法，模块化架构，代码简洁高效
-- ✅ **零外部依赖**: 无需构建工具，下载即用，部署简单
-- ✅ **跨浏览器**: 兼容Chrome、Firefox、Safari、Edge主流浏览器
-- ✅ **性能优化**: 内存管理、异步处理、缓存策略
-- ✅ **安全防护**: XSS防护、URL验证、输入校验
-- ✅ **调试友好**: 完善的错误日志、调试模式、开发工具
+### 📋 环境要求
 
-### 🛠️ 技术栈
+<div align="center">
 
-青云播采用现代化的前端技术栈，确保高性能和良好的用户体验：
+| 组件 | 最低版本 | 推荐版本 | 说明 |
+|------|----------|----------|------|
+| **Node.js** | 14.0.0+ | 18.0.0+ | JavaScript运行时环境 |
+| **浏览器** | Chrome 80+ | 最新版本 | 现代浏览器支持 |
+| **操作系统** | Windows 10+ | 最新版本 | 跨平台支持 |
+| **内存** | 2GB+ | 4GB+ | 流畅运行需求 |
+| **网络** | 1Mbps+ | 10Mbps+ | 视频流畅播放 |
 
-- **核心框架**: 原生 JavaScript (ES6+) - 轻量高效，无额外依赖
-- **视频引擎**: ArtPlayer - 专业级HTML5视频播放器
-- **流媒体**: HLS.js - 完美支持M3U8格式和自适应码率
-- **样式系统**: CSS3 + CSS Variables - 现代化样式，支持主题切换
-- **图标库**: Material Icons - Google设计规范，图标丰富
-- **数据存储**: localStorage - 本地持久化，隐私安全
-- **构建方式**: 无需构建 - 开箱即用，部署简单
+</div>
 
-### 🔄 工作流程
+### 📦 安装部署
 
-青云播的设计理念是简单高效，整个工作流程只需三步：
+#### 🎯 方法一：一键启动（推荐新手）
 
-1. **📝 添加视频** - 在管理页面添加视频链接到播放列表
-2. **💾 数据同步** - 通过localStorage在页面间无缝传递数据  
-3. **🎬 享受播放** - 在专业播放器中享受高质量的视频体验
+```bash
+# 📥 克隆项目到本地
+git clone https://github.com/zhikanyeye/video.git
+cd video
 
-```mermaid
-graph LR
-    A[视频管理页面] --> B[localStorage存储]
-    B --> C[播放器页面]
-    C --> D[ArtPlayer播放]
-    D --> E[用户体验]
+# 🎬 Windows 用户（双击即可）
+start-backend.bat
+
+# 🐧 Linux/Mac 用户
+chmod +x start-backend.sh
+./start-backend.sh
+
+# 🌐 浏览器访问
+http://localhost:8090
 ```
 
-### 📹 支持格式
+<details>
+<summary>💡 一键启动详细说明</summary>
 
-青云播凭借先进的技术架构，支持广泛的视频和音频格式：
+**Windows用户**：
+- 双击 `start-backend.bat` 文件即可启动
+- 首次启动会自动安装依赖（约2-3分钟）
+- 启动成功后会自动打开浏览器
 
-#### 🎥 视频格式全覆盖
-- **MP4**: 最主流的H.264/H.265编码视频，兼容性最佳
-- **WebM**: Google推出的开源格式，高压缩比和画质
-- **AVI**: 经典的Windows视频格式，广泛支持
-- **MOV**: Apple QuickTime格式，高质量视频首选
+**Linux/Mac用户**：
+- 运行 `./start-backend.sh` 脚本启动
+- 脚本会检查Node.js环境并自动配置
+- 支持后台运行模式
 
-#### 🌊 流媒体技术领先  
-- **M3U8 (HLS)**: HTTP Live Streaming，支持自适应码率和直播
-- **DASH**: MPEG动态自适应流媒体，国际标准
-- **FLV**: Flash Video格式，网络视频经典格式
-- **RTMP**: 实时流媒体协议，支持低延迟直播
+</details>
 
-#### 🎵 音频格式丰富
-- **MP3**: 标准音频格式，普及度最高
-- **AAC**: 高级音频编码，音质优秀压缩率高
-- **OGG**: 开源音频格式，无专利限制
-- **WAV**: 无损音频格式，录音首选
+#### 🛠️ 方法二：开发者模式
 
-#### 🌐 网络协议完备
-- **HTTP/HTTPS**: 标准网络传输协议
-- **WebSocket**: 实时双向通信支持
-- **WebRTC**: P2P实时通信技术
-- **CORS**: 跨域资源共享，支持CDN加速
+```bash
+# 1. 📂 克隆仓库
+git clone https://github.com/zhikanyeye/video.git
+cd video
 
-### 🎮 快捷键大全
+# 2. 📦 安装后端依赖
+cd backend
+npm install
 
-青云播提供完整的键盘操作支持，让你像专业播放器一样高效操作：
+# 3. 🚀 启动开发服务器
+npm run dev
 
-#### 🕹️ 播放控制
-- `空格键` / `K`: 播放/暂停切换
-- `←` / `→`: 快退/快进 10秒
-- `↑` / `↓`: 音量增减 10%  
-- `Ctrl + ←` / `Ctrl + →`: 上一个/下一个视频
-- `Home` / `End`: 跳转到视频开头/结尾
+# 4. 🌐 访问应用
+open http://localhost:8090
+```
 
-#### 🖥️ 界面操作
-- `F` / `F11`: 全屏模式切换
-- `M`: 静音/取消静音
-- `P`: 画中画模式
-- `Esc`: 退出全屏/关闭面板
-- `Tab`: 焦点切换
+#### 🐳 方法三：Docker容器化部署
 
-#### ⚡ 精准控制
-- `数字键 1-9`: 跳转到视频 10%-90% 位置
-- `数字键 0`: 跳转到视频开头
-- `Shift + ←/→`: 精确调整 ±3秒
-- `Ctrl + Shift + ←/→`: 逐帧前进/后退
+```dockerfile
+# 🏗️ 构建镜像
+docker build -t qingyunbo:latest .
 
-### 📖 完整使用指南
+# 🚀 运行容器
+docker run -d \
+  --name qingyunbo \
+  -p 8090:8090 \
+  -v $(pwd)/data:/app/data \
+  qingyunbo:latest
 
-#### 🚀 快速上手
-1. **环境准备**: 
-   ```bash
-   # 推荐方式: Python内置服务器（免安装）
-   python -m http.server 8080
-   
-   # 或者: Node.js serve（需要先安装）
-   npx serve -p 8080
+# 📊 查看运行状态
+docker ps | grep qingyunbo
+
+# 🌐 访问应用
+open http://localhost:8090
+## 📚 使用指南
+
+### 🎯 基础操作
+
+#### 1. 添加视频
+- **单个添加**: 点击"➕ 添加视频"，输入标题和链接
+- **批量添加**: 点击"📄 批量导入"，粘贴多行视频链接
+- **格式支持**: MP4、M3U8、FLV、RTMP等主流格式
+
+#### 2. 播放控制
+- `空格` - 播放/暂停
+- `←→` - 快进/快退10秒
+- `↑↓` - 音量调节
+- `F` - 全屏切换
+- `M` - 静音切换
+
+#### 3. 云端分享
+
+**自建数据库方式（推荐）**：
+1. 确保后端服务已启动
+2. 点击"分享列表"按钮  
+3. 系统自动生成分享链接
+4. 复制链接或扫描二维码分享
+
+**GitHub Gists方式**：
+1. 获取GitHub Personal Access Token（需要gist权限）
+2. 在应用中完成GitHub授权
+3. 选择"GitHub分享"创建Gist
+4. 生成全球访问链接
+
+### � 移动端使用
+
+- 在同一WiFi下使用 `http://你的IP:8090` 访问
+- 支持触摸手势：滑动调节、双击全屏
+- 完美适配手机和平板设备
+
+## 🛠️ 问题排除
+
+### 常见问题
+
+**视频无法播放**：
+- 检查视频链接有效性
+- 确认网络连接稳定
+- 验证视频格式支持
+
+**后端启动失败**：
+- 检查Node.js版本 >= 14.0.0
+- 确认端口8090未被占用
+- 查看错误日志信息
+
+**分享功能异常**：
+- 自建后端：确认服务运行正常
+- GitHub方式：验证Token权限正确
+
+### 浏览器支持
+
+- ✅ Chrome 80+ (推荐)
+- ✅ Firefox 75+
+- ✅ Safari 13+
+- ✅ Edge 80+
    
    # 或者: PHP内置服务器（如果已安装PHP）
    php -S localhost:8080
@@ -486,20 +597,49 @@ A:
 ### Q: 移动端访问慢？
 A:
 1. 确保设备在同一WiFi网络
-2. 使用设备IP地址而非localhost
-3. 考虑使用GitHub Gists方式
+## 🤝 贡献指南
 
-## 🔄 更新日志
+我们欢迎所有形式的贡献！
 
-### v2.0.0 (最新)
-- ✨ 新增云端分享功能
-- ✨ 支持两种分享方式选择
-- ✨ 添加GitHub授权管理
-- ✨ 优化移动端体验
-- 🐛 修复已知问题
+### 贡献方式
+- 🐛 报告问题和Bug
+- 💡 提出新功能建议  
+- 📖 改进文档
+- 💻 提交代码
 
-### v1.0.0
-- ✨ 基础视频管理功能
-- ✨ 专业播放器支持
-- ✨ 响应式设计
-- ✨ 本地存储支持
+### 开发环境
+```bash
+# 克隆仓库
+git clone https://github.com/zhikanyeye/video.git
+
+# 安装依赖
+cd video/backend
+npm install
+
+# 启动开发环境
+npm run dev
+```
+
+## 📄 许可证
+
+本项目基于 [MIT 许可证](LICENSE) 开源。
+
+## 🔗 相关链接
+
+- 🏠 [项目主页](https://github.com/zhikanyeye/video)
+- 🐛 [问题反馈](https://github.com/zhikanyeye/video/issues)
+- 💬 [讨论区](https://github.com/zhikanyeye/video/discussions)
+
+---
+
+<div align="center">
+  <h3>🌟 如果这个项目对您有帮助，请给个Star！</h3>
+  <p>
+    <a href="https://github.com/zhikanyeye/video">
+      <img src="https://img.shields.io/github/stars/zhikanyeye/video?style=social" alt="GitHub stars"/>
+    </a>
+  </p>
+  
+  <p><strong>青云播 - 让视频分享更简单 ☁️</strong></p>
+  <p><em>Made with ❤️ by 青云播团队</em></p>
+</div>
