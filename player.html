@@ -3,28 +3,127 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <meta name="apple-mobile-web-app-capable" content="yes">
-    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
-    <meta name="format-detection" content="telephone=no">
-    <!-- 网站元信息 -->
-    <meta name="description" content="青云播 - 专业视频播放器页面，支持多格式播放和播放列表管理">
-    <meta name="keywords" content="视频播放器,在线播放,播放列表,青云播">
-    <meta name="author" content="青云播团队">
     <title>青云播 - 视频播放器</title>
     <link href="https://fonts.googleapis.com/icon?family=Material+Icons" rel="stylesheet">
     <link rel="stylesheet" href="styles/main.css">
     <link rel="stylesheet" href="styles/player.css">
     
     <!-- ArtPlayer 视频播放器 -->
-    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/artplayer@5/dist/artplayer.css">
     <script src="https://cdn.jsdelivr.net/npm/artplayer@5/dist/artplayer.js"></script>
-    
-    <!-- 视频插件 -->
     <script src="https://cdn.jsdelivr.net/npm/hls.js@1/dist/hls.min.js"></script>
-    <script src="https://cdn.jsdelivr.net/npm/flv.js@1/dist/flv.min.js"></script>
-    <script src="https://cdn.jsdelivr.net/npm/artplayer-plugin-hls@5/dist/artplayer-plugin-hls.js"></script>
-    <script src="https://cdn.jsdelivr.net/npm/artplayer-plugin-flv@5/dist/artplayer-plugin-flv.js"></script>
 </head>
+<body class="player-page">
+    <div class="player-container">
+        <!-- 顶部控制栏 -->
+        <header class="player-header">
+            <div class="header-left">
+                <button id="backBtn" class="header-btn" title="返回列表">
+                    <i class="material-icons">arrow_back</i>
+                </button>
+                <div class="video-info">
+                    <h1 id="videoTitle" class="video-title">加载中...</h1>
+                    <div class="video-meta">
+                        <span id="videoIndex" class="video-index">1/1</span>
+                        <span id="videoType" class="video-type">unknown</span>
+                    </div>
+                </div>
+            </div>
+            
+            <div class="header-right">
+                <button id="playlistBtn" class="header-btn" title="播放列表">
+                    <i class="material-icons">queue_music</i>
+                </button>
+                <button id="playerSettingsBtn" class="header-btn" title="设置">
+                    <i class="material-icons">settings</i>
+                </button>
+            </div>
+        </header>
+
+        <!-- 主播放区域 -->
+        <main class="player-main">
+            <div id="playerContainer" class="player-video">
+                <!-- 视频播放器将在这里初始化 -->
+            </div>
+            
+            <!-- 播放控制栏 -->
+            <div class="player-controls">
+                <button id="playerPrevBtn" class="control-btn" title="上一个">
+                    <i class="material-icons">skip_previous</i>
+                </button>
+                <button id="playerPlayPauseBtn" class="control-btn play-btn" title="播放/暂停">
+                    <i class="material-icons">play_arrow</i>
+                </button>
+                <button id="playerNextBtn" class="control-btn" title="下一个">
+                    <i class="material-icons">skip_next</i>
+                </button>
+                
+                <div class="progress-container">
+                    <span id="currentTime" class="time">00:00</span>
+                    <div class="progress-bar">
+                        <div id="progress" class="progress"></div>
+                    </div>
+                    <span id="duration" class="time">00:00</span>
+                </div>
+                
+                <div class="volume-container">
+                    <button id="muteBtn" class="control-btn" title="静音">
+                        <i class="material-icons">volume_up</i>
+                    </button>
+                    <div class="volume-bar">
+                        <div id="volumeLevel" class="volume-level"></div>
+                    </div>
+                </div>
+                
+                <button id="playerFullscreenBtn" class="control-btn" title="全屏">
+                    <i class="material-icons">fullscreen</i>
+                </button>
+            </div>
+        </main>
+
+        <!-- 播放列表侧边栏 -->
+        <aside id="playlistSidebar" class="playlist-sidebar">
+            <div class="sidebar-header">
+                <h3>播放列表</h3>
+                <button id="closeSidebar" class="sidebar-close">
+                    <i class="material-icons">close</i>
+                </button>
+            </div>
+            
+            <div class="sidebar-content">
+                <div id="sidebarVideoList" class="sidebar-video-list">
+                    <!-- 播放列表项将在这里显示 -->
+                </div>
+            </div>
+        </aside>
+    </div>
+
+    <!-- 错误提示 -->
+    <div id="errorMessage" class="error-message">
+        <div class="error-content">
+            <i class="material-icons">error</i>
+            <h3>播放出错</h3>
+            <p id="errorText">无法播放视频，请检查链接是否有效</p>
+            <div class="error-actions">
+                <button id="playerRetryBtn" class="btn btn-primary">重试</button>
+                <button id="backToListBtn" class="btn btn-secondary">返回列表</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- 加载提示 -->
+    <div id="loadingMessage" class="loading-message">
+        <div class="loading-content">
+            <div class="spinner"></div>
+            <p>正在加载视频...</p>
+        </div>
+    </div>
+
+    <!-- 消息提示 -->
+    <div id="toast" class="toast"></div>
+
+    <script src="scripts/player.js"></script>
+</body>
+</html>
 <body class="player-page">
     <div class="player-layout">
         <!-- 播放列表侧边栏 -->
@@ -281,18 +380,6 @@
     <div class="toast-container" id="toastContainer"></div>
 
     <!-- 加载脚本 -->
-    <script type="module" src="scripts/player.js"></script>
-    
-    <!-- 临时调试脚本 -->
-    <script src="debug.js"></script>
-    <script>
-        // 页面加载完成后运行调试检查
-        window.addEventListener('load', () => {
-            setTimeout(() => {
-                console.log('🔍 自动运行调试检查...');
-                runAllChecks();
-            }, 1000);
-        });
-    </script>
+    <script src="scripts/player.js"></script>
 </body>
 </html>

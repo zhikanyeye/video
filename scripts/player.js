@@ -1,936 +1,815 @@
-/**
- * 播放器页面控制器 - 初始化和管理播放器页面
- */
-
-import PlaylistPlayer from './playlistPlayer.js';
-import { storage } from './storage.js';
-import { showToast, debounce } from './utils.js';
-
-class PlayerController {
+// 播放器页面JavaScript - 视频播放功能
+class VideoPlayer {
     constructor() {
-        this.playlistPlayer = null;
-        this.searchQuery = '';
-        this.isInitialized = false;
+        this.playlist = [];
+        this.currentIndex = 0;
+        this.player = null;
+        this.isPlaying = false;
+        this.currentTime = 0;
+        this.duration = 0;
+        this.volume = 0.7;
+        this.isMuted = false;
+        this.shuffleMode = false;
+        this.repeatMode = 0; // 0=不循环, 1=单曲循环, 2=列表循环
         
         this.init();
     }
-    
+
     async init() {
         try {
-            // 等待 DOM 加载完成
-            if (document.readyState === 'loading') {
-                document.addEventListener('DOMContentLoaded', () => this.initialize());
-            } else {
-                await this.initialize();
-            }
-        } catch (error) {
-            console.error('播放器页面初始化失败:', error);
-            showToast('页面初始化失败', 'error');
-        }
-    }
-    
-    async initialize() {
-        try {
-            // 检查必要的依赖
-            this.checkDependencies();
-            
-            // 初始化播放列表播放器
-            this.playlistPlayer = new PlaylistPlayer();
-            
-            // 绑定UI事件
+            this.loadPlaylist();
             this.bindEvents();
-            
-            // 处理URL参数
-            this.handleUrlParams();
-            
-            // 初始化搜索功能
-            this.initSearch();
-            
-            // 设置页面标题
-            document.title = '青云播 - 视频播放器';
-            
-            this.isInitialized = true;
-            console.log('播放器页面初始化完成');
-            
+            await this.initPlayer();
+            this.updateUI();
+            this.showLoadingMessage(false);
         } catch (error) {
             console.error('播放器初始化失败:', error);
-            this.showError('播放器初始化失败，请刷新页面重试');
+            this.showErrorMessage('播放器初始化失败: ' + error.message);
         }
-    }    checkDependencies() {
-        // 检查 ArtPlayer
-        if (typeof Artplayer === 'undefined') {
-            throw new Error('ArtPlayer 未加载');
-        }
-        
-        // 检查必要的 DOM 元素
-        const requiredElements = [
-            '#videoPlayer',
-            '#playlistSidebar'
-        ];
-        
-        requiredElements.forEach(selector => {
-            if (!document.querySelector(selector)) {
-                throw new Error(`必要元素缺失: ${selector}`);
-            }        });
     }
-    
+
+    // 加载播放列表
+    loadPlaylist() {
+        try {
+            const playlistData = localStorage.getItem('currentPlaylist');
+            const indexData = localStorage.getItem('currentIndex');
+            
+            if (playlistData) {
+                this.playlist = JSON.parse(playlistData);
+                this.currentIndex = indexData ? parseInt(indexData) : 0;
+                
+                if (this.playlist.length === 0) {
+                    throw new Error('播放列表为空');
+                }
+                
+                if (this.currentIndex >= this.playlist.length) {
+                    this.currentIndex = 0;
+                }
+            } else {
+                throw new Error('没有找到播放列表数据');
+            }
+        } catch (error) {
+            console.error('加载播放列表失败:', error);
+            this.showErrorMessage('加载播放列表失败，请返回重新选择视频');
+        }
+    }
+
+    // 绑定事件监听器
     bindEvents() {
-        console.log('🔧 开始绑定事件...');
-        
-        // 侧边栏控制按钮
-        const collapseSidebar = document.getElementById('collapseSidebar');
-        if (collapseSidebar) {
-            collapseSidebar.addEventListener('click', () => {
-                console.log('点击了收起侧边栏按钮');
-                this.toggleSidebar();
-            });
+        // 返回按钮
+        const backBtn = document.getElementById('backBtn');
+        if (backBtn) {
+            backBtn.addEventListener('click', () => this.goBack());
         }
-        
-        const expandSidebar = document.getElementById('expandSidebar');
-        if (expandSidebar) {
-            expandSidebar.addEventListener('click', () => {
-                console.log('点击了展开侧边栏按钮');
-                this.toggleSidebar();
-            });
-        }
-        
-        // 播放列表控制按钮
-        const shuffleBtn = document.getElementById('shuffleBtn');
-        if (shuffleBtn) {
-            shuffleBtn.addEventListener('click', () => {
-                console.log('点击了随机播放按钮');
-                this.toggleShuffle();
-            });
-        }
-        
-        const repeatBtn = document.getElementById('repeatBtn');
-        if (repeatBtn) {
-            repeatBtn.addEventListener('click', () => {
-                console.log('点击了循环播放按钮');
-                this.toggleRepeat();
-            });
-        }
-        
-        // 播放器控制按钮
-        const prevBtn = document.getElementById('prevBtn');
-        if (prevBtn) {
-            prevBtn.addEventListener('click', () => {
-                this.playlistPlayer?.playPrevious();
-            });
-        }
-        
+
+        // 播放列表按钮
+        const playlistBtn = document.getElementById('playlistBtn');
+        if (playlistBtn) {
+            playlistBtn.addEventListener('click', () => this.togglePlaylist());
+        }        // 播放控制按钮
         const playPauseBtn = document.getElementById('playPauseBtn');
         if (playPauseBtn) {
-            playPauseBtn.addEventListener('click', () => {
-                this.togglePlayPause();
-            });
+            playPauseBtn.addEventListener('click', () => this.togglePlayPause());
         }
-        
+
+        const prevBtn = document.getElementById('prevBtn');
+        if (prevBtn) {
+            prevBtn.addEventListener('click', () => this.playPrevious());
+        }
+
         const nextBtn = document.getElementById('nextBtn');
         if (nextBtn) {
-            nextBtn.addEventListener('click', () => {
-                this.playlistPlayer?.playNext();
-            });
+            nextBtn.addEventListener('click', () => this.playNext());
         }
-        
-        // 音量控制
-        const volumeBtn = document.getElementById('volumeBtn');
-        if (volumeBtn) {
-            volumeBtn.addEventListener('click', () => {
-                this.toggleMute();
-            });
-        }
-        
-        const volumeSlider = document.getElementById('volumeSlider');
-        if (volumeSlider) {
-            volumeSlider.addEventListener('input', (e) => {
-                this.setVolume(e.target.value / 100);
-            });
-        }
-        
-        // 播放速度按钮
-        const speedBtn = document.getElementById('speedBtn');
-        if (speedBtn) {
-            speedBtn.addEventListener('click', () => {
-                this.toggleSpeedMenu();
-            });
-        }
-        
-        // 画质按钮
-        const qualityBtn = document.getElementById('qualityBtn');
-        if (qualityBtn) {
-            qualityBtn.addEventListener('click', () => {
-                this.toggleQualityMenu();
-            });
-        }
-        
-        // 迷你播放器按钮
-        const miniPlayerBtn = document.getElementById('miniPlayerBtn');
-        if (miniPlayerBtn) {
-            miniPlayerBtn.addEventListener('click', () => {
-                this.toggleMiniMode();
-            });
-        }
-        
-        // 影院模式按钮
-        const theaterModeBtn = document.getElementById('theaterModeBtn');
-        if (theaterModeBtn) {
-            theaterModeBtn.addEventListener('click', () => {
-                this.toggleTheaterMode();
-            });
-        }
-        
+
         // 全屏按钮
         const fullscreenBtn = document.getElementById('fullscreenBtn');
         if (fullscreenBtn) {
-            fullscreenBtn.addEventListener('click', () => {
-                this.toggleFullscreen();
-            });
+            fullscreenBtn.addEventListener('click', () => this.toggleFullscreen());
         }
-        
-        // 设置按钮
-        const settingsBtn = document.getElementById('settingsBtn');
-        if (settingsBtn) {
-            settingsBtn.addEventListener('click', () => {
-                this.openSettings();
-            });
+
+        // 静音按钮
+        const volumeBtn = document.getElementById('volumeBtn');
+        if (volumeBtn) {
+            volumeBtn.addEventListener('click', () => this.toggleMute());
         }
-        
-        // 错误覆盖层的按钮
-        const retryBtn = document.getElementById('retryBtn');
+
+        // 音量滑块
+        const volumeSlider = document.getElementById('volumeSlider');
+        if (volumeSlider) {
+            volumeSlider.addEventListener('input', (e) => this.setVolume(e.target.value / 100));
+        }
+        const volumeBar = document.querySelector('.volume-bar');
+        if (volumeBar) {
+            volumeBar.addEventListener('click', (e) => this.setVolume(e));
+        }
+
+        // 侧边栏关闭按钮
+        const closeSidebar = document.getElementById('closeSidebar');
+        if (closeSidebar) {
+            closeSidebar.addEventListener('click', () => this.togglePlaylist());
+        }        // 错误重试按钮
+        const retryBtn = document.getElementById('playerRetryBtn');
         if (retryBtn) {
-            retryBtn.addEventListener('click', () => {
-                this.retryCurrentVideo();
-            });
+            retryBtn.addEventListener('click', () => this.retryPlay());
         }
-        
-        const skipBtn = document.getElementById('skipBtn');
-        if (skipBtn) {
-            skipBtn.addEventListener('click', () => {
-                this.playlistPlayer?.playNext();
-            });
+
+        const backToListBtn = document.getElementById('backToListBtn');
+        if (backToListBtn) {
+            backToListBtn.addEventListener('click', () => this.goBack());
         }
-        
-        // 返回主页按钮
-        const backToHomeBtn = document.getElementById('backToHomeBtn');
-        if (backToHomeBtn) {
-            backToHomeBtn.addEventListener('click', () => {
-                this.goBack();
-            });
+
+        // 侧边栏控制按钮
+        const collapseSidebar = document.getElementById('collapseSidebar');
+        if (collapseSidebar) {
+            collapseSidebar.addEventListener('click', () => this.toggleSidebar());
         }
-        
-        // 播放速度选项
-        this.bindSpeedMenuEvents();
-        
-        // 设置模态框
-        this.bindSettingsModalEvents();
-        
+
+        const expandSidebar = document.getElementById('expandSidebar');
+        if (expandSidebar) {
+            expandSidebar.addEventListener('click', () => this.toggleSidebar());
+        }
+
+        // 播放列表搜索
+        const playlistSearch = document.getElementById('playlistSearch');
+        if (playlistSearch) {
+            playlistSearch.addEventListener('input', (e) => this.searchPlaylist(e.target.value));
+        }
+
+        // 播放模式按钮
+        const shuffleBtn = document.getElementById('shuffleBtn');
+        if (shuffleBtn) {
+            shuffleBtn.addEventListener('click', () => this.toggleShuffle());
+        }
+
+        const repeatBtn = document.getElementById('repeatBtn');
+        if (repeatBtn) {
+            repeatBtn.addEventListener('click', () => this.toggleRepeat());
+        }
+
         // 键盘快捷键
-        this.bindKeyboardShortcuts();
-        
-        // 窗口事件
-        this.bindWindowEvents();
+        this.bindKeyboardEvents();
     }
-    
-    bindKeyboardShortcuts() {
+
+    // 绑定键盘事件
+    bindKeyboardEvents() {
         document.addEventListener('keydown', (e) => {
-            // 忽略输入框中的按键
+            // 防止在输入框中触发
             if (e.target.tagName === 'INPUT' || e.target.tagName === 'TEXTAREA') {
                 return;
             }
-            
-            switch (e.key) {
+
+            switch (e.code) {
+                case 'Space':
+                    e.preventDefault();
+                    this.togglePlayPause();
+                    break;
+                case 'ArrowLeft':
+                    e.preventDefault();
+                    if (e.ctrlKey) {
+                        this.playPrevious();
+                    } else {
+                        this.seekRelative(-10);
+                    }
+                    break;
+                case 'ArrowRight':
+                    e.preventDefault();
+                    if (e.ctrlKey) {
+                        this.playNext();
+                    } else {
+                        this.seekRelative(10);
+                    }
+                    break;
+                case 'KeyF':
+                    e.preventDefault();
+                    this.toggleFullscreen();
+                    break;
+                case 'KeyM':
+                    e.preventDefault();
+                    this.toggleMute();
+                    break;
                 case 'Escape':
                     if (document.fullscreenElement) {
                         document.exitFullscreen();
                     }
                     break;
-                    
-                case 'n':
-                case 'N':
-                    e.preventDefault();
-                    this.playlistPlayer?.playNext();
-                    break;
-                    
-                case 'p':
-                case 'P':
-                    e.preventDefault();
-                    this.playlistPlayer?.playPrevious();
-                    break;
-                    
-                case 'r':
-                case 'R':
-                    e.preventDefault();
-                    this.playlistPlayer?.togglePlayMode();
-                    break;
-                    
-                case 'l':
-                case 'L':
-                    e.preventDefault();
-                    this.toggleSidebar();
-                    break;
-                    
-                case '/':
-                    e.preventDefault();
-                    this.focusSearch();
-                    break;
             }
         });
     }
-    
-    bindWindowEvents() {
-        // 窗口大小变化
-        window.addEventListener('resize', debounce(() => {
-            this.handleResize();
-        }, 250));
+
+    // 初始化播放器
+    async initPlayer() {
+        this.showLoadingMessage(true);
         
-        // 页面可见性变化
-        document.addEventListener('visibilitychange', () => {
-            this.handleVisibilityChange();
-        });
-        
-        // 页面卸载前清理
-        window.addEventListener('beforeunload', () => {
-            this.cleanup();
-        });
-        
-        // 处理浏览器前进后退
-        window.addEventListener('popstate', (e) => {
-            this.handlePopState(e);
-        });
-    }
-    
-    handleUrlParams() {
-        const urlParams = new URLSearchParams(window.location.search);
-        
-        // 获取播放列表ID（如果从主页跳转）
-        const playlistId = urlParams.get('playlist');
-        if (playlistId) {
-            this.loadPlaylistFromId(playlistId);
-        }
-        
-        // 获取要播放的视频索引
-        const videoIndex = urlParams.get('index');
-        if (videoIndex) {
-            setTimeout(() => {
-                this.playlistPlayer?.playByIndex(parseInt(videoIndex));
-            }, 1000);
-        }
-        
-        // 获取自动播放参数
-        const autoplay = urlParams.get('autoplay');
-        if (autoplay === 'false') {
-            this.playlistPlayer.isAutoplay = false;
-        }
-    }
-    
-    async loadPlaylistFromId(playlistId) {
         try {
-            // 这里可以根据播放列表ID加载对应的播放列表
-            // 比如从localStorage或者服务器获取
-            const savedPlaylists = storage.get('playlists') || {};
-            const playlist = savedPlaylists[playlistId];
+            const currentVideo = this.playlist[this.currentIndex];
+            if (!currentVideo) {
+                throw new Error('当前视频不存在');
+            }            // 创建ArtPlayer实例
+            this.player = new Artplayer({
+                container: '#videoPlayer',
+                url: currentVideo.url,
+                title: currentVideo.title,
+                volume: this.volume,
+                autoplay: true,
+                muted: false,
+                pip: true,
+                setting: true,
+                playbackRate: true,
+                aspectRatio: true,
+                fullscreen: true,
+                fullscreenWeb: true,
+                miniProgressBar: true,
+                mutex: true,
+                backdrop: true,
+                playsInline: true,
+                autoPlayback: true,
+                airplay: true,
+                theme: '#2196F3',
+                lang: 'zh-cn',
+                moreVideoAttr: {
+                    crossOrigin: 'anonymous',
+                },
+                customType: this.getCustomType(currentVideo.type),
+                controls: [
+                    {
+                        position: 'right',
+                        html: '播放列表',
+                        click: () => this.togglePlaylist(),
+                    },
+                ],
+            });
+
+            // 绑定播放器事件
+            this.bindPlayerEvents();
             
-            if (playlist && playlist.videos) {
-                this.playlistPlayer?.setPlaylist(playlist.videos);
-                showToast(`已加载播放列表: ${playlist.name}`);
-            }
         } catch (error) {
-            console.error('加载播放列表失败:', error);
-            showToast('加载播放列表失败', 'error');
+            console.error('初始化播放器失败:', error);
+            this.showErrorMessage('播放器初始化失败: ' + error.message);
         }
     }
-    
-    initSearch() {
-        const searchInput = document.getElementById('playlist-search');
-        if (!searchInput) return;
-        
-        // 防抖搜索
-        const debouncedSearch = debounce((query) => {
-            this.searchPlaylist(query);
-        }, 300);
-        
-        searchInput.addEventListener('input', (e) => {
-            const query = e.target.value.trim();
-            this.searchQuery = query;
-            debouncedSearch(query);
-        });
-        
-        // 清空搜索按钮
-        const clearSearchBtn = document.getElementById('clear-search-btn');
-        if (clearSearchBtn) {
-            clearSearchBtn.addEventListener('click', () => {
-                searchInput.value = '';
-                this.searchQuery = '';
-                this.searchPlaylist('');
-            });
+
+    // 获取自定义类型配置
+    getCustomType(type) {
+        switch (type) {
+            case 'm3u8':
+                return {
+                    m3u8: function(video, url) {
+                        if (typeof Hls !== 'undefined' && Hls.isSupported()) {
+                            const hls = new Hls();
+                            hls.loadSource(url);
+                            hls.attachMedia(video);
+                        } else if (video.canPlayType('application/vnd.apple.mpegurl')) {
+                            video.src = url;
+                        }
+                    }
+                };
+            default:
+                return {};
         }
-        
-        // 回车键搜索
-        searchInput.addEventListener('keydown', (e) => {
-            if (e.key === 'Enter') {
-                e.preventDefault();
-                this.searchPlaylist(e.target.value.trim());
-            }
+    }
+
+    // 绑定播放器事件
+    bindPlayerEvents() {
+        if (!this.player) return;
+
+        this.player.on('ready', () => {
+            console.log('播放器准备就绪');
+            this.showLoadingMessage(false);
+            this.updateVideoInfo();
+        });
+
+        this.player.on('video:loadstart', () => {
+            this.showLoadingMessage(true);
+        });
+
+        this.player.on('video:canplay', () => {
+            this.showLoadingMessage(false);
+        });
+
+        this.player.on('video:timeupdate', () => {
+            this.currentTime = this.player.currentTime;
+            this.duration = this.player.duration;
+            this.updateProgress();
+        });
+
+        this.player.on('video:ended', () => {
+            this.playNext();
+        });
+
+        this.player.on('video:error', (error) => {
+            console.error('播放错误:', error);
+            this.showErrorMessage('视频播放出错，请检查链接是否有效');
+        });
+
+        this.player.on('play', () => {
+            this.isPlaying = true;
+            this.updatePlayButton();
+        });
+
+        this.player.on('pause', () => {
+            this.isPlaying = false;
+            this.updatePlayButton();
+        });
+
+        this.player.on('video:volumechange', () => {
+            this.volume = this.player.volume;
+            this.isMuted = this.player.muted;
+            this.updateVolumeUI();
         });
     }
-    
-    searchPlaylist(query) {
-        const items = document.querySelectorAll('.playlist-item');
-        const noResultsElement = document.querySelector('.search-no-results');
-        
-        if (!query) {
-            // 显示所有项目
-            items.forEach(item => {
-                item.style.display = '';
-            });
-            if (noResultsElement) {
-                noResultsElement.style.display = 'none';
-            }
+
+    // 播放/暂停切换
+    togglePlayPause() {
+        if (!this.player) return;
+
+        if (this.isPlaying) {
+            this.player.pause();
+        } else {
+            this.player.play();
+        }
+    }
+
+    // 播放上一个视频
+    playPrevious() {
+        if (this.playlist.length <= 1) {
+            this.showToast('已经是第一个视频了', 'warning');
             return;
         }
-        
-        const lowerQuery = query.toLowerCase();
-        let visibleCount = 0;
-        
-        items.forEach(item => {
-            const title = item.querySelector('.item-title')?.textContent?.toLowerCase() || '';
-            const isMatch = title.includes(lowerQuery);
+
+        this.currentIndex = this.currentIndex > 0 ? this.currentIndex - 1 : this.playlist.length - 1;
+        this.switchVideo();
+    }
+
+    // 播放下一个视频
+    playNext() {
+        if (this.playlist.length <= 1) {
+            this.showToast('已经是最后一个视频了', 'warning');
+            return;
+        }
+
+        this.currentIndex = this.currentIndex < this.playlist.length - 1 ? this.currentIndex + 1 : 0;
+        this.switchVideo();
+    }
+
+    // 切换视频
+    async switchVideo() {
+        if (!this.player) return;
+
+        try {
+            this.showLoadingMessage(true);
+            const currentVideo = this.playlist[this.currentIndex];
             
-            item.style.display = isMatch ? '' : 'none';
-            if (isMatch) visibleCount++;
-        });
-        
-        // 显示/隐藏无结果提示
-        if (visibleCount === 0) {
-            if (!noResultsElement) {
-                this.createNoResultsElement();
-            } else {
-                noResultsElement.style.display = 'block';
+            if (!currentVideo) {
+                throw new Error('视频不存在');
             }
-        } else if (noResultsElement) {
-            noResultsElement.style.display = 'none';
-        }
-        
-        // 更新搜索结果统计
-        this.updateSearchStats(visibleCount, items.length);
-    }
-    
-    createNoResultsElement() {
-        const container = document.querySelector('.playlist-container');
-        if (!container) return;
-        
-        const element = document.createElement('div');
-        element.className = 'search-no-results';
-        element.innerHTML = `
-            <div class="no-results-content">
-                <i class="material-icons">search_off</i>
-                <p>未找到匹配的视频</p>
-                <p>尝试使用其他关键词搜索</p>
-            </div>
-        `;
-        
-        container.appendChild(element);
-    }
-    
-    updateSearchStats(visibleCount, totalCount) {
-        const statsElement = document.querySelector('.search-stats');
-        if (statsElement) {
-            if (this.searchQuery) {
-                statsElement.textContent = `显示 ${visibleCount} / ${totalCount} 个视频`;
-                statsElement.style.display = 'block';
-            } else {
-                statsElement.style.display = 'none';
-            }
-        }
-    }
-    
-    focusSearch() {
-        const searchInput = document.getElementById('playlist-search');
-        if (searchInput) {
-            searchInput.focus();
-            searchInput.select();
-        }
-    }
-    
-    // UI 控制方法
-    toggleSidebar() {
-        const sidebar = document.querySelector('.player-sidebar');
-        const main = document.querySelector('.player-main');
-        
-        if (sidebar && main) {
-            const isHidden = sidebar.classList.contains('hidden');
+
+            // 切换视频源
+            this.player.switchUrl(currentVideo.url);
+            this.player.title = currentVideo.title;
             
-            sidebar.classList.toggle('hidden');
-            main.classList.toggle('sidebar-hidden', !isHidden);
+            this.updateVideoInfo();
+            this.updateSidebar();
             
-            // 保存状态
-            storage.set('sidebarVisible', isHidden);
+            // 保存当前索引
+            localStorage.setItem('currentIndex', this.currentIndex.toString());
+            
+        } catch (error) {
+            console.error('切换视频失败:', error);
+            this.showErrorMessage('切换视频失败: ' + error.message);
         }
     }
-    
+
+    // 跳转到指定时间
+    seekTo(e) {
+        if (!this.player || !this.duration) return;
+
+        const progressBar = e.currentTarget;
+        const rect = progressBar.getBoundingClientRect();
+        const pos = (e.clientX - rect.left) / rect.width;
+        const time = pos * this.duration;
+        
+        this.player.currentTime = time;
+    }
+
+    // 相对跳转
+    seekRelative(seconds) {
+        if (!this.player) return;
+
+        const newTime = Math.max(0, Math.min(this.duration, this.currentTime + seconds));
+        this.player.currentTime = newTime;
+    }
+
+    // 设置音量
+    setVolume(volume) {
+        if (!this.player) return;
+        
+        this.volume = Math.max(0, Math.min(1, volume));
+        this.player.volume = this.volume;
+        this.updateVolumeUI();
+    }
+
+    // 切换静音
+    toggleMute() {
+        if (!this.player) return;
+
+        this.player.muted = !this.player.muted;
+    }
+
+    // 切换全屏
     toggleFullscreen() {
-        if (document.fullscreenElement) {
-            document.exitFullscreen();
-        } else {
-            document.documentElement.requestFullscreen();
+        if (!this.player) return;
+
+        this.player.fullscreen = !this.player.fullscreen;
+    }
+
+    // 切换播放列表显示
+    togglePlaylist() {
+        const sidebar = document.getElementById('playlistSidebar');
+        if (sidebar) {
+            sidebar.classList.toggle('show');
         }
     }
-    
-    toggleMiniMode() {
-        if (this.playlistPlayer && this.playlistPlayer.player && this.playlistPlayer.player.player) {
-            // 请求画中画模式
-            try {
-                if (document.pictureInPictureElement) {
-                    document.exitPictureInPicture();
-                } else {
-                    this.playlistPlayer.player.player.video.requestPictureInPicture();
-                }
-            } catch (error) {
-                console.error('画中画模式切换失败:', error);
-                showToast('您的浏览器不支持画中画模式', 'error');
-            }
-        }
-    }
-    
-    openSettings() {
-        // 这里可以打开设置面板
-        // 或者跳转到设置页面
-        const settingsModal = document.getElementById('settings-modal');
-        if (settingsModal) {
-            settingsModal.classList.add('active');
-        } else {
-            // 如果没有设置模态框，可以创建一个简单的设置界面
-            this.createSettingsModal();
-        }
-    }
-    
-    createSettingsModal() {
-        const modal = document.createElement('div');
-        modal.id = 'settings-modal';
-        modal.className = 'modal';
-        modal.innerHTML = `
-            <div class="modal-content">
-                <div class="modal-header">
-                    <h3>播放器设置</h3>
-                    <button class="btn-close" onclick="this.closest('.modal').classList.remove('active')">
-                        <i class="material-icons">close</i>
-                    </button>
-                </div>
-                <div class="modal-body">
-                    <div class="setting-item">
-                        <label>
-                            <input type="checkbox" id="autoplay-setting" checked>
-                            自动播放下一个视频
-                        </label>
-                    </div>
-                    <div class="setting-item">
-                        <label>
-                            <input type="checkbox" id="keyborad-shortcuts-setting" checked>
-                            启用键盘快捷键
-                        </label>
-                    </div>
-                    <div class="setting-item">
-                        <label for="volume-setting">默认音量:</label>
-                        <input type="range" id="volume-setting" min="0" max="1" step="0.1" value="0.7">
-                        <span class="volume-value">70%</span>
-                    </div>
-                </div>
-                <div class="modal-footer">
-                    <button class="btn btn-primary" onclick="this.closest('.modal').classList.remove('active')">
-                        确定
-                    </button>
-                </div>
-            </div>
-        `;
-        
-        document.body.appendChild(modal);
-        modal.classList.add('active');
-        
-        // 绑定设置事件
-        this.bindSettingsEvents(modal);
-    }
-    
-    bindSettingsEvents(modal) {
-        const autoplayCheckbox = modal.querySelector('#autoplay-setting');
-        const volumeSlider = modal.querySelector('#volume-setting');
-        const volumeValue = modal.querySelector('.volume-value');
-        
-        if (autoplayCheckbox) {
-            autoplayCheckbox.checked = this.playlistPlayer?.isAutoplay !== false;
-            autoplayCheckbox.addEventListener('change', (e) => {
-                if (this.playlistPlayer) {
-                    this.playlistPlayer.isAutoplay = e.target.checked;
-                    this.playlistPlayer.saveSettings();
-                }
-            });
-        }
-        
-        if (volumeSlider && volumeValue) {
-            volumeSlider.addEventListener('input', (e) => {
-                const value = parseFloat(e.target.value);
-                volumeValue.textContent = Math.round(value * 100) + '%';
-                
-                if (this.playlistPlayer?.player) {
-                    this.playlistPlayer.player.volume(value);
-                }
-            });
-        }
-    }
-    
-    goBack() {
-        // 返回到主页
-        window.location.href = 'index.html';
-    }
-    
-    retryCurrentVideo() {
-        if (this.playlistPlayer && this.playlistPlayer.currentIndex >= 0) {
-            this.playlistPlayer.playByIndex(this.playlistPlayer.currentIndex);
-        }
-    }
-    
-    // 事件处理方法
-    handleResize() {
-        // 处理窗口大小变化
-        const isMobile = window.innerWidth <= 768;
-        document.body.classList.toggle('mobile', isMobile);
-        
-        // 在移动设备上自动隐藏侧边栏
-        if (isMobile) {
-            const sidebar = document.querySelector('.player-sidebar');
-            if (sidebar && !sidebar.classList.contains('hidden')) {
-                this.toggleSidebar();
-            }
-        }
-    }
-    
-    handleVisibilityChange() {
-        if (document.hidden) {
-            // 页面隐藏时暂停视频（可选）
-            // this.playlistPlayer?.player?.pause();
-        } else {
-            // 页面显示时的处理
-        }
-    }
-    
-    handlePopState(e) {
-        // 处理浏览器前进后退
-        if (e.state && e.state.videoIndex !== undefined) {
-            this.playlistPlayer?.playByIndex(e.state.videoIndex);
-        }
-    }
-    
-    showError(message) {
-        const errorContainer = document.getElementById('error-container');
-        if (errorContainer) {
-            errorContainer.innerHTML = `
-                <div class="error-message">
-                    <i class="material-icons">error_outline</i>
-                    <p>${message}</p>
-                    <button class="btn" onclick="location.reload()">刷新页面</button>
-                </div>
-            `;
-            errorContainer.style.display = 'flex';
-        } else {
-            showToast(message, 'error');
-        }
-    }
-    
+
+    // 切换侧边栏显示/隐藏
     toggleSidebar() {
         const sidebar = document.getElementById('playlistSidebar');
         const expandBtn = document.getElementById('expandSidebar');
-        const collapseBtn = document.getElementById('collapseSidebar');
         
-        if (sidebar) {
-            const isHidden = sidebar.classList.contains('hidden');
+        if (sidebar && expandBtn) {
+            const isCollapsed = sidebar.classList.contains('collapsed');
             
-            if (isHidden) {
-                sidebar.classList.remove('hidden');
-                if (expandBtn) expandBtn.classList.add('hidden');
-                if (collapseBtn) collapseBtn.classList.remove('hidden');
+            if (isCollapsed) {
+                sidebar.classList.remove('collapsed');
+                expandBtn.classList.add('hidden');
             } else {
-                sidebar.classList.add('hidden');
-                if (expandBtn) expandBtn.classList.remove('hidden');
-                if (collapseBtn) collapseBtn.classList.add('hidden');
+                sidebar.classList.add('collapsed');
+                expandBtn.classList.remove('hidden');
             }
         }
     }
 
-    // 播放控制方法
-    togglePlayPause() {
-        if (this.playlistPlayer && this.playlistPlayer.player) {
-            this.playlistPlayer.player.toggle();
-            this.updatePlayPauseButton();
-        }
+    // 搜索播放列表
+    searchPlaylist(query) {
+        const playlistContent = document.getElementById('playlistContent');
+        if (!playlistContent) return;
+        
+        const items = playlistContent.querySelectorAll('.playlist-item');
+        const searchQuery = query.toLowerCase().trim();
+        
+        items.forEach(item => {
+            const title = item.getAttribute('data-title') || '';
+            const isMatch = title.toLowerCase().includes(searchQuery);
+            item.style.display = isMatch ? 'flex' : 'none';
+        });
     }
-    
-    toggleMute() {
-        if (this.playlistPlayer && this.playlistPlayer.player) {
-            this.playlistPlayer.player.mute();
-            this.updateVolumeButton();
-        }
-    }
-    
-    setVolume(volume) {
-        if (this.playlistPlayer && this.playlistPlayer.player) {
-            this.playlistPlayer.player.volume(volume);
-            this.updateVolumeButton();
-        }
-    }
-    
+
+    // 切换随机播放
     toggleShuffle() {
-        if (this.playlistPlayer) {
-            this.playlistPlayer.toggleShuffle();
-            this.updateShuffleButton();
+        this.shuffleMode = !this.shuffleMode;
+        const shuffleBtn = document.getElementById('shuffleBtn');
+        
+        if (shuffleBtn) {
+            shuffleBtn.classList.toggle('active', this.shuffleMode);
         }
+        
+        this.showToast(this.shuffleMode ? '已开启随机播放' : '已关闭随机播放');
     }
-    
+
+    // 切换循环播放
     toggleRepeat() {
-        if (this.playlistPlayer) {
-            this.playlistPlayer.toggleRepeat();
-            this.updateRepeatButton();
-        }
-    }
-    
-    toggleTheaterMode() {
-        const playerMain = document.getElementById('playerMain');
-        const sidebar = document.getElementById('playlistSidebar');
+        // 循环模式: 0=不循环, 1=单曲循环, 2=列表循环
+        this.repeatMode = (this.repeatMode + 1) % 3;
+        const repeatBtn = document.getElementById('repeatBtn');
         
-        if (playerMain && sidebar) {
-            playerMain.classList.toggle('theater-mode');
-            sidebar.classList.toggle('hidden');
+        if (repeatBtn) {
+            const icon = repeatBtn.querySelector('i');
+            repeatBtn.classList.remove('active', 'single-repeat');
             
-            showToast(playerMain.classList.contains('theater-mode') ? '已开启影院模式' : '已关闭影院模式');
+            switch (this.repeatMode) {
+                case 0:
+                    icon.textContent = 'repeat';
+                    this.showToast('已关闭循环播放');
+                    break;
+                case 1:
+                    icon.textContent = 'repeat_one';
+                    repeatBtn.classList.add('active', 'single-repeat');
+                    this.showToast('已开启单曲循环');
+                    break;
+                case 2:
+                    icon.textContent = 'repeat';
+                    repeatBtn.classList.add('active');
+                    this.showToast('已开启列表循环');
+                    break;
+            }
+        }
+    }    // 更新UI
+    updateUI() {
+        this.updateVideoInfo();
+        this.renderPlaylist();
+        this.updateProgress();
+        this.updateVolumeUI();
+        this.updatePlayButton();
+    }
+
+    // 更新视频信息
+    updateVideoInfo() {
+        const currentVideo = this.playlist[this.currentIndex];
+        if (!currentVideo) return;
+
+        const videoTitle = document.getElementById('videoTitle');
+        const videoIndex = document.getElementById('videoIndex');
+        const videoType = document.getElementById('videoType');
+
+        if (videoTitle) {
+            videoTitle.textContent = currentVideo.title;
+            document.title = currentVideo.title + ' - 青云播';
+        }
+
+        if (videoIndex) {
+            videoIndex.textContent = (this.currentIndex + 1) + '/' + this.playlist.length;
+        }
+
+        if (videoType) {
+            videoType.textContent = currentVideo.type.toUpperCase();
         }
     }
-    
-    toggleSpeedMenu() {
-        const speedMenu = document.getElementById('speedMenu');
-        if (speedMenu) {
-            speedMenu.classList.toggle('hidden');
-        }
+
+    // 更新侧边栏
+    updateSidebar() {
+        const sidebarVideoList = document.getElementById('sidebarVideoList');
+        if (!sidebarVideoList) return;
+
+        const self = this;
+        sidebarVideoList.innerHTML = this.playlist.map((video, index) => {
+            return '<div class="sidebar-video-item ' + (index === self.currentIndex ? 'active' : '') + '" onclick="videoPlayer.playVideoByIndex(' + index + ')">' +
+                '<div class="sidebar-video-index">' + (index + 1) + '</div>' +
+                '<div class="sidebar-video-info">' +
+                    '<div class="sidebar-video-title">' + self.escapeHtml(video.title) + '</div>' +
+                    '<div class="sidebar-video-meta">' + video.type.toUpperCase() + '</div>' +
+                '</div>' +
+            '</div>';
+        }).join('');
     }
-    
-    toggleQualityMenu() {
-        const qualityMenu = document.getElementById('qualityMenu');
-        if (qualityMenu) {
-            qualityMenu.classList.toggle('hidden');
-        }
-    }
-    
-    // UI 更新方法
-    updatePlayPauseButton() {
-        const playPauseBtn = document.getElementById('playPauseBtn');
-        const icon = playPauseBtn?.querySelector('i');
+
+    // 渲染播放列表
+    renderPlaylist() {
+        const playlistContent = document.getElementById('playlistContent');
+        const playlistStats = document.getElementById('playlistStats');
         
-        if (icon && this.playlistPlayer && this.playlistPlayer.player) {
-            const isPlaying = !this.playlistPlayer.player.player?.paused;
-            icon.textContent = isPlaying ? 'pause' : 'play_arrow';
-            playPauseBtn.title = isPlaying ? '暂停' : '播放';
+        if (!playlistContent) return;
+        
+        if (this.playlist.length === 0) {
+            playlistContent.innerHTML = `
+                <div class="playlist-empty">
+                    <i class="material-icons">queue_music</i>
+                    <p>播放列表为空</p>
+                    <button onclick="window.close()" class="btn btn-secondary">返回首页</button>
+                </div>
+            `;
+            return;
+        }
+        
+        playlistContent.innerHTML = this.playlist.map((video, index) => `
+            <div class="playlist-item ${index === this.currentIndex ? 'active' : ''}" 
+                 data-index="${index}" 
+                 data-title="${video.title}">
+                <div class="item-info">
+                    <div class="item-title">${this.escapeHtml(video.title)}</div>
+                    <div class="item-type">${video.type.toUpperCase()}</div>
+                </div>
+                <div class="item-actions">
+                    <button class="item-btn" onclick="player.playVideo(${index})" title="播放">
+                        <i class="material-icons">play_arrow</i>
+                    </button>
+                    <button class="item-btn" onclick="player.removeFromPlaylist(${index})" title="移除">
+                        <i class="material-icons">close</i>
+                    </button>
+                </div>
+            </div>
+        `).join('');
+        
+        if (playlistStats) {
+            playlistStats.textContent = `${this.currentIndex + 1}/${this.playlist.length}`;
         }
     }
-    
-    updateVolumeButton() {
+
+    // 播放指定视频
+    playVideo(index) {
+        if (index >= 0 && index < this.playlist.length) {
+            this.currentIndex = index;
+            this.loadCurrentVideo();
+        }
+    }
+
+    // 从播放列表中移除视频
+    removeFromPlaylist(index) {
+        if (index >= 0 && index < this.playlist.length) {
+            this.playlist.splice(index, 1);
+            
+            // 调整当前播放索引
+            if (index < this.currentIndex) {
+                this.currentIndex--;
+            } else if (index === this.currentIndex) {
+                if (this.currentIndex >= this.playlist.length) {
+                    this.currentIndex = 0;
+                }
+                this.loadCurrentVideo();
+            }
+            
+            this.renderPlaylist();
+            this.updateVideoInfo();
+        }
+    }
+
+    // 根据索引播放视频
+    playVideoByIndex(index) {
+        if (index >= 0 && index < this.playlist.length && index !== this.currentIndex) {
+            this.currentIndex = index;
+            this.switchVideo();
+        }
+    }
+
+    // 更新进度条
+    updateProgress() {
+        const progress = document.getElementById('progress');
+        const currentTimeEl = document.getElementById('currentTime');
+        const durationEl = document.getElementById('duration');
+
+        if (progress && this.duration > 0) {
+            const percentage = (this.currentTime / this.duration) * 100;
+            progress.style.width = percentage + '%';
+        }
+
+        if (currentTimeEl) {
+            currentTimeEl.textContent = this.formatTime(this.currentTime);
+        }
+
+        if (durationEl) {
+            durationEl.textContent = this.formatTime(this.duration);
+        }
+    }
+
+    // 更新音量UI
+    updateVolumeUI() {
         const volumeBtn = document.getElementById('volumeBtn');
         const volumeSlider = document.getElementById('volumeSlider');
-        const icon = volumeBtn?.querySelector('i');
         
-        if (this.playlistPlayer && this.playlistPlayer.player && this.playlistPlayer.player.player) {
-            const player = this.playlistPlayer.player.player;
-            const volume = player.volume;
-            const muted = player.muted;
-            
+        if (volumeBtn) {
+            const icon = volumeBtn.querySelector('i');
             if (icon) {
-                if (muted || volume === 0) {
+                if (this.isMuted || this.volume === 0) {
                     icon.textContent = 'volume_off';
-                } else if (volume < 0.5) {
+                } else if (this.volume < 0.5) {
                     icon.textContent = 'volume_down';
                 } else {
                     icon.textContent = 'volume_up';
                 }
             }
-            
-            if (volumeSlider) {
-                volumeSlider.value = muted ? 0 : volume * 100;
-            }
-        }
-    }
-    
-    updateShuffleButton() {
-        const shuffleBtn = document.getElementById('shuffleBtn');
-        if (shuffleBtn && this.playlistPlayer) {
-            shuffleBtn.classList.toggle('active', this.playlistPlayer.isShuffleMode);
-        }
-    }
-    
-    updateRepeatButton() {
-        const repeatBtn = document.getElementById('repeatBtn');
-        if (repeatBtn && this.playlistPlayer) {
-            repeatBtn.classList.toggle('active', this.playlistPlayer.isRepeatMode);
-        }
-    }
-    
-    // 事件绑定辅助方法
-    bindSpeedMenuEvents() {
-        const speedOptions = document.querySelectorAll('.speed-option');
-        speedOptions.forEach(option => {
-            option.addEventListener('click', () => {
-                const speed = parseFloat(option.dataset.speed);
-                this.setPlaybackRate(speed);
-                
-                // 更新UI
-                speedOptions.forEach(opt => opt.classList.remove('active'));
-                option.classList.add('active');
-                
-                // 更新速度按钮文本
-                const speedBtn = document.getElementById('speedBtn');
-                const speedText = speedBtn?.querySelector('.speed-text');
-                if (speedText) {
-                    speedText.textContent = `${speed}x`;
-                }
-                
-                // 隐藏菜单
-                this.toggleSpeedMenu();
-            });
-        });
-        
-        // 点击其他地方关闭菜单
-        document.addEventListener('click', (e) => {
-            const speedMenu = document.getElementById('speedMenu');
-            const speedBtn = document.getElementById('speedBtn');
-            
-            if (speedMenu && !speedMenu.contains(e.target) && !speedBtn?.contains(e.target)) {
-                speedMenu.classList.add('hidden');
-            }
-        });
-    }
-    
-    bindSettingsModalEvents() {
-        const modal = document.getElementById('playerSettingsModal');
-        const closeBtn = document.getElementById('closePlayerSettingsModal');
-        
-        if (closeBtn) {
-            closeBtn.addEventListener('click', () => {
-                this.closeSettings();
-            });
         }
         
-        // 点击模态框外部关闭
-        if (modal) {
-            modal.addEventListener('click', (e) => {
-                if (e.target === modal) {
-                    this.closeSettings();
-                }
-            });
-        }
-        
-        // 绑定设置项
-        const autoplayNext = document.getElementById('autoplayNext');
-        if (autoplayNext) {
-            autoplayNext.addEventListener('change', (e) => {
-                if (this.playlistPlayer) {
-                    this.playlistPlayer.isAutoplay = e.target.checked;
-                }
-            });
-        }
-        
-        const rememberVolume = document.getElementById('rememberVolume');
-        if (rememberVolume) {
-            rememberVolume.addEventListener('change', (e) => {
-                // 实现记住音量功能
-                localStorage.setItem('rememberVolume', e.target.checked);
-            });
-        }
-    }
-    
-    setPlaybackRate(rate) {
-        if (this.playlistPlayer && this.playlistPlayer.player) {
-            this.playlistPlayer.player.playbackRate(rate);
-        }
-    }
-    
-    openSettings() {
-        const modal = document.getElementById('playerSettingsModal');
-        if (modal) {
-            modal.classList.add('active');
-        }
-    }
-    
-    closeSettings() {
-        const modal = document.getElementById('playerSettingsModal');
-        if (modal) {
-            modal.classList.remove('active');
+        if (volumeSlider) {
+            volumeSlider.value = this.volume * 100;
         }
     }
 
-    cleanup() {
-        // 清理资源
-        if (this.playlistPlayer) {
-            this.playlistPlayer.destroy();
+    // 更新播放按钮
+    updatePlayButton() {
+        const playPauseBtn = document.getElementById('playPauseBtn');
+        if (playPauseBtn) {
+            const icon = playPauseBtn.querySelector('i');
+            if (icon) {
+                icon.textContent = this.isPlaying ? 'pause' : 'play_arrow';
+            }
+        }
+    }    // 显示/隐藏加载信息
+    showLoadingMessage(show) {
+        const loadingOverlay = document.getElementById('loadingOverlay');
+        const errorOverlay = document.getElementById('errorOverlay');
+        
+        if (loadingOverlay) {
+            if (show) {
+                loadingOverlay.classList.remove('hidden');
+                if (errorOverlay) errorOverlay.classList.add('hidden');
+            } else {
+                loadingOverlay.classList.add('hidden');
+            }
+        }
+    }
+
+    // 显示错误信息
+    showErrorMessage(message) {
+        const errorOverlay = document.getElementById('errorOverlay');
+        const loadingOverlay = document.getElementById('loadingOverlay');
+        const errorMessage = errorOverlay?.querySelector('.error-message');
+        
+        if (errorOverlay) {
+            if (errorMessage) {
+                errorMessage.textContent = message;
+            }
+            errorOverlay.classList.remove('hidden');
+            if (loadingOverlay) loadingOverlay.classList.add('hidden');
+        }
+        
+        this.showToast(message, 'error');
+    }
+
+    // 重试播放
+    retryPlay() {
+        const errorMessage = document.getElementById('errorMessage');
+        if (errorMessage) {
+            errorMessage.classList.remove('show');
+        }
+        
+        this.switchVideo();
+    }
+
+    // 返回列表页面
+    goBack() {
+        if (window.history.length > 1) {
+            window.history.back();
+        } else {
+            window.close();
+        }
+    }
+
+    // 显示提示消息
+    showToast(message, type = 'info') {
+        // 创建toast容器如果不存在
+        let toastContainer = document.getElementById('toastContainer');
+        if (!toastContainer) {
+            toastContainer = document.createElement('div');
+            toastContainer.id = 'toastContainer';
+            toastContainer.className = 'toast-container';
+            document.body.appendChild(toastContainer);
+        }
+
+        // 创建toast元素
+        const toast = document.createElement('div');
+        toast.className = `toast toast-${type}`;
+        toast.textContent = message;
+
+        // 添加到容器
+        toastContainer.appendChild(toast);
+
+        // 显示动画
+        setTimeout(() => toast.classList.add('show'), 100);
+
+        // 3秒后移除
+        setTimeout(() => {
+            toast.classList.remove('show');
+            setTimeout(() => {
+                if (toast.parentNode) {
+                    toast.parentNode.removeChild(toast);
+                }
+            }, 300);
+        }, 3000);
+    }
+
+    // 格式化时间
+    formatTime(seconds) {
+        if (!seconds || isNaN(seconds)) return '00:00';
+        
+        const hrs = Math.floor(seconds / 3600);
+        const mins = Math.floor((seconds % 3600) / 60);
+        const secs = Math.floor(seconds % 60);
+        
+        if (hrs > 0) {
+            return hrs.toString().padStart(2, '0') + ':' + 
+                   mins.toString().padStart(2, '0') + ':' + 
+                   secs.toString().padStart(2, '0');
+        } else {
+            return mins.toString().padStart(2, '0') + ':' + 
+                   secs.toString().padStart(2, '0');
+        }
+    }
+
+    // HTML转义
+    escapeHtml(text) {
+        const div = document.createElement('div');
+        div.textContent = text;
+        return div.innerHTML;
+    }
+
+    // 销毁播放器
+    destroy() {
+        if (this.player) {
+            this.player.destroy();
+            this.player = null;
         }
     }
 }
-
-// 创建全局实例
-let playerController;
 
 // 页面加载完成后初始化
-if (document.readyState === 'loading') {
-    document.addEventListener('DOMContentLoaded', () => {
-        playerController = new PlayerController();
-    });
-} else {
-    playerController = new PlayerController();
-}
+let videoPlayer;
 
-// 调试工具 - 测试按钮绑定
-window.testPlayerButtons = function() {
-    console.log('=== 播放器按钮测试 ===');
-    
-    const buttons = [
-        'collapseSidebar',
-        'expandSidebar', 
-        'shuffleBtn',
-        'repeatBtn',
-        'prevBtn',
-        'playPauseBtn',
-        'nextBtn',
-        'volumeBtn',
-        'speedBtn',
-        'qualityBtn',
-        'miniPlayerBtn',
-        'theaterModeBtn',
-        'fullscreenBtn',
-        'settingsBtn',
-        'retryBtn',
-        'skipBtn',
-        'backToHomeBtn'
-    ];
-    
-    buttons.forEach(id => {
-        const element = document.getElementById(id);
-        console.log(`${id}: ${element ? '✓ 找到' : '✗ 未找到'}`);
-        if (element) {
-            console.log(`  - 事件监听器: ${element._listeners ? Object.keys(element._listeners).length : 0}`);
-            console.log(`  - onclick: ${element.onclick ? '有' : '无'}`);
-        }
-    });
-    
-    console.log('=== PlayerController 状态 ===');
-    console.log('playerController:', window.playerController);
-    console.log('playlistPlayer:', window.playerController?.playlistPlayer);
-    console.log('=== 测试完成 ===');
-};
+document.addEventListener('DOMContentLoaded', function() {
+    videoPlayer = new VideoPlayer();
+});
 
-// 页面加载完成后自动运行测试
-setTimeout(() => {
-    if (window.testPlayerButtons) {
-        window.testPlayerButtons();
+// 页面卸载时清理资源
+window.addEventListener('beforeunload', function() {
+    if (videoPlayer) {
+        videoPlayer.destroy();
     }
-}, 2000);
-
-// 导出（用于调试）
-window.playerController = playerController;
-
-// ES6 模块导出
-export default PlayerController;
+});
