@@ -10,6 +10,11 @@ class VideoManager {
         this.renderVideoList();
         this.updateUI();
         
+        // 检查GitHub授权状态
+        if (gitHubAuth && gitHubAuth.checkAuthStatus) {
+            gitHubAuth.checkAuthStatus();
+        }
+        
         // 监听GitHub授权成功事件
         window.addEventListener('github-auth-success', () => {
             this.handleAuthSuccess();

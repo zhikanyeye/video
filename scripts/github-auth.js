@@ -150,6 +150,21 @@ class GitHubAuthManager {
             authModal.style.display = 'none';
         }
         
+        // 显示简洁的授权成功状态，而不是完整的用户信息
+        const githubUserInfo = document.getElementById('githubUserInfo');
+        if (githubUserInfo) {
+            const user = this.getUser();
+            if (user) {
+                githubUserInfo.innerHTML = `
+                    <div class="auth-success-badge">
+                        <i class="material-icons">check_circle</i>
+                        <span>已授权 (${user.login})</span>
+                    </div>
+                `;
+                githubUserInfo.style.display = 'block';
+            }
+        }
+        
         // 隐藏任何可能的Token输入界面
         const tokenInputs = document.querySelectorAll('[id*="token"], [id*="Token"]');
         tokenInputs.forEach(input => {
@@ -159,7 +174,7 @@ class GitHubAuthManager {
             }
         });
         
-        // 隐藏GitHub相关的设置按钮
+        // 隐藏GitHub相关的设置按钮（但不隐藏授权成功的显示）
         const githubButtons = document.querySelectorAll('[class*="github"], [id*="github"]');
         githubButtons.forEach(btn => {
             if (btn.textContent.includes('Token') || btn.textContent.includes('授权')) {
@@ -169,6 +184,13 @@ class GitHubAuthManager {
         
         // 给body添加授权成功状态类
         document.body.classList.add('auth-success-state');
+    }
+
+    // 初始化时检查授权状态
+    checkAuthStatus() {
+        if (this.isAuthenticated()) {
+            this.hideAuthUI();
+        }
     }
 
     // 显示用户信息
