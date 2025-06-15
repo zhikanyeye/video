@@ -70,11 +70,10 @@ class ImprovedGistManager {
                 },
                 body: JSON.stringify(updatedGistData)
             });
-            
-            return {
+              return {
                 id: gist.id,
                 url: gist.html_url,
-                shareUrl: `${window.location.origin}/player.html?gist=${gist.id}`,
+                shareUrl: this.getPlayerUrl() + `?gist=${gist.id}`,
                 rawUrl: gist.files['playlist.json'].raw_url
             };
         } catch (error) {
@@ -156,11 +155,9 @@ class ImprovedGistManager {
             console.error('更新播放列表失败:', error);
             throw error;
         }
-    }
-
-    // 生成README文档
+    }    // 生成README文档
     generateReadme(title, description, videos, gistId) {
-        const playerUrl = window.location.origin + '/player.html';
+        const playerUrl = this.getPlayerUrl();
         
         return `# ${title}
 
@@ -203,8 +200,7 @@ ${videos.map((video, index) =>
             }
 
             const gists = await response.json();
-            
-            // 过滤出包含playlist.json的Gist
+              // 过滤出包含playlist.json的Gist
             return gists.filter(gist => 
                 gist.files['playlist.json'] && 
                 (gist.description.includes('青云播') || gist.description.includes('播放列表'))
@@ -212,7 +208,7 @@ ${videos.map((video, index) =>
                 id: gist.id,
                 title: gist.description,
                 url: gist.html_url,
-                shareUrl: `${window.location.origin}/player.html?gist=${gist.id}`,
+                shareUrl: `${this.getPlayerUrl()}?gist=${gist.id}`,
                 created: gist.created_at,
                 updated: gist.updated_at
             }));
@@ -220,6 +216,25 @@ ${videos.map((video, index) =>
             console.error('获取用户播放列表失败:', error);
             return [];
         }
+    }
+
+    // 获取播放器URL（智能判断GitHub Pages或本地开发）
+    getPlayerUrl() {
+        const origin = window.location.origin;
+        const pathname = window.location.pathname;
+        
+        // 如果是GitHub Pages
+        if (origin.includes('github.io')) {
+            // 从当前路径推断仓库名
+            const pathParts = pathname.split('/').filter(p => p);
+            if (pathParts.length > 0) {
+                // 如果当前在子目录中（如 /video/），使用该路径
+                return `${origin}/${pathParts[0]}/player.html`;
+            }
+        }
+        
+        // 本地开发或其他情况
+        return `${origin}/player.html`;
     }
 }
 
