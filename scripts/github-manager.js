@@ -78,8 +78,7 @@ class GitHubManager {
         document.body.classList.remove('auth-success-state');
         
         // 重新显示授权UI
-        this.showAuthUI();
-    }
+        this.showAuthUI();    }
 
     // ==================== UI相关方法 ====================
 
@@ -87,6 +86,8 @@ class GitHubManager {
      * 显示授权引导弹窗
      */
     showAuthGuide() {
+        console.log('showAuthGuide方法被调用');
+        
         const modal = document.createElement('div');
         modal.className = 'auth-modal';
         modal.innerHTML = `
@@ -169,9 +170,7 @@ class GitHubManager {
                 saveBtn.disabled = false;
                 saveBtn.textContent = '保存授权';
             }
-        });
-
-        return modal;
+        });        return modal;
     }
 
     /**
@@ -189,13 +188,30 @@ class GitHubManager {
                             <span>已授权 (${user.login})</span>
                         </div>
                         <div class="auth-actions">
-                            <button class="btn-small" onclick="gitHubManager.showAuthGuide()">重新授权</button>
-                            <button class="btn-small danger" onclick="gitHubManager.logout()">退出登录</button>
+                            <button id="reAuthBtn" class="btn-small">重新授权</button>
+                            <button id="logoutBtn" class="btn-small danger">退出登录</button>
                         </div>
                     </div>
                 `;
                 githubUserInfo.style.display = 'block';
-            }
+                
+                // 绑定事件
+                const reAuthBtn = document.getElementById('reAuthBtn');
+                const logoutBtn = document.getElementById('logoutBtn');
+                
+                if (reAuthBtn) {
+                    reAuthBtn.addEventListener('click', () => {
+                        console.log('点击重新授权按钮');
+                        this.showAuthGuide();
+                    });
+                }
+                
+                if (logoutBtn) {
+                    logoutBtn.addEventListener('click', () => {
+                        console.log('点击退出登录按钮');
+                        this.logout();
+                    });
+                }            }
         }
     }
 
@@ -208,12 +224,21 @@ class GitHubManager {
             githubUserInfo.innerHTML = `
                 <div class="auth-prompt">
                     <span>GitHub未授权</span>
-                    <button onclick="gitHubManager.showAuthGuide()" class="btn btn-primary btn-sm">
+                    <button id="authLoginBtn" class="btn btn-primary btn-sm">
                         授权登录
                     </button>
                 </div>
             `;
             githubUserInfo.style.display = 'block';
+            
+            // 绑定点击事件
+            const authBtn = document.getElementById('authLoginBtn');
+            if (authBtn) {
+                authBtn.addEventListener('click', () => {
+                    console.log('点击授权登录按钮');
+                    this.showAuthGuide();
+                });
+            }
         }
     }
 
@@ -462,3 +487,10 @@ const gitHubManager = new GitHubManager();
 // 兼容旧的变量名（向后兼容）
 const gitHubAuth = gitHubManager;
 const improvedGistManager = gitHubManager;
+
+// 调试信息
+console.log('GitHub Manager 已加载:', {
+    gitHubManager: !!gitHubManager,
+    gitHubAuth: !!gitHubAuth,
+    improvedGistManager: !!improvedGistManager
+});

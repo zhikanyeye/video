@@ -306,8 +306,19 @@
             const userInfoDiv = document.getElementById('githubUserInfo');
             userInfoDiv.style.display = 'block';
             
-            // 使用GitHubAuthManager来处理授权状态
-            gitHubAuth.checkAuthStatus();
+            // 确保GitHub管理器已加载并初始化
+            if (typeof gitHubAuth !== 'undefined' && gitHubAuth.checkAuthStatus) {
+                console.log('初始化GitHub授权状态');
+                gitHubAuth.checkAuthStatus();
+            } else {
+                console.error('GitHub管理器未正确加载');
+                // 延迟重试
+                setTimeout(() => {
+                    if (typeof gitHubAuth !== 'undefined' && gitHubAuth.checkAuthStatus) {
+                        gitHubAuth.checkAuthStatus();
+                    }
+                }, 100);
+            }
         }
         
         // 初始化自建后端方式
