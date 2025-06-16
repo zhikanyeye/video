@@ -1,63 +1,28 @@
 <!DOCTYPE html>
 <html lang="zh-CN">
 <head>
-    <meta charset="UTF-8">    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>青云播 - 视频管理</title>
-      <!-- Favicon -->
-    <link rel="icon" type="image/svg+xml" href="assets/favicon.svg">
-    <link rel="icon" type="image/svg+xml" sizes="16x16" href="assets/favicon-16.svg">
-    <link rel="alternate icon" href="assets/favicon.svg">
-    <link rel="apple-touch-icon" href="assets/favicon.svg">
-    <link rel="shortcut icon" href="assets/favicon.svg">
-    
-    <!-- Meta Tags -->
-    <meta name="description" content="青云播 - 现代化云端视频播放器，支持多格式播放和智能分享">
-    <meta name="keywords" content="视频播放器,云端分享,在线播放,青云播">
-    <meta name="author" content="青云播团队">
-    
     <link href="https://fonts.googleapis.com/icon?family=Material+Icons" rel="stylesheet">
     <link rel="stylesheet" href="styles/main.css">
 </head>
 <body>
     <div class="app-container">
-        <!-- 分享方式选择提示 -->
-        <div id="methodSelector" class="method-selector" style="display: none;">
-            <div class="method-selector-content">
-                <h3>🚀 选择分享方式</h3>
-                <p>选择您偏好的云端分享方案：</p>
-                <div class="method-buttons">
-                    <button onclick="setShareMethod('selfhosted')" class="btn btn-primary">
-                        🏠 自建数据库 (推荐)
-                    </button>
-                    <button onclick="setShareMethod('github')" class="btn btn-secondary">
-                        🐙 GitHub Gists
-                    </button>
-                </div>
-                <div class="method-note">
-                    <small>💡 可在设置中随时更改分享方式</small>
-                </div>
-            </div>
-        </div>
-
         <!-- 头部 -->
         <header class="header">
-            <div class="header-content">                <h1 class="logo">
-                    <div class="logo-container">
-                        <img src="assets/favicon.svg" alt="青云播" class="logo-icon">
-                        <span class="logo-text">青云播</span>
+            <div class="header-content">
+                <h1 class="logo">
+                    <i class="material-icons">videocam</i>
+                    青云播
+                </h1>                <div class="header-actions">
+                    <div id="githubUserInfo" class="github-user-info" style="display: none;">
+                        <span id="githubUsername"></span>
+                        <button id="logoutBtn" class="btn btn-link">
+                            <i class="material-icons">logout</i>
+                            退出
+                        </button>
                     </div>
-                </h1>
-                <div class="header-actions">
-                    <!-- 分享方式状态显示 -->
-                    <div id="shareMethodStatus" class="share-method-status">
-                        <span class="method-label">分享方式:</span>
-                        <span id="currentMethod" class="method-name">未设置</span>
-                        <button id="changeMethodBtn" class="btn-link">更改</button>
-                    </div>
-                    
-                    <!-- GitHub用户信息显示 -->
-                    <div id="githubUserInfo" class="github-user-info" style="display: none;"></div>
-                    
                     <button id="clearAllBtn" class="btn btn-danger">
                         <i class="material-icons">delete_sweep</i>
                         清空列表
@@ -113,21 +78,6 @@
                             <option value="rtmp">RTMP</option>
                         </select>
                     </div>
-
-                    <!-- 从分享链接导入 -->
-                    <div class="form-group">
-                        <label for="gistUrl">从分享链接导入</label>
-                        <div class="import-group">
-                            <input type="text" id="gistUrl" placeholder="粘贴分享链接或Gist ID">
-                            <button type="button" id="importFromGistBtn" class="btn btn-secondary">
-                                <i class="material-icons">cloud_download</i>
-                                导入
-                            </button>
-                        </div>
-                        <div class="import-help">
-                            <small>可以导入其他人分享的播放列表</small>
-                        </div>
-                    </div>
                     
                     <div class="form-actions">
                         <button type="submit" class="btn btn-primary">
@@ -148,15 +98,17 @@
                     <h2>
                         <i class="material-icons">queue_music</i>
                         播放列表 (<span id="videoCount">0</span>)
-                    </h2>
-                    <div class="section-actions">
+                    </h2>                    <div class="section-actions">
                         <button id="playAllBtn" class="btn btn-success">
                             <i class="material-icons">play_arrow</i>
                             播放全部
-                        </button>
-                        <button id="shareBtn" class="btn btn-primary">
+                        </button>                        <button id="shareBtn" class="btn btn-primary">
                             <i class="material-icons">share</i>
-                            分享列表
+                            生成分享链接
+                        </button>
+                        <button id="importBtn" class="btn btn-secondary">
+                            <i class="material-icons">cloud_download</i>
+                            从GitHub导入
                         </button>
                         <button id="exportBtn" class="btn btn-secondary">
                             <i class="material-icons">download</i>
@@ -176,6 +128,29 @@
                 </div>
             </section>
         </main>
+    </div>    <!-- GitHub导入模态框 -->
+    <div id="importModal" class="modal">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h3>从GitHub导入播放列表</h3>
+                <button id="importModalClose" class="modal-close">
+                    <i class="material-icons">close</i>
+                </button>
+            </div>
+            <div class="modal-body">
+                <div class="form-group">
+                    <label for="gistUrl">Gist URL或ID</label>
+                    <input type="text" id="gistUrl" placeholder="请输入Gist链接或ID" />
+                    <div class="url-help">
+                        支持：https://gist.github.com/user/xxxxx 或直接输入Gist ID
+                    </div>
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button id="importCancel" class="btn btn-secondary">取消</button>
+                <button id="importConfirm" class="btn btn-primary">导入</button>
+            </div>
+        </div>
     </div>
 
     <!-- 弹窗 -->
@@ -200,172 +175,8 @@
     <!-- 消息提示 -->
     <div id="toast" class="toast"></div>
 
-    <!-- 分享模态框 -->
-    <div id="shareModal" class="modal">
-        <div class="modal-content">
-            <div class="modal-header">
-                <h3 id="modalTitle">分享播放列表</h3>
-                <button id="shareModalClose" class="modal-close">
-                    <i class="material-icons">close</i>
-                </button>
-            </div>
-            <div class="modal-body">
-                <div class="share-content">
-                    <p>您的播放列表已成功创建分享链接！</p>
-                    
-                    <div class="share-url-section">
-                        <label for="shareUrl">分享链接</label>
-                        <div class="url-input-group">
-                            <input type="text" id="shareUrl" readonly />
-                            <button id="copyUrlBtn" class="btn btn-primary">
-                                <i class="material-icons">content_copy</i>
-                                复制
-                            </button>
-                        </div>
-                    </div>
-                    
-                    <div class="share-qr-section">
-                        <label>二维码分享</label>
-                        <div class="qr-container">
-                            <img id="shareQR" alt="分享二维码" />
-                        </div>
-                        <p class="qr-hint">扫描二维码快速分享给好友</p>
-                    </div>
-                    
-                    <div class="share-tips">
-                        <h4>使用说明：</h4>
-                        <ul>
-                            <li>分享链接永久有效，可以随时访问</li>
-                            <li>接收者打开链接即可直接播放视频</li>
-                            <li>视频数据存储在GitHub Gists中</li>
-                        </ul>
-                    </div>
-                </div>
-            </div>
-        </div>
-    </div>    <!-- 核心脚本文件 -->
+    <!-- 脚本引用 -->
     <script src="scripts/github-manager.js"></script>
     <script src="scripts/main.js"></script>
-      <script>
-        // 初始化分享方式选择
-        document.addEventListener('DOMContentLoaded', function() {
-            initializeShareMethod();
-            
-            // 确保GitHub管理器也被初始化
-            if (typeof gitHubManager !== 'undefined') {
-                console.log('初始化GitHub管理器');
-                gitHubManager.checkAuthStatus();
-            }
-        });
-        
-        // 根据URL参数设置分享方式
-        function initializeShareMethod() {
-            const urlParams = new URLSearchParams(window.location.search);
-            const method = urlParams.get('method');
-            
-            if (method) {
-                setShareMethod(method);
-            } else {
-                // 检查是否已有设置
-                const savedMethod = localStorage.getItem('shareMethod');
-                if (savedMethod) {
-                    setShareMethod(savedMethod);
-                } else {
-                    // 显示选择界面
-                    showMethodSelector();
-                }
-            }
-        }
-        
-        // 显示分享方式选择器
-        function showMethodSelector() {
-            document.getElementById('methodSelector').style.display = 'flex';
-        }
-        
-        // 设置分享方式
-        function setShareMethod(method) {
-            localStorage.setItem('shareMethod', method);
-            document.getElementById('methodSelector').style.display = 'none';
-            
-            // 更新UI显示
-            updateMethodStatus(method);
-            
-            // 根据方式初始化相应的管理器
-            if (method === 'github') {
-                initializeGitHubMethod();
-            } else if (method === 'selfhosted') {
-                initializeSelfHostedMethod();
-            }
-        }
-        
-        // 更新方式状态显示
-        function updateMethodStatus(method) {
-            const methodNames = {
-                'github': '🐙 GitHub Gists',
-                'selfhosted': '🏠 自建数据库'
-            };
-            
-            document.getElementById('currentMethod').textContent = methodNames[method] || '未设置';
-        }        // 初始化GitHub方式
-        function initializeGitHubMethod() {
-            const userInfoDiv = document.getElementById('githubUserInfo');
-            userInfoDiv.style.display = 'block';
-            
-            // 确保GitHub管理器已加载并初始化
-            if (typeof gitHubAuth !== 'undefined' && gitHubAuth.checkAuthStatus) {
-                console.log('初始化GitHub授权状态');
-                gitHubAuth.checkAuthStatus();
-            } else {
-                console.error('GitHub管理器未正确加载');
-                // 延迟重试
-                setTimeout(() => {
-                    if (typeof gitHubAuth !== 'undefined' && gitHubAuth.checkAuthStatus) {
-                        gitHubAuth.checkAuthStatus();
-                    }
-                }, 100);
-            }
-        }
-        
-        // 初始化自建后端方式
-        function initializeSelfHostedMethod() {
-            document.getElementById('githubUserInfo').style.display = 'none';
-            
-            // 检查后端服务是否可用
-            checkBackendStatus();
-        }
-        
-        // 检查后端服务状态
-        async function checkBackendStatus() {
-            try {
-                const response = await fetch('http://localhost:8090/api/health');
-                if (response.ok) {
-                    console.log('后端服务正常运行');
-                } else {
-                    showBackendWarning();
-                }
-            } catch (error) {
-                showBackendWarning();
-            }
-        }
-        
-        // 显示后端服务警告
-        function showBackendWarning() {
-            const warning = document.createElement('div');
-            warning.className = 'backend-warning';
-            warning.innerHTML = `
-                <div class="warning-content">
-                    <i class="material-icons">warning</i>
-                    <span>后端服务未启动，请先运行服务器</span>
-                    <button onclick="this.parentNode.parentNode.remove()" class="btn-close">×</button>
-                </div>
-            `;
-            document.body.appendChild(warning);
-        }
-        
-        // 更改分享方式
-        document.getElementById('changeMethodBtn').addEventListener('click', function() {
-            showMethodSelector();
-        });
-    </script>
 </body>
 </html>

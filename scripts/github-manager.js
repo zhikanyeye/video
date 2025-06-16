@@ -1,12 +1,17 @@
 /**
  * GitHub管理器 - 统一的GitHub授权和Gist管理
  * 整合了用户授权、Token管理、Gist分享和导入等功能
+ * @class GitHubManager
  */
 class GitHubManager {
     constructor() {
+        /** @type {string} Token存储键名 */
         this.tokenKey = 'github_token';
+        /** @type {string} 用户信息存储键名 */
         this.userKey = 'github_user';
+        /** @type {string} GitHub API基础URL */
         this.baseUrl = 'https://api.github.com';
+        /** @type {string} GitHub Gist API URL */
         this.gistUrl = 'https://api.github.com/gists';
     }
 
@@ -65,9 +70,7 @@ class GitHubManager {
         } catch (error) {
             throw new Error('Token验证失败，请检查Token是否正确');
         }
-    }
-
-    /**
+    }    /**
      * 清除授权信息
      */
     logout() {
@@ -77,8 +80,9 @@ class GitHubManager {
         // 移除授权成功状态类
         document.body.classList.remove('auth-success-state');
         
-        // 重新显示授权UI
-        this.showAuthUI();    }
+        // 隐藏GitHub管理部件
+        this.hideGitHubManagement();
+    }
 
     // ==================== UI相关方法 ====================
 
@@ -153,16 +157,16 @@ class GitHubManager {
                 saveBtn.textContent = '验证中...';
                 
                 await this.saveToken(token);
-                
-                alert('授权成功！现在可以分享播放列表了。');
+                  alert('授权成功！现在可以分享播放列表了。');
                 document.body.removeChild(modal);
                 
                 // 触发授权成功事件
                 window.dispatchEvent(new Event('github-auth-success'));
                 
-                // 更新UI
+                // 更新UI并隐藏管理部件
                 this.hideAuthUI();
                 this.showAuthStatus();
+                this.hideGitHubManagement();
                 
             } catch (error) {
                 alert(error.message);
@@ -173,48 +177,38 @@ class GitHubManager {
         });
 
         return modal;
-    }
-
-    /**
+    }    /**
      * 显示授权状态（已授权时显示用户信息和管理选项）
      */
     showAuthStatus() {
         const githubUserInfo = document.getElementById('githubUserInfo');
-        if (githubUserInfo) {
+        const githubUsername = document.getElementById('githubUsername');
+        const logoutBtn = document.getElementById('logoutBtn');
+        
+        if (githubUserInfo && githubUsername) {
             const user = this.getUser();
             if (user) {
-                githubUserInfo.innerHTML = `
-                    <div class="auth-status-container">
-                        <div class="auth-success-badge">
-                            <i class="material-icons">check_circle</i>
-                            <span>已授权 (${user.login})</span>
-                        </div>
-                        <div class="auth-actions">
-                            <button id="reAuthBtn" class="btn-small">重新授权</button>
-                            <button id="logoutBtn" class="btn-small danger">退出登录</button>
-                        </div>
-                    </div>
-                `;
-                githubUserInfo.style.display = 'block';
+                githubUsername.textContent = `👋 ${user.name || user.login}`;
+                githubUserInfo.style.display = 'flex';
+                githubUserInfo.style.cursor = 'default';
+                githubUserInfo.onclick = null;
                 
-                // 绑定事件
-                const reAuthBtn = document.getElementById('reAuthBtn');
-                const logoutBtn = document.getElementById('logoutBtn');
-                
-                if (reAuthBtn) {
-                    reAuthBtn.addEventListener('click', () => {
-                        this.showAuthGuide();
-                    });
-                }
-                
+                // 显示退出按钮
                 if (logoutBtn) {
-                    logoutBtn.addEventListener('click', () => {
-                        this.logout();
-                    });
+                    logoutBtn.style.display = 'flex';
+                    
+                    // 绑定退出登录事件（如果还没有绑定）
+                    if (!logoutBtn.hasAttribute('data-github-bound')) {
+                        logoutBtn.setAttribute('data-github-bound', 'true');
+                        logoutBtn.addEventListener('click', (e) => {
+                            e.preventDefault();
+                            this.logout();
+                        });
+                    }
                 }
             }
         }
-    }    /**
+    }/**
      * 显示授权UI（未授权时显示）
      */    /**
      * 显示授权UI（未授权时显示）
@@ -222,31 +216,26 @@ class GitHubManager {
     showAuthUI() {
         console.log('显示授权UI');
         const githubUserInfo = document.getElementById('githubUserInfo');
-        if (githubUserInfo) {
-            githubUserInfo.innerHTML = `
-                <div class="auth-prompt">
-                    <span>GitHub未授权</span>
-                    <button id="authLoginBtn" class="btn btn-primary btn-sm">
-                        🔐 授权登录
-                    </button>
-                </div>
-            `;
-            githubUserInfo.style.display = 'block';
+        const githubUsername = document.getElementById('githubUsername');
+        
+        if (githubUserInfo && githubUsername) {
+            githubUsername.textContent = '🔐 点击授权';
+            githubUserInfo.style.display = 'flex';
             
-            // 绑定点击事件，直接显示弹窗
-            setTimeout(() => {
-                const authBtn = document.getElementById('authLoginBtn');
-                if (authBtn) {
-                    authBtn.addEventListener('click', () => {
-                        console.log('点击授权登录按钮，显示弹窗');
-                        this.showAuthGuide();
-                    });
-                }
-            }, 10);
+            // 将整个区域变为可点击的授权按钮
+            githubUserInfo.style.cursor = 'pointer';
+            githubUserInfo.onclick = () => {
+                console.log('点击授权区域，显示弹窗');
+                this.showAuthGuide();
+            };
+            
+            // 隐藏退出按钮，显示授权提示
+            const logoutBtn = document.getElementById('logoutBtn');
+            if (logoutBtn) {
+                logoutBtn.style.display = 'none';
+            }
         }
-    }
-
-    /**
+    }    /**
      * 隐藏授权UI（授权成功后调用）
      */
     hideAuthUI() {
@@ -259,13 +248,34 @@ class GitHubManager {
     }
 
     /**
+     * 隐藏GitHub管理部件
+     */
+    hideGitHubManagement() {
+        const githubUserInfo = document.getElementById('githubUserInfo');
+        if (githubUserInfo) {
+            githubUserInfo.style.display = 'none';
+        }
+        console.log('GitHub管理部件已隐藏');
+    }
+
+    /**
+     * 显示GitHub管理部件
+     */
+    showGitHubManagement() {
+        if (this.isAuthenticated()) {
+            this.showAuthStatus();
+        } else {
+            this.showAuthUI();
+        }
+        console.log('GitHub管理部件已显示');
+    }    /**
      * 初始化时检查授权状态
      */
     checkAuthStatus() {
         console.log('检查GitHub授权状态');
         if (this.isAuthenticated()) {
-            console.log('用户已授权，显示授权状态');
-            this.showAuthStatus();
+            console.log('用户已授权，隐藏管理部件');
+            this.hideGitHubManagement();
         } else {
             console.log('用户未授权，显示授权UI');
             this.showAuthUI();
@@ -379,14 +389,18 @@ class GitHubManager {
             console.error('分享失败:', error);
             throw error;
         }
-    }
-
-    /**
+    }    /**
      * 从Gist导入播放列表
      */
     async importFromGist(gistId) {
         try {
-            const response = await fetch(`${this.gistUrl}/${gistId}`, {
+            // 处理不同格式的gistId输入
+            const cleanGistId = this.parseGistId(gistId);
+            if (!cleanGistId) {
+                throw new Error('无效的Gist ID或URL');
+            }
+
+            const response = await fetch(`${this.gistUrl}/${cleanGistId}`, {
                 headers: {
                     'Accept': 'application/vnd.github.v3+json'
                 }
@@ -409,23 +423,105 @@ class GitHubManager {
                 throw new Error('播放列表格式不正确');
             }
 
-            return playlist;
+            return {
+                success: true,
+                videos: playlist.videos,
+                title: playlist.title,
+                description: playlist.description,
+                gistId: cleanGistId,
+                gistUrl: gist.html_url
+            };
 
         } catch (error) {
             console.error('导入失败:', error);
-            throw error;
+            return {
+                success: false,
+                error: error.message
+            };
         }
-    }
-
-    /**
+    }/**
      * 加载播放列表（兼容旧的API）
      */
     async loadPlaylist(gistId) {
         return await this.importFromGist(gistId);
+    }    /**
+     * 分享到Gist（兼容main.js的调用）
+     */
+    async shareToGist(title, description, videos) {
+        try {
+            const result = await this.sharePlaylist(videos, title, description);
+            return {
+                success: true,
+                gistId: result.gist_id,
+                gistUrl: result.gist_url,
+                playerUrl: result.player_url,
+                shareUrl: result.share_url
+            };
+        } catch (error) {
+            return {
+                success: false,
+                error: error.message
+            };
+        }
     }
 
-    // ==================== 辅助方法 ====================    /**
+    /**
+     * 更新现有Gist
+     */
+    async updateGist(gistId, playlistData) {
+        try {
+            if (!this.isAuthenticated()) {
+                throw new Error('未授权，无法更新Gist');
+            }
+
+            const gistData = {
+                files: {
+                    "playlist.json": {
+                        content: JSON.stringify({
+                            title: playlistData.title,
+                            description: playlistData.description,
+                            updated: new Date().toISOString(),
+                            videos: playlistData.videos,
+                            player_url: this.getPlayerUrl()
+                        }, null, 2)
+                    }
+                }
+            };
+
+            const response = await fetch(`${this.gistUrl}/${gistId}`, {
+                method: 'PATCH',
+                headers: {
+                    'Authorization': `token ${this.getToken()}`,
+                    'Accept': 'application/vnd.github.v3+json',
+                    'Content-Type': 'application/json'
+                },
+                body: JSON.stringify(gistData)
+            });
+
+            if (!response.ok) {
+                const error = await response.json();
+                throw new Error(error.message || '更新失败');
+            }
+
+            return {
+                success: true,
+                gistId: gistId
+            };
+
+        } catch (error) {
+            console.error('更新Gist失败:', error);
+            return {
+                success: false,
+                error: error.message
+            };
+        }
+    }
+
+    // ==================== 辅助方法 ====================    
+    /**
      * 获取播放器URL
+     * @param {string} gistId - 可选的Gist ID
+     * @returns {string} 完整的播放器URL路径
      */
     getPlayerUrl(gistId = '') {
         const baseUrl = window.location.origin;
@@ -447,6 +543,8 @@ class GitHubManager {
 
     /**
      * 获取分享URL
+     * @param {string} gistId - Gist ID
+     * @returns {string} 分享链接URL
      */
     getShareUrl(gistId) {
         return this.getPlayerUrl(gistId);
@@ -454,6 +552,12 @@ class GitHubManager {
 
     /**
      * 生成README内容
+     * @param {string} title - 播放列表标题
+     * @param {string} description - 播放列表描述
+     * @param {Array<{title: string, url: string, description: string}>} videos - 视频列表
+     * @param {string} gistUrl - Gist URL
+     * @param {string} gistId - Gist ID
+     * @returns {string} 生成的README内容
      */
     generateReadme(title, description, videos, gistUrl, gistId) {
         const playerUrl = this.getPlayerUrl(gistId);
@@ -480,6 +584,8 @@ ${videos.map((video, index) => `${index + 1}. **${video.title}**${video.descript
 
     /**
      * 解析Gist ID从URL
+     * @param {string} url - 包含Gist ID的URL或直接ID
+     * @returns {string|null} 解析出的Gist ID或null
      */
     parseGistId(url) {
         const patterns = [
