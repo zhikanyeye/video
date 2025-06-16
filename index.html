@@ -246,11 +246,16 @@
     </div>    <!-- 核心脚本文件 -->
     <script src="scripts/github-manager.js"></script>
     <script src="scripts/main.js"></script>
-    
-    <script>
+      <script>
         // 初始化分享方式选择
         document.addEventListener('DOMContentLoaded', function() {
             initializeShareMethod();
+            
+            // 确保GitHub管理器也被初始化
+            if (typeof gitHubManager !== 'undefined') {
+                console.log('初始化GitHub管理器');
+                gitHubManager.checkAuthStatus();
+            }
         });
         
         // 根据URL参数设置分享方式
