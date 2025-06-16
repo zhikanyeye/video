@@ -170,7 +170,9 @@ class GitHubManager {
                 saveBtn.disabled = false;
                 saveBtn.textContent = '保存授权';
             }
-        });        return modal;
+        });
+
+        return modal;
     }
 
     /**
@@ -201,44 +203,46 @@ class GitHubManager {
                 
                 if (reAuthBtn) {
                     reAuthBtn.addEventListener('click', () => {
-                        console.log('点击重新授权按钮');
                         this.showAuthGuide();
                     });
                 }
                 
                 if (logoutBtn) {
                     logoutBtn.addEventListener('click', () => {
-                        console.log('点击退出登录按钮');
                         this.logout();
                     });
-                }            }
+                }
+            }
         }
-    }
-
-    /**
+    }    /**
+     * 显示授权UI（未授权时显示）
+     */    /**
      * 显示授权UI（未授权时显示）
      */
     showAuthUI() {
+        console.log('显示授权UI');
         const githubUserInfo = document.getElementById('githubUserInfo');
         if (githubUserInfo) {
             githubUserInfo.innerHTML = `
                 <div class="auth-prompt">
                     <span>GitHub未授权</span>
                     <button id="authLoginBtn" class="btn btn-primary btn-sm">
-                        授权登录
+                        🔐 授权登录
                     </button>
                 </div>
             `;
             githubUserInfo.style.display = 'block';
             
-            // 绑定点击事件
-            const authBtn = document.getElementById('authLoginBtn');
-            if (authBtn) {
-                authBtn.addEventListener('click', () => {
-                    console.log('点击授权登录按钮');
-                    this.showAuthGuide();
-                });
-            }
+            // 绑定点击事件，直接显示弹窗
+            setTimeout(() => {
+                const authBtn = document.getElementById('authLoginBtn');
+                if (authBtn) {
+                    authBtn.addEventListener('click', () => {
+                        console.log('点击授权登录按钮，显示弹窗');
+                        this.showAuthGuide();
+                    });
+                }
+            }, 10);
         }
     }
 
@@ -258,9 +262,12 @@ class GitHubManager {
      * 初始化时检查授权状态
      */
     checkAuthStatus() {
+        console.log('检查GitHub授权状态');
         if (this.isAuthenticated()) {
+            console.log('用户已授权，显示授权状态');
             this.showAuthStatus();
         } else {
+            console.log('用户未授权，显示授权UI');
             this.showAuthUI();
         }
     }
@@ -417,14 +424,25 @@ class GitHubManager {
         return await this.importFromGist(gistId);
     }
 
-    // ==================== 辅助方法 ====================
-
-    /**
+    // ==================== 辅助方法 ====================    /**
      * 获取播放器URL
      */
     getPlayerUrl(gistId = '') {
         const baseUrl = window.location.origin;
-        return gistId ? `${baseUrl}/player.html?gist=${gistId}` : `${baseUrl}/player.html`;
+        const pathname = window.location.pathname;
+        
+        // 检测是否在GitHub Pages环境
+        let basePath = '';
+        if (pathname.includes('/video/') || pathname.includes('/video-master/')) {
+            // GitHub Pages 环境，提取项目路径
+            const segments = pathname.split('/').filter(seg => seg);
+            if (segments.length > 0) {
+                basePath = '/' + segments[0];
+            }
+        }
+        
+        const playerUrl = `${baseUrl}${basePath}/player.html`;
+        return gistId ? `${playerUrl}?gist=${gistId}` : playerUrl;
     }
 
     /**
@@ -488,7 +506,7 @@ const gitHubManager = new GitHubManager();
 const gitHubAuth = gitHubManager;
 const improvedGistManager = gitHubManager;
 
-// 调试信息
+// 初始化日志
 console.log('GitHub Manager 已加载:', {
     gitHubManager: !!gitHubManager,
     gitHubAuth: !!gitHubAuth,

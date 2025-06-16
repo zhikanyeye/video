@@ -1332,3 +1332,208 @@ body {
         padding: 10px;
     }
 }
+
+/* GitHub授权弹窗样式 */
+.auth-modal {
+    position: fixed;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    background: rgba(0, 0, 0, 0.8);
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    z-index: 10000;
+    backdrop-filter: blur(5px);
+    -webkit-backdrop-filter: blur(5px);
+}
+
+.auth-modal-content {
+    background: var(--bg-card);
+    border-radius: var(--radius-large);
+    width: 90%;
+    max-width: 500px;
+    max-height: 90vh;
+    overflow-y: auto;
+    box-shadow: var(--shadow-large);
+    border: 1px solid var(--border-color);
+    animation: modalFadeIn 0.3s ease-out;
+}
+
+@keyframes modalFadeIn {
+    from {
+        opacity: 0;
+        transform: scale(0.9) translateY(-50px);
+    }
+    to {
+        opacity: 1;
+        transform: scale(1) translateY(0);
+    }
+}
+
+.auth-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: var(--space-lg);
+    border-bottom: 1px solid var(--border-color);
+    background: linear-gradient(135deg, var(--primary-color), var(--primary-dark));
+    border-radius: var(--radius-large) var(--radius-large) 0 0;
+    color: white;
+}
+
+.auth-header h3 {
+    margin: 0;
+    font-size: var(--font-lg);
+    font-weight: 600;
+}
+
+.auth-close {
+    font-size: 24px;
+    cursor: pointer;
+    opacity: 0.8;
+    transition: opacity 0.2s;
+    background: none;
+    border: none;
+    color: white;
+    padding: 0;
+    width: 30px;
+    height: 30px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    border-radius: 50%;
+}
+
+.auth-close:hover {
+    opacity: 1;
+    background: rgba(255, 255, 255, 0.1);
+}
+
+.auth-body {
+    padding: var(--space-lg);
+}
+
+.auth-body p {
+    margin-bottom: var(--space-md);
+    color: var(--text-secondary);
+    line-height: 1.6;
+}
+
+.auth-steps {
+    margin: var(--space-md) 0;
+    padding-left: var(--space-lg);
+    color: var(--text-primary);
+}
+
+.auth-steps li {
+    margin-bottom: var(--space-sm);
+    line-height: 1.5;
+}
+
+.auth-steps strong {
+    color: var(--primary-color);
+    font-weight: 600;
+}
+
+.auth-actions {
+    margin: var(--space-lg) 0;
+    text-align: center;
+}
+
+.auth-btn {
+    display: inline-block;
+    padding: var(--space-sm) var(--space-lg);
+    border-radius: var(--radius-medium);
+    text-decoration: none;
+    font-weight: 500;
+    transition: all 0.2s;
+    border: none;
+    cursor: pointer;
+    font-size: var(--font-md);
+}
+
+.auth-btn.primary {
+    background: var(--primary-color);
+    color: white;
+}
+
+.auth-btn.primary:hover {
+    background: var(--primary-dark);
+    transform: translateY(-2px);
+    box-shadow: 0 4px 12px rgba(33, 150, 243, 0.3);
+}
+
+.auth-btn.secondary {
+    background: var(--success-color);
+    color: white;
+}
+
+.auth-btn.secondary:hover {
+    background: #45a049;
+    transform: translateY(-2px);
+    box-shadow: 0 4px 12px rgba(76, 175, 80, 0.3);
+}
+
+.auth-input-group {
+    margin: var(--space-lg) 0;
+}
+
+.auth-input-group label {
+    display: block;
+    margin-bottom: var(--space-sm);
+    color: var(--text-primary);
+    font-weight: 500;
+}
+
+.auth-input-group input {
+    width: 100%;
+    padding: var(--space-sm);
+    border: 1px solid var(--border-color);
+    border-radius: var(--radius-medium);
+    background: var(--bg-secondary);
+    color: var(--text-primary);
+    font-size: var(--font-md);
+    margin-bottom: var(--space-md);
+}
+
+.auth-input-group input:focus {
+    outline: none;
+    border-color: var(--primary-color);
+    box-shadow: 0 0 0 2px rgba(33, 150, 243, 0.2);
+}
+
+.auth-note {
+    margin-top: var(--space-lg);
+    padding: var(--space-md);
+    background: rgba(33, 150, 243, 0.1);
+    border-radius: var(--radius-medium);
+    border-left: 4px solid var(--primary-color);
+}
+
+.auth-note small {
+    color: var(--text-secondary);
+    line-height: 1.5;
+}
+
+/* 移动端适配 */
+@media (max-width: 768px) {
+    .auth-modal-content {
+        width: 95%;
+        margin: var(--space-md);
+    }
+    
+    .auth-header {
+        padding: var(--space-md);
+    }
+    
+    .auth-body {
+        padding: var(--space-md);
+    }
+    
+    .auth-btn {
+        padding: var(--space-md) var(--space-lg);
+        font-size: var(--font-sm);
+    }
+}
