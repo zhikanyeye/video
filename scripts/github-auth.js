@@ -50,12 +50,16 @@ class GitHubAuthManager {
         } catch (error) {
             throw new Error('Token验证失败，请检查Token是否正确');
         }
-    }
-
-    // 清除授权信息
+    }    // 清除授权信息
     logout() {
         localStorage.removeItem(this.tokenKey);
         localStorage.removeItem(this.userKey);
+        
+        // 移除授权成功状态类
+        document.body.classList.remove('auth-success-state');
+        
+        // 重新显示授权UI
+        this.showAuthUI();
     }
 
     // 显示授权引导
@@ -121,8 +125,7 @@ class GitHubAuthManager {
             try {
                 saveBtn.disabled = true;
                 saveBtn.textContent = '验证中...';
-                
-                await this.saveToken(token);
+                  await this.saveToken(token);
                 
                 alert('授权成功！现在可以分享播放列表了。');
                 document.body.removeChild(modal);
@@ -130,8 +133,9 @@ class GitHubAuthManager {
                 // 触发授权成功事件
                 window.dispatchEvent(new Event('github-auth-success'));
                 
-                // 隐藏授权相关的UI元素
+                // 隐藏授权相关的UI元素并显示授权状态
                 this.hideAuthUI();
+                this.showAuthStatus();
                 
             } catch (error) {
                 alert(error.message);
@@ -150,14 +154,9 @@ class GitHubAuthManager {
             authModal.style.display = 'none';
         }
         
-        // 显示简洁的授权成功状态
-        this.showAuthStatus();
-        
         // 给body添加授权成功状态类
         document.body.classList.add('auth-success-state');
-    }
-
-    // 显示授权状态（已授权时显示用户信息和管理选项）
+    }// 显示授权状态（已授权时显示用户信息和管理选项）
     showAuthStatus() {
         const githubUserInfo = document.getElementById('githubUserInfo');
         if (githubUserInfo) {
@@ -171,21 +170,37 @@ class GitHubAuthManager {
                         </div>
                         <div class="auth-actions">
                             <button class="btn-small" onclick="gitHubAuth.showAuthGuide()">重新授权</button>
-                            <button class="btn-small danger" onclick="gitHubAuth.logout(); location.reload();">退出登录</button>
+                            <button class="btn-small danger" onclick="gitHubAuth.logout()">退出登录</button>
                         </div>
                     </div>
                 `;
                 githubUserInfo.style.display = 'block';
             }
         }
+    }
+
+    // 显示授权UI（未授权时显示）
+    showAuthUI() {
+        const githubUserInfo = document.getElementById('githubUserInfo');
+        if (githubUserInfo) {
+            githubUserInfo.innerHTML = `
+                <div class="auth-prompt">
+                    <span>GitHub未授权</span>
+                    <button onclick="gitHubAuth.showAuthGuide()" class="btn btn-primary btn-sm">
+                        授权登录
+                    </button>
+                </div>
+            `;
+            githubUserInfo.style.display = 'block';
+        }
     }    // 初始化时检查授权状态
     checkAuthStatus() {
         if (this.isAuthenticated()) {
-            this.showAuthStatus(); // 只显示状态，不隐藏输入界面
+            this.showAuthStatus(); // 显示已授权状态
+        } else {
+            this.showAuthUI(); // 显示授权UI
         }
-    }
-
-    // 显示用户信息
+    }    // 显示用户信息
     renderUserInfo(container) {
         const user = this.getUser();
         if (!user) return;
@@ -197,7 +212,7 @@ class GitHubAuthManager {
                     <div class="user-name">${user.name || user.login}</div>
                     <div class="user-login">@${user.login}</div>
                 </div>
-                <button class="logout-btn" onclick="gitHubAuth.logout(); location.reload();">
+                <button class="logout-btn" onclick="gitHubAuth.logout();">
                     退出登录
                 </button>
             </div>

@@ -303,25 +303,13 @@
             };
             
             document.getElementById('currentMethod').textContent = methodNames[method] || '未设置';
-        }
-          // 初始化GitHub方式
+        }        // 初始化GitHub方式
         function initializeGitHubMethod() {
             const userInfoDiv = document.getElementById('githubUserInfo');
             userInfoDiv.style.display = 'block';
             
-            if (gitHubAuth.isAuthenticated()) {
-                // 显示授权状态
-                gitHubAuth.showAuthStatus();
-            } else {
-                userInfoDiv.innerHTML = `
-                    <div class="auth-prompt">
-                        <span>GitHub未授权</span>
-                        <button onclick="gitHubAuth.showAuthGuide()" class="btn btn-primary btn-sm">
-                            授权登录
-                        </button>
-                    </div>
-                `;
-            }
+            // 使用GitHubAuthManager来处理授权状态
+            gitHubAuth.checkAuthStatus();
         }
         
         // 初始化自建后端方式
