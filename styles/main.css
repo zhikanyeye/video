@@ -1266,15 +1266,12 @@ body {
     }
     
     .share-method-status {
-        margin-right: 0;
-        margin-bottom: 10px;
+        margin-right: 0;        margin-bottom: 10px;
     }
     
     .method-buttons {
         flex-direction: column;
-    }
-    
-    .method-buttons .btn {
+    }    .method-buttons .btn {
         width: 100%;
     }
 }
