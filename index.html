@@ -304,14 +304,14 @@
             
             document.getElementById('currentMethod').textContent = methodNames[method] || '未设置';
         }
-        
-        // 初始化GitHub方式
+          // 初始化GitHub方式
         function initializeGitHubMethod() {
             const userInfoDiv = document.getElementById('githubUserInfo');
             userInfoDiv.style.display = 'block';
             
             if (gitHubAuth.isAuthenticated()) {
-                gitHubAuth.renderUserInfo(userInfoDiv);
+                // 显示授权状态
+                gitHubAuth.showAuthStatus();
             } else {
                 userInfoDiv.innerHTML = `
                     <div class="auth-prompt">

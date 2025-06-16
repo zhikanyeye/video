@@ -631,9 +631,7 @@ class VideoManager {
             bulkUrls.value = '';
             bulkUrls.focus();
         }
-    }
-
-    // 从Gist导入视频
+    }    // 从Gist导入视频
     async handleImportFromGist() {
         const gistUrlInput = document.getElementById('gistUrl');
         const input = gistUrlInput.value.trim();
@@ -673,7 +671,8 @@ class VideoManager {
                     return;
                 }
                 
-                gistData = await this.gistManager.loadPlaylist(shareId);
+                // 使用自建后端API加载
+                gistData = await this.loadFromBackend(shareId);
             }
             
             if (gistData && gistData.videos && gistData.videos.length > 0) {
@@ -817,6 +816,31 @@ class VideoManager {
             };
         } catch (error) {
             console.error('分享到自建后端失败:', error);
+            throw error;
+        }
+    }
+
+    // 从自建后端加载播放列表
+    async loadFromBackend(shareId) {
+        try {
+            const response = await fetch(`/api/playlist/${shareId}`);
+            
+            if (!response.ok) {
+                if (response.status === 404) {
+                    throw new Error('分享链接已过期或不存在');
+                } else {
+                    throw new Error(`加载失败: ${response.status}`);
+                }
+            }
+            
+            const data = await response.json();
+            return {
+                title: data.title,
+                description: data.description,
+                videos: JSON.parse(data.videos)
+            };
+        } catch (error) {
+            console.error('从自建后端加载失败:', error);
             throw error;
         }
     }
