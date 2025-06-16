@@ -142,7 +142,7 @@ class GitHubAuthManager {
         });
 
         return modal;
-    }    // 隐藏授权相关的UI元素
+    }    // 隐藏授权相关的UI元素（仅在授权成功后调用，不在页面加载时调用）
     hideAuthUI() {
         // 如果有授权引导弹窗，隐藏它
         const authModal = document.querySelector('.auth-modal');
@@ -150,46 +150,38 @@ class GitHubAuthManager {
             authModal.style.display = 'none';
         }
         
-        // 显示简洁的授权成功状态，而不是完整的用户信息
-        const githubUserInfo = document.getElementById('githubUserInfo');
-        if (githubUserInfo) {
-            const user = this.getUser();
-            if (user) {
-                githubUserInfo.innerHTML = `
-                    <div class="auth-success-badge">
-                        <i class="material-icons">check_circle</i>
-                        <span>已授权 (${user.login})</span>
-                    </div>
-                `;
-                githubUserInfo.style.display = 'block';
-            }
-        }
-        
-        // 隐藏任何可能的Token输入界面
-        const tokenInputs = document.querySelectorAll('[id*="token"], [id*="Token"]');
-        tokenInputs.forEach(input => {
-            const parent = input.closest('.form-group, .auth-input-group, .input-group');
-            if (parent) {
-                parent.classList.add('auth-hidden');
-            }
-        });
-        
-        // 隐藏GitHub相关的设置按钮（但不隐藏授权成功的显示）
-        const githubButtons = document.querySelectorAll('[class*="github"], [id*="github"]');
-        githubButtons.forEach(btn => {
-            if (btn.textContent.includes('Token') || btn.textContent.includes('授权')) {
-                btn.classList.add('auth-hidden');
-            }
-        });
+        // 显示简洁的授权成功状态
+        this.showAuthStatus();
         
         // 给body添加授权成功状态类
         document.body.classList.add('auth-success-state');
     }
 
-    // 初始化时检查授权状态
+    // 显示授权状态（已授权时显示用户信息和管理选项）
+    showAuthStatus() {
+        const githubUserInfo = document.getElementById('githubUserInfo');
+        if (githubUserInfo) {
+            const user = this.getUser();
+            if (user) {
+                githubUserInfo.innerHTML = `
+                    <div class="auth-status-container">
+                        <div class="auth-success-badge">
+                            <i class="material-icons">check_circle</i>
+                            <span>已授权 (${user.login})</span>
+                        </div>
+                        <div class="auth-actions">
+                            <button class="btn-small" onclick="gitHubAuth.showAuthGuide()">重新授权</button>
+                            <button class="btn-small danger" onclick="gitHubAuth.logout(); location.reload();">退出登录</button>
+                        </div>
+                    </div>
+                `;
+                githubUserInfo.style.display = 'block';
+            }
+        }
+    }    // 初始化时检查授权状态
     checkAuthStatus() {
         if (this.isAuthenticated()) {
-            this.hideAuthUI();
+            this.showAuthStatus(); // 只显示状态，不隐藏输入界面
         }
     }
 
