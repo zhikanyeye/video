@@ -1236,14 +1236,11 @@ body {
 
     .form-group label {
         font-size: var(--font-md);
-    }
-
-    .form-group input,
+    }    .form-group input,
     .form-group textarea {
         font-size: var(--font-md);
         padding: var(--space-sm);
     }
-}
     
     .video-actions {
         align-self: stretch;
@@ -1264,14 +1261,16 @@ body {
         gap: 10px;
         align-items: stretch;
     }
-    
-    .share-method-status {
-        margin-right: 0;        margin-bottom: 10px;
+      .share-method-status {
+        margin-right: 0;
+        margin-bottom: 10px;
     }
     
     .method-buttons {
         flex-direction: column;
-    }    .method-buttons .btn {
+    }
+    
+    .method-buttons .btn {
         width: 100%;
     }
 }
