@@ -189,7 +189,8 @@ class GitHubManager {
             const user = this.getUser();
             if (user) {
                 githubUsername.textContent = `👋 ${user.name || user.login}`;
-                githubUserInfo.style.display = 'flex';
+                githubUserInfo.classList.remove('hidden');
+                githubUserInfo.style.display = 'flex'; // 保留flex布局
                 githubUserInfo.style.cursor = 'default';
                 githubUserInfo.onclick = null;
                 
@@ -218,9 +219,9 @@ class GitHubManager {
         const githubUserInfo = document.getElementById('githubUserInfo');
         const githubUsername = document.getElementById('githubUsername');
         
-        if (githubUserInfo && githubUsername) {
-            githubUsername.textContent = '🔐 点击授权';
-            githubUserInfo.style.display = 'flex';
+        if (githubUserInfo && githubUsername) {            githubUsername.textContent = '🔐 点击授权';
+            githubUserInfo.classList.remove('hidden');
+            githubUserInfo.style.display = 'flex'; // 保留flex布局
             
             // 将整个区域变为可点击的授权按钮
             githubUserInfo.style.cursor = 'pointer';
@@ -251,9 +252,8 @@ class GitHubManager {
      * 隐藏GitHub管理部件
      */
     hideGitHubManagement() {
-        const githubUserInfo = document.getElementById('githubUserInfo');
-        if (githubUserInfo) {
-            githubUserInfo.style.display = 'none';
+        const githubUserInfo = document.getElementById('githubUserInfo');        if (githubUserInfo) {
+            githubUserInfo.classList.add('hidden');
         }
         console.log('GitHub管理部件已隐藏');
     }

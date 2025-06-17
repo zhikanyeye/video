@@ -581,11 +581,11 @@ class VideoManager {
 
         if (typeof gitHubManager !== 'undefined' && gitHubManager.isAuthenticated()) {
             const user = gitHubManager.getUser();
-            if (user) {
-                githubUsername.textContent = `👋 ${user.name || user.login}`;
-                githubUserInfo.style.display = 'flex';
+            if (user) {                githubUsername.textContent = `👋 ${user.name || user.login}`;
+                githubUserInfo.classList.remove('hidden');
+                githubUserInfo.style.display = 'flex'; // 保留flex布局
             }        } else {
-            githubUserInfo.style.display = 'none';
+            githubUserInfo.classList.add('hidden');
         }
     }
 
