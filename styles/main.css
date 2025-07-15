@@ -308,30 +308,6 @@ body {
         gap: var(--space-sm);
         width: 100%;
     }
-    
-    /* GitHub用户信息移动端适配 */
-    .github-user-info {
-        margin-right: 0;
-        margin-bottom: var(--space-sm);
-        width: 100%;
-        display: flex;
-        align-items: center;
-        justify-content: space-between;
-        flex-wrap: wrap;
-        gap: var(--space-xs);
-    }
-    
-    .github-user-info #githubUsername {
-        flex: 1;
-        min-width: 0;
-        text-overflow: ellipsis;
-        overflow: hidden;
-        white-space: nowrap;
-    }
-    
-    .github-user-info #logoutBtn {
-        flex-shrink: 0;
-    }
 
     .share-method-status {
         flex-direction: column;
@@ -584,6 +560,11 @@ body {
         font-size: var(--font-sm);
         padding: var(--space-xs) var(--space-sm);
         min-height: 36px;
+    }
+    
+    .video-item {
+        padding: var(--space-md);
+        border-radius: var(--radius-medium);
     }
 }
 
@@ -1242,77 +1223,65 @@ body {
         gap: var(--space-sm);
     }
     
-    /* 修复移动端按钮文字被截断的问题 */
-    .section-actions .btn {
-        flex: 1;
-        min-width: 0;
-        font-size: var(--font-sm);
-        padding: var(--space-sm);
-        white-space: nowrap;
-        overflow: hidden;
-        text-overflow: ellipsis;
+    .video-item {
+        flex-direction: column;
+        align-items: flex-start;
+        gap: var(--space-sm);
     }
     
-    /* 针对小屏幕进一步优化 */
-    @media (max-width: 480px) {
-        :root {
-            --font-sm: 0.7rem;
-            --font-md: 0.8rem;
-            --font-lg: 0.9rem;
-            --font-xl: 1rem;
-            --space-sm: 6px;
-            --space-md: 10px;
-            --space-lg: 14px;
-        }
-        
-        .header-content {
-            padding: var(--space-sm);
-        }
-        
-        .logo {
-            font-size: var(--font-lg);
-        }
-        
-        .header-actions {
-            gap: var(--space-xs);
-        }
-        
-        .github-user-info {
-            flex-direction: column;
-            align-items: stretch;
-            gap: var(--space-xs);
-        }
-        
-        .section-header h2 {
-            font-size: var(--font-lg);
-        }
-        
-        .btn {
-            font-size: var(--font-sm);
-            padding: var(--space-xs) var(--space-sm);
-            min-height: 36px;
-        }
-        
-        .modal-content {
-            margin: var(--space-sm);
-            width: calc(100% - 2 * var(--space-sm));
-            border-radius: var(--radius-medium);
-        }
-        
-        .modal-header,
-        .modal-body,
-        .modal-footer {
-            padding: var(--space-sm);
-        }
-        
-        .form-group input,
-        .form-group textarea {
-            font-size: var(--font-md);
-        }
-        
-        .url-help {
-            font-size: var(--font-sm);
-        }
+    .video-meta {
+        flex-direction: column;
+        gap: var(--space-sm);
+        width: 100%;
+    }
+
+    .video-actions {
+        width: 100%;
+        justify-content: space-between;
+    }
+
+    .form-group {
+        margin-bottom: var(--space-md);
+    }
+
+    .form-group label {
+        font-size: var(--font-md);
+    }    .form-group input,
+    .form-group textarea {
+        font-size: var(--font-md);
+        padding: var(--space-sm);
+    }
+    
+    .video-actions {
+        align-self: stretch;
+        justify-content: center;
+    }
+    
+    .modal-content {
+        margin: var(--space-md);
+        width: calc(100% - 2 * var(--space-md));
+    }
+    
+    .modal-footer {
+        flex-direction: column;
+    }
+    
+    .header-actions {
+        flex-direction: column;
+        gap: 10px;
+        align-items: stretch;
+    }
+      .share-method-status {
+        margin-right: 0;
+        margin-bottom: 10px;
+    }
+    
+    .method-buttons {
+        flex-direction: column;
+    }
+    
+    .method-buttons .btn {
+        width: 100%;
     }
 }
 
@@ -1574,68 +1543,6 @@ body {
     
     .auth-btn {
         padding: var(--space-md) var(--space-lg);
-        font-size: var(--font-sm);
-    }
-}
-
-/* 超小屏幕优化 (iPhone SE等) */
-@media (max-width: 480px) {
-    :root {
-        --font-sm: 0.7rem;
-        --font-md: 0.8rem;
-        --font-lg: 0.9rem;
-        --font-xl: 1rem;
-        --space-sm: 6px;
-        --space-md: 10px;
-        --space-lg: 14px;
-    }
-    
-    .header-content {
-        padding: var(--space-sm);
-    }
-    
-    .logo {
-        font-size: var(--font-lg);
-    }
-    
-    .header-actions {
-        gap: var(--space-xs);
-    }
-    
-    .github-user-info {
-        flex-direction: column;
-        align-items: stretch;
-        gap: var(--space-xs);
-    }
-    
-    .section-header h2 {
-        font-size: var(--font-lg);
-    }
-    
-    .btn {
-        font-size: var(--font-sm);
-        padding: var(--space-xs) var(--space-sm);
-        min-height: 36px;
-    }
-    
-    .modal-content {
-        margin: var(--space-sm);
-        width: calc(100% - 2 * var(--space-sm));
-        border-radius: var(--radius-medium);
-    }
-    
-    .modal-header,
-    .modal-body,
-    .modal-footer {
-        padding: var(--space-sm);
-    }
-    
-    .form-group input,
-    .form-group textarea {
-        font-size: var(--font-md);
-    }
-    
-    .url-help {
         font-size: var(--font-sm);
     }
 }
