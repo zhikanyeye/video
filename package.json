@@ -1,5 +1,37 @@
 {
+  "name": "qingyunbo",
+  "version": "1.0.0",
+  "description": "青云播 - 现代化视频播放器",
+  "main": "index.html",
+  "scripts": {
+    "start": "live-server --port=8080 --entry-file=index.html",
+    "backend": "cd backend && npm start",
+    "install-backend": "cd backend && npm install",
+    "dev": "concurrently \"npm run backend\" \"npm start\""
+  },
+  "keywords": [
+    "video",
+    "player",
+    "html5",
+    "artplayer",
+    "streaming",
+    "playlist"
+  ],
+  "author": "",
+  "license": "MIT",
   "dependencies": {
     "node-fetch": "^3.3.2"
-  }
+  },
+  "devDependencies": {
+    "live-server": "^1.2.2",
+    "concurrently": "^8.2.2"
+  },
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/yourusername/qingyunbo.git"
+  },
+  "bugs": {
+    "url": "https://github.com/yourusername/qingyunbo/issues"
+  },
+  "homepage": "https://github.com/yourusername/qingyunbo#readme"
 }

@@ -147,43 +147,8 @@ class VideoPlayer {
                     this.toggleSettings();
                 }
             });
-        }// 播放控制按钮
-        const playPauseBtn = document.getElementById('playerPlayPauseBtn');
-        if (playPauseBtn) {
-            playPauseBtn.addEventListener('click', () => this.togglePlayPause());
-        }
-
-        const prevBtn = document.getElementById('playerPrevBtn');
-        if (prevBtn) {
-            prevBtn.addEventListener('click', () => this.playPrevious());
-        }
-
-        const nextBtn = document.getElementById('playerNextBtn');
-        if (nextBtn) {
-            nextBtn.addEventListener('click', () => this.playNext());
-        }
-
-        // 全屏按钮
-        const fullscreenBtn = document.getElementById('playerFullscreenBtn');
-        if (fullscreenBtn) {
-            fullscreenBtn.addEventListener('click', () => this.toggleFullscreen());
-        }
-
-        // 静音按钮
-        const volumeBtn = document.getElementById('muteBtn');
-        if (volumeBtn) {
-            volumeBtn.addEventListener('click', () => this.toggleMute());
-        }
-
-        // 音量滑块
-        const volumeSlider = document.getElementById('volumeSlider');
-        if (volumeSlider) {
-            volumeSlider.addEventListener('input', (e) => this.setVolume(e.target.value / 100));
-        }
-        const volumeBar = document.querySelector('.volume-bar');
-        if (volumeBar) {
-            volumeBar.addEventListener('click', (e) => this.setVolume(e));
-        }
+        }        // 播放控制由 ArtPlayer 自身提供，移除自定义控件事件绑定
+        // 播放列表控制将通过 ArtPlayer 的自定义插件实现
 
         // 侧边栏关闭按钮
         const closeSidebar = document.getElementById('closeSidebar');
@@ -327,8 +292,21 @@ class VideoPlayer {
                 customType: this.getCustomType(currentVideo.type),
                 controls: [
                     {
+                        position: 'left',
+                        html: '<i class="material-icons" style="font-size: 18px;">skip_previous</i>',
+                        tooltip: '上一个',
+                        click: () => this.playPrevious(),
+                    },
+                    {
+                        position: 'left', 
+                        html: '<i class="material-icons" style="font-size: 18px;">skip_next</i>',
+                        tooltip: '下一个',
+                        click: () => this.playNext(),
+                    },
+                    {
                         position: 'right',
-                        html: '播放列表',
+                        html: '<i class="material-icons" style="font-size: 18px;">queue_music</i>',
+                        tooltip: '播放列表',
                         click: () => this.togglePlaylist(),
                     },
                 ],

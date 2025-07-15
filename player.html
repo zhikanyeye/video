@@ -4,6 +4,13 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>青云播 - 视频播放器</title>
+    
+    <!-- 网站图标 -->
+    <link rel="icon" type="image/svg+xml" href="assets/favicon.svg">
+    <link rel="icon" type="image/svg+xml" sizes="16x16" href="assets/favicon-16.svg">
+    <link rel="shortcut icon" href="assets/favicon.svg">
+    <link rel="apple-touch-icon" href="assets/favicon.svg">
+    
     <link href="https://fonts.googleapis.com/icon?family=Material+Icons" rel="stylesheet">
     <link rel="stylesheet" href="styles/main.css">
     <link rel="stylesheet" href="styles/player.css">
@@ -65,40 +72,6 @@
                     <div class="loading-spinner"></div>
                     <p>正在初始化播放器...</p>
                 </div>
-            </div>
-            
-            <!-- 播放控制栏 -->
-            <div class="player-controls">
-                <button id="playerPrevBtn" class="control-btn" title="上一个">
-                    <i class="material-icons">skip_previous</i>
-                </button>
-                <button id="playerPlayPauseBtn" class="control-btn play-btn" title="播放/暂停">
-                    <i class="material-icons">play_arrow</i>
-                </button>
-                <button id="playerNextBtn" class="control-btn" title="下一个">
-                    <i class="material-icons">skip_next</i>
-                </button>
-                
-                <div class="progress-container">
-                    <span id="currentTime" class="time">00:00</span>
-                    <div class="progress-bar">
-                        <div id="progress" class="progress"></div>
-                    </div>
-                    <span id="duration" class="time">00:00</span>
-                </div>
-                
-                <div class="volume-container">
-                    <button id="muteBtn" class="control-btn" title="静音">
-                        <i class="material-icons">volume_up</i>
-                    </button>
-                    <div class="volume-bar">
-                        <div id="volumeLevel" class="volume-level"></div>
-                    </div>
-                </div>
-                
-                <button id="playerFullscreenBtn" class="control-btn" title="全屏">
-                    <i class="material-icons">fullscreen</i>
-                </button>
             </div>
         </main>
 
