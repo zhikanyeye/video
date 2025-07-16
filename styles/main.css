@@ -308,6 +308,30 @@ body {
         gap: var(--space-sm);
         width: 100%;
     }
+    
+    /* GitHub用户信息移动端适配 */
+    .github-user-info {
+        margin-right: 0;
+        margin-bottom: var(--space-sm);
+        width: 100%;
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        flex-wrap: wrap;
+        gap: var(--space-xs);
+    }
+    
+    .github-user-info #githubUsername {
+        flex: 1;
+        min-width: 0;
+        text-overflow: ellipsis;
+        overflow: hidden;
+        white-space: nowrap;
+    }
+    
+    .github-user-info #logoutBtn {
+        flex-shrink: 0;
+    }
 
     .share-method-status {
         flex-direction: column;
@@ -329,6 +353,19 @@ body {
     .form-actions .btn {
         width: 100%;
         justify-content: center;
+    }
+    
+    /* 移动端按钮样式优化 */
+    .btn {
+        min-height: 44px; /* 改善触摸体验 */
+        padding: var(--space-sm) var(--space-md);
+    }
+    
+    .btn-link {
+        min-height: 36px;
+        display: inline-flex;
+        align-items: center;
+        padding: var(--space-xs) var(--space-sm);
     }
 
     .main-content {
