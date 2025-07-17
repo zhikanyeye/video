@@ -1,4 +1,4 @@
-// 播放器页面JavaScript - 视频播放功能
+// 增强版视频播放器 - 支持B站、YouTube等在线视频平台
 class VideoPlayer {
     constructor() {
         this.playlist = [];
@@ -11,36 +11,38 @@ class VideoPlayer {
         this.isMuted = false;
         this.shuffleMode = false;
         this.repeatMode = 0; // 0=不循环, 1=单曲循环, 2=列表循环
-        this.enableProgressInTitle = false; // 是否在标题中显示进度
+        this.enableProgressInTitle = false;
+        this.currentPlayerType = null; // 'artplayer' 或 'iframe'
+        this.currentParsedVideo = null;
         
         this.init();
-    }    async init() {
+    }
+
+    async init() {
         try {
             await this.loadPlaylist();
             this.bindEvents();
             await this.initPlayer();
             this.updateUI();
             this.showLoadingMessage(false);
-            // 应用保存的设置
             this.applySettings(this.getSettings());
         } catch (error) {
             console.error('播放器初始化失败:', error);
             this.showErrorMessage('播放器初始化失败: ' + error.message);
         }
-    }// 加载播放列表
+    }
+
+    // 加载播放列表
     async loadPlaylist() {
         try {
-            // 首先检查URL参数中是否有gist参数
             const urlParams = new URLSearchParams(window.location.search);
             const gistParam = urlParams.get('gist');
             
             if (gistParam) {
-                // 从Gist加载播放列表
                 await this.loadFromGist(gistParam);
                 return;
             }
 
-            // 否则从localStorage加载
             const playlistData = localStorage.getItem('currentPlaylist');
             const indexData = localStorage.getItem('currentIndex');
             
@@ -56,7 +58,6 @@ class VideoPlayer {
                     this.currentIndex = 0;
                 }
             } else {
-                // 如果没有播放列表数据，使用测试数据
                 console.warn('没有找到播放列表数据，使用测试视频');
                 this.playlist = [{
                     title: '测试视频 - Big Buck Bunny',
@@ -68,7 +69,6 @@ class VideoPlayer {
             }
         } catch (error) {
             console.error('加载播放列表失败:', error);
-            // 使用测试数据作为后备
             this.playlist = [{
                 title: '测试视频 - Big Buck Bunny',
                 url: 'https://commondatastorage.googleapis.com/gtv-videos-bucket/sample/BigBuckBunny.mp4',
@@ -93,15 +93,14 @@ class VideoPlayer {
             if (result.success && result.videos && result.videos.length > 0) {
                 this.playlist = result.videos;
                 this.currentIndex = 0;
-                this.showToast(`成功加载 ${result.videos.length} 个视频`, 'success');
+                this.showToast('成功加载 ' + result.videos.length + ' 个视频', 'success');
             } else {
                 throw new Error(result.error || '加载失败');
             }
         } catch (error) {
             console.error('从Gist加载失败:', error);
-            this.showToast(`加载失败: ${error.message}`, 'error');
+            this.showToast('加载失败: ' + error.message, 'error');
             
-            // 回退到本地数据或测试数据
             const playlistData = localStorage.getItem('currentPlaylist');
             if (playlistData) {
                 this.playlist = JSON.parse(playlistData);
@@ -119,27 +118,26 @@ class VideoPlayer {
 
     // 绑定事件监听器
     bindEvents() {
-        // 返回按钮
         const backBtn = document.getElementById('backBtn');
         if (backBtn) {
             backBtn.addEventListener('click', () => this.goBack());
-        }        // 播放列表按钮
+        }
+
         const playlistBtn = document.getElementById('playlistBtn');
         if (playlistBtn) {
             playlistBtn.addEventListener('click', () => this.togglePlaylist());
         }
 
-        // 设置按钮
         const playerSettingsBtn = document.getElementById('playerSettingsBtn');
         if (playerSettingsBtn) {
             playerSettingsBtn.addEventListener('click', () => this.toggleSettings());
-        }        // 设置模态框关闭按钮
+        }
+
         const closePlayerSettingsModal = document.getElementById('closePlayerSettingsModal');
         if (closePlayerSettingsModal) {
             closePlayerSettingsModal.addEventListener('click', () => this.toggleSettings());
         }
 
-        // 点击模态框外部关闭
         const playerSettingsModal = document.getElementById('playerSettingsModal');
         if (playerSettingsModal) {
             playerSettingsModal.addEventListener('click', (e) => {
@@ -147,14 +145,13 @@ class VideoPlayer {
                     this.toggleSettings();
                 }
             });
-        }        // 播放控制由 ArtPlayer 自身提供，移除自定义控件事件绑定
-        // 播放列表控制将通过 ArtPlayer 的自定义插件实现
+        }
 
-        // 侧边栏关闭按钮
         const closeSidebar = document.getElementById('closeSidebar');
         if (closeSidebar) {
             closeSidebar.addEventListener('click', () => this.togglePlaylist());
-        }        // 错误重试按钮
+        }
+
         const retryBtn = document.getElementById('playerRetryBtn');
         if (retryBtn) {
             retryBtn.addEventListener('click', () => this.retryPlay());
@@ -165,42 +162,12 @@ class VideoPlayer {
             backToListBtn.addEventListener('click', () => this.goBack());
         }
 
-        // 侧边栏控制按钮
-        const collapseSidebar = document.getElementById('collapseSidebar');
-        if (collapseSidebar) {
-            collapseSidebar.addEventListener('click', () => this.toggleSidebar());
-        }
-
-        const expandSidebar = document.getElementById('expandSidebar');
-        if (expandSidebar) {
-            expandSidebar.addEventListener('click', () => this.toggleSidebar());
-        }
-
-        // 播放列表搜索
-        const playlistSearch = document.getElementById('playlistSearch');
-        if (playlistSearch) {
-            playlistSearch.addEventListener('input', (e) => this.searchPlaylist(e.target.value));
-        }
-
-        // 播放模式按钮
-        const shuffleBtn = document.getElementById('shuffleBtn');
-        if (shuffleBtn) {
-            shuffleBtn.addEventListener('click', () => this.toggleShuffle());
-        }
-
-        const repeatBtn = document.getElementById('repeatBtn');
-        if (repeatBtn) {
-            repeatBtn.addEventListener('click', () => this.toggleRepeat());
-        }
-
-        // 键盘快捷键
         this.bindKeyboardEvents();
     }
 
     // 绑定键盘事件
     bindKeyboardEvents() {
         document.addEventListener('keydown', (e) => {
-            // 防止在输入框中触发
             if (e.target.tagName === 'INPUT' || e.target.tagName === 'TEXTAREA') {
                 return;
             }
@@ -241,12 +208,13 @@ class VideoPlayer {
                     break;
             }
         });
-    }    // 初始化播放器
+    }
+
+    // 初始化播放器
     async initPlayer() {
         this.showLoadingMessage(true);
         
         try {
-            // 检查ArtPlayer是否可用
             if (typeof Artplayer === 'undefined') {
                 throw new Error('ArtPlayer库未加载，请检查网络连接');
             }
@@ -258,17 +226,90 @@ class VideoPlayer {
 
             console.log('正在初始化播放器，当前视频:', currentVideo);
 
-            // 检查容器是否存在
+            // 解析视频URL
+            const parsedVideo = await this.parseVideoUrl(currentVideo.url);
+            console.log('视频解析结果:', parsedVideo);
+
             const container = document.querySelector('#videoPlayer');
             if (!container) {
                 throw new Error('找不到视频播放器容器');
             }
 
-            // 创建ArtPlayer实例
+            // 如果是iframe类型，使用iframe播放器
+            if (parsedVideo.type === 'iframe') {
+                this.initIframePlayer(parsedVideo);
+                return;
+            }
+
+            // 否则使用ArtPlayer
+            await this.initArtPlayer(parsedVideo, currentVideo);
+            
+        } catch (error) {
+            console.error('初始化播放器失败:', error);
+            this.showErrorMessage('播放器初始化失败: ' + error.message);
+        }
+    }
+
+    // 初始化iframe播放器
+    initIframePlayer(parsedVideo) {
+        try {
+            const artplayerContainer = document.querySelector('#videoPlayer');
+            if (artplayerContainer) {
+                artplayerContainer.style.display = 'none';
+            }
+
+            let iframeContainer = document.querySelector('#iframePlayer');
+            if (!iframeContainer) {
+                iframeContainer = document.createElement('div');
+                iframeContainer.id = 'iframePlayer';
+                iframeContainer.style.cssText = 'width: 100%; height: 100%; position: relative; background: #000;';
+                
+                const parent = artplayerContainer.parentNode;
+                parent.appendChild(iframeContainer);
+            }
+
+            const iframe = document.createElement('iframe');
+            iframe.src = parsedVideo.url;
+            iframe.style.cssText = 'width: 100%; height: 100%; border: none; background: #000;';
+            iframe.allowFullscreen = true;
+            iframe.allow = 'autoplay; fullscreen; picture-in-picture';
+
+            iframeContainer.innerHTML = '';
+            iframeContainer.appendChild(iframe);
+            iframeContainer.style.display = 'block';
+
+            this.showLoadingMessage(false);
+            this.updateVideoInfo();
+            
+            console.log(parsedVideo.platform + '视频播放器初始化成功');
+            this.showToast(parsedVideo.platform + '视频加载成功');
+
+            this.currentPlayerType = 'iframe';
+            this.currentParsedVideo = parsedVideo;
+
+        } catch (error) {
+            console.error('iframe播放器初始化失败:', error);
+            this.showErrorMessage('iframe播放器初始化失败: ' + error.message);
+        }
+    }
+
+    // 初始化ArtPlayer
+    async initArtPlayer(parsedVideo, videoInfo) {
+        try {
+            const artplayerContainer = document.querySelector('#videoPlayer');
+            if (artplayerContainer) {
+                artplayerContainer.style.display = 'block';
+            }
+
+            const iframeContainer = document.querySelector('#iframePlayer');
+            if (iframeContainer) {
+                iframeContainer.style.display = 'none';
+            }
+
             this.player = new Artplayer({
                 container: '#videoPlayer',
-                url: currentVideo.url,
-                title: currentVideo.title,
+                url: parsedVideo.url,
+                title: videoInfo.title,
                 volume: this.volume,
                 autoplay: true,
                 muted: false,
@@ -289,7 +330,7 @@ class VideoPlayer {
                 moreVideoAttr: {
                     crossOrigin: 'anonymous',
                 },
-                customType: this.getCustomType(currentVideo.type),
+                customType: this.getCustomType(videoInfo.type),
                 controls: [
                     {
                         position: 'left',
@@ -309,20 +350,27 @@ class VideoPlayer {
                         tooltip: '播放列表',
                         click: () => this.togglePlaylist(),
                     },
+                    {
+                        position: 'right',
+                        html: '<i class="material-icons" style="font-size: 18px;">smart_display</i>',
+                        tooltip: parsedVideo.platform || '直接播放',
+                        click: () => this.showVideoInfo(),
+                    },
                 ],
             });
 
             console.log('ArtPlayer实例创建成功:', this.player);
 
-            // 绑定播放器事件
             this.bindPlayerEvents();
             
-            // 显示成功消息
-            this.showToast('播放器初始化成功');
+            this.currentPlayerType = 'artplayer';
+            this.currentParsedVideo = parsedVideo;
+            
+            this.showToast((parsedVideo.platform || '直接') + '视频初始化成功');
             
         } catch (error) {
-            console.error('初始化播放器失败:', error);
-            this.showErrorMessage('播放器初始化失败: ' + error.message);
+            console.error('ArtPlayer初始化失败:', error);
+            this.showErrorMessage('ArtPlayer初始化失败: ' + error.message);
         }
     }
 
@@ -341,8 +389,231 @@ class VideoPlayer {
                         }
                     }
                 };
+            case 'flv':
+                return {
+                    flv: function(video, url) {
+                        if (typeof flvjs !== 'undefined' && flvjs.isSupported()) {
+                            const flvPlayer = flvjs.createPlayer({
+                                type: 'flv',
+                                url: url,
+                            });
+                            flvPlayer.attachMediaElement(video);
+                            flvPlayer.load();
+                        }
+                    }
+                };
             default:
                 return {};
+        }
+    }
+
+    // 增强的视频URL解析功能
+    async parseVideoUrl(url) {
+        try {
+            if (this.isDirectVideoUrl(url)) {
+                return {
+                    type: 'direct',
+                    url: url,
+                    platform: this.detectVideoPlatform(url)
+                };
+            }
+
+            if (this.isBilibiliUrl(url)) {
+                return await this.parseBilibiliUrl(url);
+            }
+
+            if (this.isYouTubeUrl(url)) {
+                return await this.parseYouTubeUrl(url);
+            }
+
+            if (this.isOtherPlatformUrl(url)) {
+                return await this.parseOtherPlatformUrl(url);
+            }
+
+            return {
+                type: 'direct',
+                url: url,
+                platform: 'unknown'
+            };
+
+        } catch (error) {
+            console.error('视频URL解析失败:', error);
+            throw new Error('视频解析失败: ' + error.message);
+        }
+    }
+
+    // 检测是否为直接视频链接
+    isDirectVideoUrl(url) {
+        const videoExtensions = /\.(mp4|webm|ogg|avi|mov|wmv|flv|m3u8|mpd)(\?.*)?$/i;
+        return videoExtensions.test(url);
+    }
+
+    // 检测视频平台
+    detectVideoPlatform(url) {
+        if (url.includes('bilibili.com') || url.includes('b23.tv')) return 'bilibili';
+        if (url.includes('youtube.com') || url.includes('youtu.be')) return 'youtube';
+        if (url.includes('vimeo.com')) return 'vimeo';
+        if (url.includes('dailymotion.com')) return 'dailymotion';
+        if (url.includes('twitch.tv')) return 'twitch';
+        return 'direct';
+    }
+
+    // B站URL检测
+    isBilibiliUrl(url) {
+        return url.includes('bilibili.com') || url.includes('b23.tv');
+    }
+
+    // YouTube URL检测
+    isYouTubeUrl(url) {
+        return url.includes('youtube.com') || url.includes('youtu.be');
+    }
+
+    // 其他平台URL检测
+    isOtherPlatformUrl(url) {
+        const platforms = ['vimeo.com', 'dailymotion.com', 'twitch.tv', 'facebook.com/watch'];
+        return platforms.some(platform => url.includes(platform));
+    }
+
+    // B站视频解析
+    async parseBilibiliUrl(url) {
+        try {
+            let videoId = null;
+            let idType = null;
+
+            if (url.includes('b23.tv')) {
+                try {
+                    const response = await fetch(url, { method: 'HEAD', redirect: 'follow' });
+                    url = response.url;
+                } catch (error) {
+                    console.warn('短链接解析失败，尝试直接处理');
+                }
+            }
+
+            const bvMatch = url.match(/BV([A-Za-z0-9]+)/);
+            if (bvMatch) {
+                videoId = 'BV' + bvMatch[1];
+                idType = 'bvid';
+            } else {
+                const avMatch = url.match(/av(\d+)/);
+                if (avMatch) {
+                    videoId = avMatch[1];
+                    idType = 'aid';
+                }
+            }
+
+            if (!videoId) {
+                throw new Error('无法提取B站视频ID');
+            }
+
+            const embedUrl = 'https://player.bilibili.com/player.html?' + idType + '=' + videoId + '&autoplay=1&high_quality=1&danmaku=0';
+
+            return {
+                type: 'iframe',
+                url: embedUrl,
+                platform: 'bilibili',
+                originalUrl: url,
+                videoId: videoId
+            };
+
+        } catch (error) {
+            console.error('B站视频解析失败:', error);
+            throw new Error('B站视频解析失败: ' + error.message);
+        }
+    }
+
+    // YouTube视频解析
+    async parseYouTubeUrl(url) {
+        try {
+            let videoId = null;
+
+            const patterns = [
+                /(?:youtube\.com\/watch\?v=|youtu\.be\/|youtube\.com\/embed\/)([^&\n?#]+)/,
+                /youtube\.com\/v\/([^&\n?#]+)/,
+                /youtube\.com\/.*[?&]v=([^&\n?#]+)/
+            ];
+
+            for (const pattern of patterns) {
+                const match = url.match(pattern);
+                if (match) {
+                    videoId = match[1];
+                    break;
+                }
+            }
+
+            if (!videoId) {
+                throw new Error('无法提取YouTube视频ID');
+            }
+
+            const embedUrl = 'https://www.youtube-nocookie.com/embed/' + videoId + '?autoplay=1&controls=1&rel=0&modestbranding=1';
+
+            return {
+                type: 'iframe',
+                url: embedUrl,
+                platform: 'youtube',
+                originalUrl: url,
+                videoId: videoId
+            };
+
+        } catch (error) {
+            console.error('YouTube视频解析失败:', error);
+            throw new Error('YouTube视频解析失败: ' + error.message);
+        }
+    }
+
+    // 其他平台视频解析
+    async parseOtherPlatformUrl(url) {
+        try {
+            if (url.includes('vimeo.com')) {
+                const vimeoMatch = url.match(/vimeo\.com\/(\d+)/);
+                if (vimeoMatch) {
+                    const videoId = vimeoMatch[1];
+                    return {
+                        type: 'iframe',
+                        url: 'https://player.vimeo.com/video/' + videoId + '?autoplay=1',
+                        platform: 'vimeo',
+                        originalUrl: url,
+                        videoId: videoId
+                    };
+                }
+            }
+
+            if (url.includes('dailymotion.com')) {
+                const dmMatch = url.match(/dailymotion\.com\/video\/([^_]+)/);
+                if (dmMatch) {
+                    const videoId = dmMatch[1];
+                    return {
+                        type: 'iframe',
+                        url: 'https://www.dailymotion.com/embed/video/' + videoId + '?autoplay=1',
+                        platform: 'dailymotion',
+                        originalUrl: url,
+                        videoId: videoId
+                    };
+                }
+            }
+
+            if (url.includes('twitch.tv')) {
+                const twitchMatch = url.match(/twitch\.tv\/videos\/(\d+)/);
+                if (twitchMatch) {
+                    const videoId = twitchMatch[1];
+                    return {
+                        type: 'iframe',
+                        url: 'https://player.twitch.tv/?video=' + videoId + '&parent=' + window.location.hostname + '&autoplay=true',
+                        platform: 'twitch',
+                        originalUrl: url,
+                        videoId: videoId
+                    };
+                }
+            }
+
+            return {
+                type: 'direct',
+                url: url,
+                platform: 'unknown'
+            };
+
+        } catch (error) {
+            console.error('其他平台视频解析失败:', error);
+            throw new Error('视频解析失败: ' + error.message);
         }
     }
 
@@ -368,7 +639,9 @@ class VideoPlayer {
             this.currentTime = this.player.currentTime;
             this.duration = this.player.duration;
             this.updateProgress();
-        });        this.player.on('video:ended', () => {
+        });
+
+        this.player.on('video:ended', () => {
             const settings = this.getSettings();
             if (settings.autoplayNext) {
                 this.playNext();
@@ -390,12 +663,13 @@ class VideoPlayer {
         this.player.on('pause', () => {
             this.isPlaying = false;
             this.updatePlayButton();
-        });        this.player.on('video:volumechange', () => {
+        });
+
+        this.player.on('video:volumechange', () => {
             this.volume = this.player.volume;
             this.isMuted = this.player.muted;
             this.updateVolumeUI();
             
-            // 保存音量设置
             const settings = this.getSettings();
             if (settings.rememberVolume) {
                 localStorage.setItem('playerVolume', this.volume.toString());
@@ -406,12 +680,14 @@ class VideoPlayer {
 
     // 播放/暂停切换
     togglePlayPause() {
-        if (!this.player) return;
-
-        if (this.isPlaying) {
-            this.player.pause();
-        } else {
-            this.player.play();
+        if (this.currentPlayerType === 'artplayer' && this.player) {
+            if (this.isPlaying) {
+                this.player.pause();
+            } else {
+                this.player.play();
+            }
+        } else if (this.currentPlayerType === 'iframe') {
+            this.showToast('请使用视频内置控件进行播放控制', 'info');
         }
     }
 
@@ -439,8 +715,6 @@ class VideoPlayer {
 
     // 切换视频
     async switchVideo() {
-        if (!this.player) return;
-
         try {
             this.showLoadingMessage(true);
             const currentVideo = this.playlist[this.currentIndex];
@@ -449,14 +723,19 @@ class VideoPlayer {
                 throw new Error('视频不存在');
             }
 
-            // 切换视频源
-            this.player.switchUrl(currentVideo.url);
-            this.player.title = currentVideo.title;
+            const parsedVideo = await this.parseVideoUrl(currentVideo.url);
+            console.log('切换到视频:', parsedVideo);
+
+            this.cleanupCurrentPlayer();
+
+            if (parsedVideo.type === 'iframe') {
+                this.initIframePlayer(parsedVideo);
+            } else {
+                await this.initArtPlayer(parsedVideo, currentVideo);
+            }
             
             this.updateVideoInfo();
-            this.updateSidebar();
             
-            // 保存当前索引
             localStorage.setItem('currentIndex', this.currentIndex.toString());
             
         } catch (error) {
@@ -465,47 +744,63 @@ class VideoPlayer {
         }
     }
 
-    // 跳转到指定时间
-    seekTo(e) {
-        if (!this.player || !this.duration) return;
+    // 清理当前播放器
+    cleanupCurrentPlayer() {
+        if (this.player) {
+            this.player.destroy();
+            this.player = null;
+        }
 
-        const progressBar = e.currentTarget;
-        const rect = progressBar.getBoundingClientRect();
-        const pos = (e.clientX - rect.left) / rect.width;
-        const time = pos * this.duration;
-        
-        this.player.currentTime = time;
+        const iframeContainer = document.querySelector('#iframePlayer');
+        if (iframeContainer) {
+            iframeContainer.style.display = 'none';
+            iframeContainer.innerHTML = '';
+        }
+
+        this.currentPlayerType = null;
+        this.currentParsedVideo = null;
     }
 
-    // 相对跳转
+    // 显示视频信息
+    showVideoInfo() {
+        if (this.currentParsedVideo) {
+            const info = '平台: ' + this.currentParsedVideo.platform + '\n类型: ' + this.currentParsedVideo.type + '\n视频ID: ' + (this.currentParsedVideo.videoId || 'N/A');
+            this.showToast(info, 'info');
+        }
+    }
+
+    // 相对跳转（仅对直接视频有效）
     seekRelative(seconds) {
-        if (!this.player) return;
+        if (this.currentPlayerType !== 'artplayer' || !this.player) return;
 
         const newTime = Math.max(0, Math.min(this.duration, this.currentTime + seconds));
         this.player.currentTime = newTime;
     }
 
-    // 设置音量
-    setVolume(volume) {
-        if (!this.player) return;
-        
-        this.volume = Math.max(0, Math.min(1, volume));
-        this.player.volume = this.volume;
-        this.updateVolumeUI();
-    }
-
-    // 切换静音
+    // 切换静音（仅对直接视频有效）
     toggleMute() {
-        if (!this.player) return;
+        if (this.currentPlayerType !== 'artplayer' || !this.player) return;
 
         this.player.muted = !this.player.muted;
     }
 
     // 切换全屏
     toggleFullscreen() {
-        if (!this.player) return;
-
-        this.player.fullscreen = !this.player.fullscreen;
+        if (this.currentPlayerType === 'artplayer' && this.player) {
+            this.player.fullscreen = !this.player.fullscreen;
+        } else if (this.currentPlayerType === 'iframe') {
+            const iframeContainer = document.querySelector('#iframePlayer');
+            if (iframeContainer) {
+                if (document.fullscreenElement) {
+                    document.exitFullscreen();
+                } else {
+                    iframeContainer.requestFullscreen().catch(err => {
+                        console.warn('全屏请求失败:', err);
+                        this.showToast('全屏功能可能不支持iframe视频', 'warning');
+                    });
+                }
+            }
+        }
     }
 
     // 切换播放列表显示
@@ -516,85 +811,15 @@ class VideoPlayer {
         }
     }
 
-    // 切换侧边栏显示/隐藏
-    toggleSidebar() {
-        const sidebar = document.getElementById('playlistSidebar');
-        const expandBtn = document.getElementById('expandSidebar');
-        
-        if (sidebar && expandBtn) {
-            const isCollapsed = sidebar.classList.contains('collapsed');
-            
-            if (isCollapsed) {
-                sidebar.classList.remove('collapsed');
-                expandBtn.classList.add('hidden');
-            } else {
-                sidebar.classList.add('collapsed');
-                expandBtn.classList.remove('hidden');
-            }
-        }
-    }
-
-    // 搜索播放列表
-    searchPlaylist(query) {
-        const playlistContent = document.getElementById('playlistContent');
-        if (!playlistContent) return;
-        
-        const items = playlistContent.querySelectorAll('.playlist-item');
-        const searchQuery = query.toLowerCase().trim();
-        
-        items.forEach(item => {
-            const title = item.getAttribute('data-title') || '';
-            const isMatch = title.toLowerCase().includes(searchQuery);
-            item.style.display = isMatch ? 'flex' : 'none';
-        });
-    }
-
-    // 切换随机播放
-    toggleShuffle() {
-        this.shuffleMode = !this.shuffleMode;
-        const shuffleBtn = document.getElementById('shuffleBtn');
-        
-        if (shuffleBtn) {
-            shuffleBtn.classList.toggle('active', this.shuffleMode);
-        }
-        
-        this.showToast(this.shuffleMode ? '已开启随机播放' : '已关闭随机播放');
-    }
-
-    // 切换循环播放
-    toggleRepeat() {
-        // 循环模式: 0=不循环, 1=单曲循环, 2=列表循环
-        this.repeatMode = (this.repeatMode + 1) % 3;
-        const repeatBtn = document.getElementById('repeatBtn');
-        
-        if (repeatBtn) {
-            const icon = repeatBtn.querySelector('i');
-            repeatBtn.classList.remove('active', 'single-repeat');
-            
-            switch (this.repeatMode) {
-                case 0:
-                    icon.textContent = 'repeat';
-                    this.showToast('已关闭循环播放');
-                    break;
-                case 1:
-                    icon.textContent = 'repeat_one';
-                    repeatBtn.classList.add('active', 'single-repeat');
-                    this.showToast('已开启单曲循环');
-                    break;
-                case 2:
-                    icon.textContent = 'repeat';
-                    repeatBtn.classList.add('active');
-                    this.showToast('已开启列表循环');
-                    break;
-            }
-        }
-    }    // 更新UI
+    // 更新UI
     updateUI() {
         this.updateVideoInfo();
         this.renderPlaylist();
-        this.updateProgress();
-        this.updateVolumeUI();
-        this.updatePlayButton();
+        if (this.currentPlayerType === 'artplayer') {
+            this.updateProgress();
+            this.updateVolumeUI();
+            this.updatePlayButton();
+        }
     }
 
     // 更新视频信息
@@ -616,25 +841,9 @@ class VideoPlayer {
         }
 
         if (videoType) {
-            videoType.textContent = currentVideo.type.toUpperCase();
+            const platform = this.currentParsedVideo ? this.currentParsedVideo.platform : currentVideo.type;
+            videoType.textContent = platform.toUpperCase();
         }
-    }
-
-    // 更新侧边栏
-    updateSidebar() {
-        const sidebarVideoList = document.getElementById('sidebarVideoList');
-        if (!sidebarVideoList) return;
-
-        const self = this;
-        sidebarVideoList.innerHTML = this.playlist.map((video, index) => {
-            return '<div class="sidebar-video-item ' + (index === self.currentIndex ? 'active' : '') + '" onclick="videoPlayer.playVideoByIndex(' + index + ')">' +
-                '<div class="sidebar-video-index">' + (index + 1) + '</div>' +
-                '<div class="sidebar-video-info">' +
-                    '<div class="sidebar-video-title">' + self.escapeHtml(video.title) + '</div>' +
-                    '<div class="sidebar-video-meta">' + video.type.toUpperCase() + '</div>' +
-                '</div>' +
-            '</div>';
-        }).join('');
     }
 
     // 渲染播放列表
@@ -645,37 +854,36 @@ class VideoPlayer {
         if (!playlistContent) return;
         
         if (this.playlist.length === 0) {
-            playlistContent.innerHTML = `
-                <div class="playlist-empty">
-                    <i class="material-icons">queue_music</i>
-                    <p>播放列表为空</p>
-                    <button onclick="window.close()" class="btn btn-secondary">返回首页</button>
-                </div>
-            `;
+            playlistContent.innerHTML = 
+                '<div class="playlist-empty">' +
+                    '<i class="material-icons">queue_music</i>' +
+                    '<p>播放列表为空</p>' +
+                    '<button onclick="window.close()" class="btn btn-secondary">返回首页</button>' +
+                '</div>';
             return;
         }
         
-        playlistContent.innerHTML = this.playlist.map((video, index) => `
-            <div class="playlist-item ${index === this.currentIndex ? 'active' : ''}" 
-                 data-index="${index}" 
-                 data-title="${video.title}">
-                <div class="item-info">
-                    <div class="item-title">${this.escapeHtml(video.title)}</div>
-                    <div class="item-type">${video.type.toUpperCase()}</div>
-                </div>
-                <div class="item-actions">
-                    <button class="item-btn" onclick="player.playVideo(${index})" title="播放">
-                        <i class="material-icons">play_arrow</i>
-                    </button>
-                    <button class="item-btn" onclick="player.removeFromPlaylist(${index})" title="移除">
-                        <i class="material-icons">close</i>
-                    </button>
-                </div>
-            </div>
-        `).join('');
+        playlistContent.innerHTML = this.playlist.map((video, index) => 
+            '<div class="playlist-item ' + (index === this.currentIndex ? 'active' : '') + '"' +
+                 ' data-index="' + index + '"' + 
+                 ' data-title="' + video.title + '">' +
+                '<div class="item-info">' +
+                    '<div class="item-title">' + this.escapeHtml(video.title) + '</div>' +
+                    '<div class="item-type">' + this.detectVideoPlatform(video.url).toUpperCase() + '</div>' +
+                '</div>' +
+                '<div class="item-actions">' +
+                    '<button class="item-btn" onclick="videoPlayer.playVideo(' + index + ')" title="播放">' +
+                        '<i class="material-icons">play_arrow</i>' +
+                    '</button>' +
+                    '<button class="item-btn" onclick="videoPlayer.removeFromPlaylist(' + index + ')" title="移除">' +
+                        '<i class="material-icons">close</i>' +
+                    '</button>' +
+                '</div>' +
+            '</div>'
+        ).join('');
         
         if (playlistStats) {
-            playlistStats.textContent = `${this.currentIndex + 1}/${this.playlist.length}`;
+            playlistStats.textContent = (this.currentIndex + 1) + '/' + this.playlist.length;
         }
     }
 
@@ -683,7 +891,7 @@ class VideoPlayer {
     playVideo(index) {
         if (index >= 0 && index < this.playlist.length) {
             this.currentIndex = index;
-            this.loadCurrentVideo();
+            this.switchVideo();
         }
     }
 
@@ -692,14 +900,13 @@ class VideoPlayer {
         if (index >= 0 && index < this.playlist.length) {
             this.playlist.splice(index, 1);
             
-            // 调整当前播放索引
             if (index < this.currentIndex) {
                 this.currentIndex--;
             } else if (index === this.currentIndex) {
                 if (this.currentIndex >= this.playlist.length) {
                     this.currentIndex = 0;
                 }
-                this.loadCurrentVideo();
+                this.switchVideo();
             }
             
             this.renderPlaylist();
@@ -707,16 +914,10 @@ class VideoPlayer {
         }
     }
 
-    // 根据索引播放视频
-    playVideoByIndex(index) {
-        if (index >= 0 && index < this.playlist.length && index !== this.currentIndex) {
-            this.currentIndex = index;
-            this.switchVideo();
-        }
-    }
-
-    // 更新进度条
+    // 更新进度条（仅对直接视频有效）
     updateProgress() {
+        if (this.currentPlayerType !== 'artplayer') return;
+
         const progress = document.getElementById('progress');
         const currentTimeEl = document.getElementById('currentTime');
         const durationEl = document.getElementById('duration');
@@ -734,14 +935,15 @@ class VideoPlayer {
             durationEl.textContent = this.formatTime(this.duration);
         }
 
-        // 更新标题显示进度
         if (this.enableProgressInTitle) {
-            document.title = `${this.formatTime(this.currentTime)} - ${this.playlist[this.currentIndex]?.title} - 青云播`;
+            document.title = this.formatTime(this.currentTime) + ' - ' + (this.playlist[this.currentIndex] ? this.playlist[this.currentIndex].title : '') + ' - 青云播';
         }
     }
 
-    // 更新音量UI
+    // 更新音量UI（仅对直接视频有效）
     updateVolumeUI() {
+        if (this.currentPlayerType !== 'artplayer') return;
+
         const volumeBtn = document.getElementById('volumeBtn');
         const volumeSlider = document.getElementById('volumeSlider');
         
@@ -763,8 +965,10 @@ class VideoPlayer {
         }
     }
 
-    // 更新播放按钮
+    // 更新播放按钮（仅对直接视频有效）
     updatePlayButton() {
+        if (this.currentPlayerType !== 'artplayer') return;
+
         const playPauseBtn = document.getElementById('playPauseBtn');
         if (playPauseBtn) {
             const icon = playPauseBtn.querySelector('i');
@@ -772,7 +976,9 @@ class VideoPlayer {
                 icon.textContent = this.isPlaying ? 'pause' : 'play_arrow';
             }
         }
-    }    // 显示/隐藏加载信息
+    }
+
+    // 显示/隐藏加载信息
     showLoadingMessage(show) {
         const loadingIndicator = document.getElementById('loadingIndicator');
         const errorMessage = document.getElementById('errorMessage');
@@ -791,7 +997,7 @@ class VideoPlayer {
     showErrorMessage(message) {
         const errorOverlay = document.getElementById('errorOverlay');
         const loadingOverlay = document.getElementById('loadingOverlay');
-        const errorMessage = errorOverlay?.querySelector('.error-message');
+        const errorMessage = errorOverlay ? errorOverlay.querySelector('.error-message') : null;
         
         if (errorOverlay) {
             if (errorMessage) {
@@ -825,7 +1031,6 @@ class VideoPlayer {
 
     // 显示提示消息
     showToast(message, type = 'info') {
-        // 创建toast容器如果不存在
         let toastContainer = document.getElementById('toastContainer');
         if (!toastContainer) {
             toastContainer = document.createElement('div');
@@ -834,18 +1039,14 @@ class VideoPlayer {
             document.body.appendChild(toastContainer);
         }
 
-        // 创建toast元素
         const toast = document.createElement('div');
-        toast.className = `toast toast-${type}`;
+        toast.className = 'toast toast-' + type;
         toast.textContent = message;
 
-        // 添加到容器
         toastContainer.appendChild(toast);
 
-        // 显示动画
         setTimeout(() => toast.classList.add('show'), 100);
 
-        // 3秒后移除
         setTimeout(() => {
             toast.classList.remove('show');
             setTimeout(() => {
@@ -881,14 +1082,6 @@ class VideoPlayer {
         return div.innerHTML;
     }
 
-    // 销毁播放器
-    destroy() {
-        if (this.player) {
-            this.player.destroy();
-            this.player = null;
-        }
-    }
-
     // 切换设置面板显示/隐藏
     toggleSettings() {
         const modal = document.getElementById('playerSettingsModal');
@@ -897,7 +1090,6 @@ class VideoPlayer {
             modal.style.display = isVisible ? 'none' : 'block';
             
             if (!isVisible) {
-                // 加载当前设置
                 this.loadSettings();
             }
         }
@@ -907,7 +1099,6 @@ class VideoPlayer {
     loadSettings() {
         const settings = this.getSettings();
         
-        // 设置复选框状态
         const autoplayNext = document.getElementById('autoplayNext');
         if (autoplayNext) autoplayNext.checked = settings.autoplayNext;
         
@@ -923,7 +1114,6 @@ class VideoPlayer {
         const defaultQuality = document.getElementById('defaultQuality');
         if (defaultQuality) defaultQuality.value = settings.defaultQuality;
         
-        // 绑定设置项变更事件
         this.bindSettingsEvents();
     }
 
@@ -947,7 +1137,7 @@ class VideoPlayer {
         
         try {
             const saved = localStorage.getItem('playerSettings');
-            return saved ? { ...defaultSettings, ...JSON.parse(saved) } : defaultSettings;
+            return saved ? Object.assign(defaultSettings, JSON.parse(saved)) : defaultSettings;
         } catch (error) {
             console.error('获取设置失败:', error);
             return defaultSettings;
@@ -958,25 +1148,25 @@ class VideoPlayer {
     saveSettings() {
         try {
             const settings = {
-                autoplayNext: document.getElementById('autoplayNext')?.checked || false,
-                rememberVolume: document.getElementById('rememberVolume')?.checked || false,
-                showNotifications: document.getElementById('showNotifications')?.checked || false,
-                showProgressOnTitle: document.getElementById('showProgressOnTitle')?.checked || false,
-                defaultQuality: document.getElementById('defaultQuality')?.value || 'auto'
+                autoplayNext: document.getElementById('autoplayNext') ? document.getElementById('autoplayNext').checked : false,
+                rememberVolume: document.getElementById('rememberVolume') ? document.getElementById('rememberVolume').checked : false,
+                showNotifications: document.getElementById('showNotifications') ? document.getElementById('showNotifications').checked : false,
+                showProgressOnTitle: document.getElementById('showProgressOnTitle') ? document.getElementById('showProgressOnTitle').checked : false,
+                defaultQuality: document.getElementById('defaultQuality') ? document.getElementById('defaultQuality').value : 'auto'
             };
             
             localStorage.setItem('playerSettings', JSON.stringify(settings));
             this.showToast('设置已保存');
             
-            // 应用设置
             this.applySettings(settings);
         } catch (error) {
             console.error('保存设置失败:', error);
             this.showToast('保存设置失败', 'error');
         }
-    }    // 应用设置
+    }
+
+    // 应用设置
     applySettings(settings) {
-        // 应用记住音量设置
         if (settings.rememberVolume && this.player) {
             const savedVolume = localStorage.getItem('playerVolume');
             const savedMuted = localStorage.getItem('playerMuted');
@@ -988,7 +1178,6 @@ class VideoPlayer {
             }
         }
         
-        // 应用标题进度显示
         if (settings.showProgressOnTitle) {
             this.enableProgressInTitle = true;
         } else {
@@ -996,8 +1185,12 @@ class VideoPlayer {
             document.title = '青云播 - 视频播放器';
         }
         
-        // 存储设置以供其他方法使用
         this.currentSettings = settings;
+    }
+
+    // 销毁播放器
+    destroy() {
+        this.cleanupCurrentPlayer();
     }
 }
 
