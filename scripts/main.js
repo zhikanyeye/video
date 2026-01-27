@@ -149,6 +149,13 @@ class VideoManager {
             return;
         }
 
+        // 验证URL安全性
+        const validation = this.isValidVideoUrl(url);
+        if (!validation.valid) {
+            this.showToast(`链接验证失败: ${validation.reason}`, 'error');
+            return;
+        }
+
         // 检测视频类型
         const detectedType = type === 'auto' ? this.detectVideoType(url) : type;
 
@@ -749,6 +756,32 @@ class VideoManager {
             // 显示授权UI以供重新授权
             gitHubManager.showAuthUI();
             this.showToast('已退出GitHub登录', 'info');
+        }
+    }
+
+    /**
+     * 验证视频URL安全性
+     * @param {string} url - 视频URL
+     * @returns {Object} 验证结果 {valid: boolean, reason?: string}
+     */
+    isValidVideoUrl(url) {
+        try {
+            const parsed = new URL(url);
+            
+            // 只允许 http/https/rtmp 协议
+            const allowedProtocols = ['http:', 'https:', 'rtmp:'];
+            if (!allowedProtocols.includes(parsed.protocol)) {
+                return { valid: false, reason: '不支持的协议' };
+            }
+            
+            // 检查是否为 javascript: 协议（XSS 防护）
+            if (url.toLowerCase().includes('javascript:')) {
+                return { valid: false, reason: '不安全的链接' };
+            }
+            
+            return { valid: true };
+        } catch {
+            return { valid: false, reason: '无效的链接格式' };
         }
     }
 }

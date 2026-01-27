@@ -42,7 +42,7 @@
         <!-- 顶部控制栏 -->
         <header class="player-header">
             <div class="header-left">
-                <button id="backBtn" class="header-btn" title="返回列表">
+                <button id="backBtn" class="header-btn" title="返回列表" aria-label="返回列表">
                     <i class="material-icons">arrow_back</i>
                 </button>
                 <div class="video-info">
@@ -55,10 +55,10 @@
             </div>
             
             <div class="header-right">
-                <button id="playlistBtn" class="header-btn" title="播放列表">
+                <button id="playlistBtn" class="header-btn" title="播放列表" aria-label="播放列表">
                     <i class="material-icons">queue_music</i>
                 </button>
-                <button id="playerSettingsBtn" class="header-btn" title="设置">
+                <button id="playerSettingsBtn" class="header-btn" title="设置" aria-label="设置">
                     <i class="material-icons">settings</i>
                 </button>
             </div>
@@ -66,7 +66,7 @@
 
         <!-- 主播放区域 -->
         <main class="player-main">
-            <div id="videoPlayer" class="player-video">
+            <div id="videoPlayer" class="player-video" role="region" aria-label="视频播放器">
                 <!-- 视频播放器将在这里初始化 -->
                 <div id="loadingIndicator" class="loading-indicator">
                     <div class="loading-spinner"></div>
@@ -375,6 +375,7 @@
     <div class="toast-container" id="toastContainer"></div>
 
     <!-- 加载脚本 -->
+    <script src="scripts/utils.js"></script>
     <script src="scripts/github-manager.js"></script>
     <script src="scripts/player.js"></script>
 </body>

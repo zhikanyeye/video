@@ -22,7 +22,8 @@ class VideoPlayer {
         try {
             await this.loadPlaylist();
             this.bindEvents();
-            await this.initPlayer();
+            this.initNetworkListener();
+            await this.initPlayerWithRetry();
             this.updateUI();
             this.showLoadingMessage(false);
             this.applySettings(this.getSettings());
@@ -193,6 +194,14 @@ class VideoPlayer {
                         this.seekRelative(10);
                     }
                     break;
+                case 'ArrowUp':
+                    e.preventDefault();
+                    this.adjustVolume(0.1);
+                    break;
+                case 'ArrowDown':
+                    e.preventDefault();
+                    this.adjustVolume(-0.1);
+                    break;
                 case 'KeyF':
                     e.preventDefault();
                     this.toggleFullscreen();
@@ -200,6 +209,28 @@ class VideoPlayer {
                 case 'KeyM':
                     e.preventDefault();
                     this.toggleMute();
+                    break;
+                case 'KeyL':
+                    e.preventDefault();
+                    this.seekRelative(10);
+                    break;
+                case 'KeyJ':
+                    e.preventDefault();
+                    this.seekRelative(-10);
+                    break;
+                case 'Key0':
+                case 'Key1':
+                case 'Key2':
+                case 'Key3':
+                case 'Key4':
+                case 'Key5':
+                case 'Key6':
+                case 'Key7':
+                case 'Key8':
+                case 'Key9':
+                    e.preventDefault();
+                    const percent = parseInt(e.code.replace('Key', '')) / 10;
+                    this.seekToPercent(percent);
                     break;
                 case 'Escape':
                     if (document.fullscreenElement) {
@@ -273,6 +304,8 @@ class VideoPlayer {
             iframe.style.cssText = 'width: 100%; height: 100%; border: none; background: #000;';
             iframe.allowFullscreen = true;
             iframe.allow = 'autoplay; fullscreen; picture-in-picture';
+            iframe.setAttribute('sandbox', 'allow-scripts allow-same-origin allow-presentation allow-fullscreen');
+            iframe.setAttribute('referrerpolicy', 'no-referrer-when-downgrade');
 
             iframeContainer.innerHTML = '';
             iframeContainer.appendChild(iframe);
@@ -625,6 +658,7 @@ class VideoPlayer {
             console.log('播放器准备就绪');
             this.showLoadingMessage(false);
             this.updateVideoInfo();
+            this.restorePlaybackRate();
         });
 
         this.player.on('video:loadstart', () => {
@@ -633,15 +667,23 @@ class VideoPlayer {
 
         this.player.on('video:canplay', () => {
             this.showLoadingMessage(false);
+            this.restoreProgress();
         });
+
+        // 创建防抖的保存进度函数（每5秒保存一次）
+        if (!this.debouncedSaveProgress) {
+            this.debouncedSaveProgress = this.debounce(() => this.saveProgress(), 5000);
+        }
 
         this.player.on('video:timeupdate', () => {
             this.currentTime = this.player.currentTime;
             this.duration = this.player.duration;
             this.updateProgress();
+            this.debouncedSaveProgress();
         });
 
         this.player.on('video:ended', () => {
+            this.clearProgress();
             const settings = this.getSettings();
             if (settings.autoplayNext) {
                 this.playNext();
@@ -674,6 +716,13 @@ class VideoPlayer {
             if (settings.rememberVolume) {
                 localStorage.setItem('playerVolume', this.volume.toString());
                 localStorage.setItem('playerMuted', this.isMuted.toString());
+            }
+        });
+
+        // 监听播放速度变化
+        this.player.on('video:ratechange', () => {
+            if (this.player) {
+                this.savePlaybackRate(this.player.playbackRate);
             }
         });
     }
@@ -1186,6 +1235,298 @@ class VideoPlayer {
         }
         
         this.currentSettings = settings;
+    }
+
+    // ==================== 播放进度记忆功能 ====================
+    
+    /**
+     * 生成视频唯一标识
+     * @param {Object} video - 视频对象
+     * @returns {string} 视频唯一ID
+     */
+    getVideoId(video) {
+        return `progress_${btoa(video.url).substring(0, 32)}`;
+    }
+
+    /**
+     * 保存播放进度
+     * 只在进度超过 5 秒且未播放完成时保存
+     */
+    saveProgress() {
+        if (this.currentPlayerType !== 'artplayer' || !this.player) return;
+        
+        const currentVideo = this.playlist[this.currentIndex];
+        if (!currentVideo) return;
+        
+        const videoId = this.getVideoId(currentVideo);
+        const progress = {
+            time: this.player.currentTime,
+            duration: this.player.duration,
+            savedAt: Date.now()
+        };
+        
+        // 只在进度超过 5 秒且未播放完成时保存
+        if (progress.time > 5 && progress.time < progress.duration - 5) {
+            localStorage.setItem(videoId, JSON.stringify(progress));
+        }
+    }
+
+    /**
+     * 恢复播放进度
+     * 检查是否为 24 小时内的进度
+     */
+    restoreProgress() {
+        if (this.currentPlayerType !== 'artplayer' || !this.player) return;
+        
+        const currentVideo = this.playlist[this.currentIndex];
+        if (!currentVideo) return;
+        
+        const videoId = this.getVideoId(currentVideo);
+        const savedProgress = localStorage.getItem(videoId);
+        
+        if (savedProgress) {
+            try {
+                const progress = JSON.parse(savedProgress);
+                // 检查是否为 24 小时内的进度
+                if (Date.now() - progress.savedAt < 24 * 60 * 60 * 1000) {
+                    this.player.currentTime = progress.time;
+                    this.showToast(`已恢复到 ${this.formatTime(progress.time)}`, 'info');
+                }
+            } catch (e) {
+                console.warn('恢复进度失败:', e);
+            }
+        }
+    }
+
+    /**
+     * 清除播放进度
+     */
+    clearProgress() {
+        const currentVideo = this.playlist[this.currentIndex];
+        if (!currentVideo) return;
+        
+        const videoId = this.getVideoId(currentVideo);
+        localStorage.removeItem(videoId);
+    }
+
+    // ==================== 错误处理增强 ====================
+    
+    /**
+     * 带重试机制的播放器初始化
+     * @param {number} maxRetries - 最大重试次数
+     */
+    async initPlayerWithRetry(maxRetries = 3) {
+        for (let i = 0; i < maxRetries; i++) {
+            try {
+                await this.initPlayer();
+                return; // 成功则退出
+            } catch (error) {
+                console.warn(`播放器初始化失败，第 ${i + 1} 次重试...`, error);
+                
+                if (i === maxRetries - 1) {
+                    this.handleFatalError(error);
+                    throw error;
+                }
+                
+                // 指数退避等待
+                await this.delay(1000 * Math.pow(2, i));
+            }
+        }
+    }
+
+    /**
+     * 延迟函数
+     * @param {number} ms - 延迟毫秒数
+     * @returns {Promise}
+     */
+    delay(ms) {
+        return new Promise(resolve => setTimeout(resolve, ms));
+    }
+
+    /**
+     * 处理严重错误
+     * @param {Error} error - 错误对象
+     */
+    handleFatalError(error) {
+        let message = '播放器初始化失败';
+        
+        if (!navigator.onLine) {
+            message = '网络已断开，请检查网络连接后重试';
+        } else if (error.message.includes('CORS')) {
+            message = '视频源不支持跨域访问，请更换视频链接';
+        } else if (error.message.includes('404')) {
+            message = '视频不存在，请检查链接是否正确';
+        } else if (error.message.includes('403')) {
+            message = '视频访问被拒绝，可能需要登录或权限';
+        }
+        
+        this.showErrorMessage(message);
+    }
+
+    /**
+     * 初始化网络状态监听
+     */
+    initNetworkListener() {
+        window.addEventListener('online', () => {
+            this.showToast('网络已恢复', 'success');
+        });
+        
+        window.addEventListener('offline', () => {
+            this.showToast('网络已断开', 'warning');
+            if (this.player) {
+                this.player.pause();
+            }
+        });
+    }
+
+    // ==================== 性能优化 ====================
+    
+    /**
+     * 动态加载 HLS.js
+     * @returns {Promise} HLS类
+     */
+    async loadHlsJs() {
+        if (window.Hls) return window.Hls;
+        
+        return new Promise((resolve, reject) => {
+            const script = document.createElement('script');
+            script.src = 'https://cdn.jsdelivr.net/npm/hls.js@1/dist/hls.min.js';
+            script.onload = () => resolve(window.Hls);
+            script.onerror = reject;
+            document.head.appendChild(script);
+        });
+    }
+
+    /**
+     * 动态加载 FLV.js
+     * @returns {Promise} flvjs对象
+     */
+    async loadFlvJs() {
+        if (window.flvjs) return window.flvjs;
+        
+        return new Promise((resolve, reject) => {
+            const script = document.createElement('script');
+            script.src = 'https://cdn.jsdelivr.net/npm/flv.js@1/dist/flv.min.js';
+            script.onload = () => resolve(window.flvjs);
+            script.onerror = reject;
+            document.head.appendChild(script);
+        });
+    }
+
+    /**
+     * 预加载下一个视频的元数据
+     */
+    preloadNextVideo() {
+        const nextIndex = (this.currentIndex + 1) % this.playlist.length;
+        const nextVideo = this.playlist[nextIndex];
+        
+        if (nextVideo && this.isDirectVideoUrl(nextVideo.url)) {
+            const link = document.createElement('link');
+            link.rel = 'preload';
+            link.as = 'video';
+            link.href = nextVideo.url;
+            document.head.appendChild(link);
+        }
+    }
+
+    /**
+     * 防抖函数
+     * @param {Function} func - 要防抖的函数
+     * @param {number} wait - 等待时间
+     * @returns {Function}
+     */
+    debounce(func, wait) {
+        let timeout;
+        return (...args) => {
+            clearTimeout(timeout);
+            timeout = setTimeout(() => func.apply(this, args), wait);
+        };
+    }
+
+    /**
+     * 节流函数
+     * @param {Function} func - 要节流的函数
+     * @param {number} limit - 时间限制
+     * @returns {Function}
+     */
+    throttle(func, limit) {
+        let inThrottle;
+        return (...args) => {
+            if (!inThrottle) {
+                func.apply(this, args);
+                inThrottle = true;
+                setTimeout(() => inThrottle = false, limit);
+            }
+        };
+    }
+
+    // ==================== 用户体验优化 ====================
+    
+    /**
+     * 调整音量
+     * @param {number} delta - 音量变化量 (-1 到 1)
+     */
+    adjustVolume(delta) {
+        if (this.currentPlayerType !== 'artplayer' || !this.player) return;
+        
+        const newVolume = Math.max(0, Math.min(1, this.player.volume + delta));
+        this.player.volume = newVolume;
+        this.showToast(`音量: ${Math.round(newVolume * 100)}%`, 'info');
+    }
+
+    /**
+     * 跳转到百分比位置
+     * @param {number} percent - 百分比 (0-1)
+     */
+    seekToPercent(percent) {
+        if (this.currentPlayerType !== 'artplayer' || !this.player) return;
+        
+        const targetTime = this.player.duration * percent;
+        this.player.currentTime = targetTime;
+    }
+
+    /**
+     * 保存播放速度偏好
+     * @param {number} rate - 播放速度
+     */
+    savePlaybackRate(rate) {
+        localStorage.setItem('preferredPlaybackRate', rate.toString());
+    }
+
+    /**
+     * 恢复播放速度偏好
+     */
+    restorePlaybackRate() {
+        const savedRate = localStorage.getItem('preferredPlaybackRate');
+        if (savedRate && this.player) {
+            this.player.playbackRate = parseFloat(savedRate);
+        }
+    }
+
+    /**
+     * 验证视频URL安全性
+     * @param {string} url - 视频URL
+     * @returns {Object} 验证结果
+     */
+    isValidVideoUrl(url) {
+        try {
+            const parsed = new URL(url);
+            
+            // 只允许 http/https/rtmp 协议
+            const allowedProtocols = ['http:', 'https:', 'rtmp:'];
+            if (!allowedProtocols.includes(parsed.protocol)) {
+                return { valid: false, reason: '不支持的协议' };
+            }
+            
+            // 检查是否为 javascript: 协议（XSS 防护）
+            if (url.toLowerCase().includes('javascript:')) {
+                return { valid: false, reason: '不安全的链接' };
+            }
+            
+            return { valid: true };
+        } catch {
+            return { valid: false, reason: '无效的链接格式' };
+        }
     }
 
     // 销毁播放器
