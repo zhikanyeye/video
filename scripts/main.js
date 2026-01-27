@@ -149,6 +149,13 @@ class VideoManager {
             return;
         }
 
+        // 验证URL安全性
+        const validation = this.isValidVideoUrl(url);
+        if (!validation.valid) {
+            this.showToast(`链接验证失败: ${validation.reason}`, 'error');
+            return;
+        }
+
         // 检测视频类型
         const detectedType = type === 'auto' ? this.detectVideoType(url) : type;
 
@@ -750,6 +757,15 @@ class VideoManager {
             gitHubManager.showAuthUI();
             this.showToast('已退出GitHub登录', 'info');
         }
+    }
+
+    /**
+     * 验证视频URL安全性 - 使用全局 utils.js 中的实现
+     * @param {string} url - 视频URL
+     * @returns {Object} 验证结果 {valid: boolean, reason?: string}
+     */
+    isValidVideoUrl(url) {
+        return isValidVideoUrl(url);
     }
 }
 
