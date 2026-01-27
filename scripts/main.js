@@ -760,29 +760,12 @@ class VideoManager {
     }
 
     /**
-     * 验证视频URL安全性
+     * 验证视频URL安全性 - 使用全局 utils.js 中的实现
      * @param {string} url - 视频URL
      * @returns {Object} 验证结果 {valid: boolean, reason?: string}
      */
     isValidVideoUrl(url) {
-        try {
-            const parsed = new URL(url);
-            
-            // 只允许 http/https/rtmp 协议
-            const allowedProtocols = ['http:', 'https:', 'rtmp:'];
-            if (!allowedProtocols.includes(parsed.protocol)) {
-                return { valid: false, reason: '不支持的协议' };
-            }
-            
-            // 检查是否为 javascript: 协议（XSS 防护）
-            if (url.toLowerCase().includes('javascript:')) {
-                return { valid: false, reason: '不安全的链接' };
-            }
-            
-            return { valid: true };
-        } catch {
-            return { valid: false, reason: '无效的链接格式' };
-        }
+        return isValidVideoUrl(url);
     }
 }
 

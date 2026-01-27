@@ -1106,22 +1106,9 @@ class VideoPlayer {
         }, 3000);
     }
 
-    // 格式化时间
+    // Note: formatTime is now using the shared utility from utils.js
     formatTime(seconds) {
-        if (!seconds || isNaN(seconds)) return '00:00';
-        
-        const hrs = Math.floor(seconds / 3600);
-        const mins = Math.floor((seconds % 3600) / 60);
-        const secs = Math.floor(seconds % 60);
-        
-        if (hrs > 0) {
-            return hrs.toString().padStart(2, '0') + ':' + 
-                   mins.toString().padStart(2, '0') + ':' + 
-                   secs.toString().padStart(2, '0');
-        } else {
-            return mins.toString().padStart(2, '0') + ':' + 
-                   secs.toString().padStart(2, '0');
-        }
+        return formatTime(seconds);
     }
 
     // HTML转义
@@ -1429,39 +1416,28 @@ class VideoPlayer {
         }
     }
 
+    // ==================== 用户体验优化 ====================
+    
     /**
-     * 防抖函数
+     * 防抖函数 - 使用全局 utils.js 中的实现
      * @param {Function} func - 要防抖的函数
      * @param {number} wait - 等待时间
      * @returns {Function}
      */
     debounce(func, wait) {
-        let timeout;
-        return (...args) => {
-            clearTimeout(timeout);
-            timeout = setTimeout(() => func.apply(this, args), wait);
-        };
+        return debounce(func.bind(this), wait);
     }
 
     /**
-     * 节流函数
+     * 节流函数 - 使用全局 utils.js 中的实现
      * @param {Function} func - 要节流的函数
      * @param {number} limit - 时间限制
      * @returns {Function}
      */
     throttle(func, limit) {
-        let inThrottle;
-        return (...args) => {
-            if (!inThrottle) {
-                func.apply(this, args);
-                inThrottle = true;
-                setTimeout(() => inThrottle = false, limit);
-            }
-        };
+        return throttle(func.bind(this), limit);
     }
 
-    // ==================== 用户体验优化 ====================
-    
     /**
      * 调整音量
      * @param {number} delta - 音量变化量 (-1 到 1)
@@ -1504,29 +1480,12 @@ class VideoPlayer {
     }
 
     /**
-     * 验证视频URL安全性
+     * 验证视频URL安全性 - 使用全局 utils.js 中的实现
      * @param {string} url - 视频URL
      * @returns {Object} 验证结果
      */
     isValidVideoUrl(url) {
-        try {
-            const parsed = new URL(url);
-            
-            // 只允许 http/https/rtmp 协议
-            const allowedProtocols = ['http:', 'https:', 'rtmp:'];
-            if (!allowedProtocols.includes(parsed.protocol)) {
-                return { valid: false, reason: '不支持的协议' };
-            }
-            
-            // 检查是否为 javascript: 协议（XSS 防护）
-            if (url.toLowerCase().includes('javascript:')) {
-                return { valid: false, reason: '不安全的链接' };
-            }
-            
-            return { valid: true };
-        } catch {
-            return { valid: false, reason: '无效的链接格式' };
-        }
+        return isValidVideoUrl(url);
     }
 
     // 销毁播放器
