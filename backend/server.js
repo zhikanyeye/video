@@ -134,6 +134,12 @@ app.get('/api/health', (req, res) => {
 
 // ==================== 视频嗅探 API ====================
 
+/** 嗅探时抓取页面的最大读取字节数（2 MB） */
+const MAX_PAGE_SIZE_BYTES = 2 * 1024 * 1024;
+
+/** 抓取页面的超时时间（毫秒） */
+const FETCH_TIMEOUT_MS = 8000;
+
 /**
  * GET /api/sniff?url=<页面地址>
  * 抓取目标页面 HTML，提取可能的视频直链（mp4 / m3u8 等）并返回候选列表。
@@ -194,7 +200,9 @@ function isInternalHost(hostname) {
 }
 
 /**
- * 抓取页面 HTML（跟随最多一次重定向，超时 8 秒）
+ * 抓取页面 HTML（跟随最多一次重定向，超时 FETCH_TIMEOUT_MS 毫秒）
+ * @param {string} url - 要抓取的页面地址
+ * @param {number} [redirectCount=0] - 已跟随的重定向次数，用于防止无限重定向
  */
 function fetchPage(url, redirectCount) {
     if ((redirectCount || 0) > 1) {
@@ -225,7 +233,7 @@ function fetchPage(url, redirectCount) {
                 'Accept': 'text/html,application/xhtml+xml,*/*',
                 'Accept-Language': 'zh-CN,zh;q=0.9,en;q=0.8'
             },
-            timeout: 8000
+            timeout: FETCH_TIMEOUT_MS
         };
 
         const req = lib.request(options, (resp) => {
@@ -243,12 +251,11 @@ function fetchPage(url, redirectCount) {
             }
 
             let data = '';
-            // 最多读取 2MB，防止超大页面消耗内存
+            // 最多读取 MAX_PAGE_SIZE_BYTES，防止超大页面消耗内存
             let size = 0;
-            const MAX_SIZE = 2 * 1024 * 1024;
             resp.on('data', chunk => {
                 size += chunk.length;
-                if (size > MAX_SIZE) {
+                if (size > MAX_PAGE_SIZE_BYTES) {
                     req.destroy();
                     resolve(data); // 已有足够内容，不等完整响应
                     return;
@@ -262,7 +269,7 @@ function fetchPage(url, redirectCount) {
         req.on('error', reject);
         req.on('timeout', () => {
             req.destroy();
-            reject(new Error('请求超时（8s）'));
+            reject(new Error('请求超时（' + (FETCH_TIMEOUT_MS / 1000) + 's）'));
         });
 
         req.end();

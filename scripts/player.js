@@ -518,14 +518,15 @@ class VideoPlayer {
         }
 
         const sniffEndpoint = apiBase + '/api/sniff?url=' + encodeURIComponent(pageUrl);
-        const MAX_RETRIES = 2;
+        const MAX_ATTEMPTS = 2;       // 总尝试次数（首次 + 1次重试）
+        const SNIFF_TIMEOUT_MS = 12000; // 单次请求超时（毫秒）
         let lastError = null;
 
-        for (let attempt = 1; attempt <= MAX_RETRIES; attempt++) {
+        for (let attempt = 1; attempt <= MAX_ATTEMPTS; attempt++) {
             try {
                 const controller = typeof AbortController !== 'undefined' ? new AbortController() : null;
                 const timer = controller
-                    ? setTimeout(() => controller.abort(), 12000)
+                    ? setTimeout(() => controller.abort(), SNIFF_TIMEOUT_MS)
                     : null;
 
                 const fetchOptions = { method: 'GET' };
@@ -554,14 +555,14 @@ class VideoPlayer {
                 lastError = error;
                 console.warn('[sniff] 第 ' + attempt + ' 次尝试失败:', error.message);
 
-                if (attempt < MAX_RETRIES) {
+                if (attempt < MAX_ATTEMPTS) {
                     this.showToast('嗅探第 ' + attempt + ' 次失败，1秒后重试...', 'warning');
                     await this.delay(1000);
                 }
             }
         }
 
-        // 所有重试均失败，给出明确提示
+        // 所有尝试均失败，给出明确提示
         const isOffline = typeof navigator !== 'undefined' && !navigator.onLine;
         if (isOffline) {
             throw new Error('网络已断开，请检查网络连接后重试');
