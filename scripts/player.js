@@ -463,6 +463,31 @@ class VideoPlayer {
                 return await this.parseOtherPlatformUrl(url);
             }
 
+            // 未识别的 URL：调用后端嗅探 API，尝试从页面提取视频直链
+            const apiBase = window.APP_CONFIG && window.APP_CONFIG.API_BASE
+                ? window.APP_CONFIG.API_BASE
+                : '';
+            if (apiBase) {
+                try {
+                    this.showToast('正在嗅探视频源，请稍候...', 'info');
+                    const sources = await this.sniffVideoUrl(url);
+                    if (sources && sources.length > 0) {
+                        const best = sources[0];
+                        this.showToast('嗅探成功，共找到 ' + sources.length + ' 个视频源', 'success');
+                        return {
+                            type: best.type === 'unknown' ? 'direct' : best.type,
+                            url: best.url,
+                            platform: 'sniffed',
+                            sources: sources
+                        };
+                    }
+                } catch (sniffError) {
+                    // 嗅探失败：回退为直接尝试播放
+                    console.warn('嗅探失败，将直接尝试播放:', sniffError.message);
+                    this.showToast('嗅探失败：' + sniffError.message + '，将直接尝试播放', 'warning');
+                }
+            }
+
             return {
                 type: 'direct',
                 url: url,
@@ -473,6 +498,76 @@ class VideoPlayer {
             console.error('视频URL解析失败:', error);
             throw new Error('视频解析失败: ' + error.message);
         }
+    }
+
+    /**
+     * 通过后端 API 嗅探页面内的视频源
+     * 使用 window.APP_CONFIG.API_BASE 作为后端地址，支持本地开发与生产环境自动切换。
+     * 内置1次重试（间隔1秒），失败时给出友好提示。
+     *
+     * @param {string} pageUrl - 要嗅探的页面地址
+     * @returns {Promise<Array>} 视频源列表 [{url, type, score, from}, ...]
+     */
+    async sniffVideoUrl(pageUrl) {
+        const apiBase = window.APP_CONFIG && window.APP_CONFIG.API_BASE
+            ? window.APP_CONFIG.API_BASE
+            : '';
+
+        if (!apiBase) {
+            throw new Error('APP_CONFIG.API_BASE 未配置，无法调用嗅探接口');
+        }
+
+        const sniffEndpoint = apiBase + '/api/sniff?url=' + encodeURIComponent(pageUrl);
+        const MAX_RETRIES = 2;
+        let lastError = null;
+
+        for (let attempt = 1; attempt <= MAX_RETRIES; attempt++) {
+            try {
+                const controller = typeof AbortController !== 'undefined' ? new AbortController() : null;
+                const timer = controller
+                    ? setTimeout(() => controller.abort(), 12000)
+                    : null;
+
+                const fetchOptions = { method: 'GET' };
+                if (controller) fetchOptions.signal = controller.signal;
+
+                const resp = await fetch(sniffEndpoint, fetchOptions);
+                if (timer) clearTimeout(timer);
+
+                if (!resp.ok) {
+                    throw new Error('服务器返回 HTTP ' + resp.status);
+                }
+
+                const data = await resp.json();
+
+                if (!data.ok) {
+                    throw new Error(data.error || '嗅探接口返回错误');
+                }
+
+                if (!data.sources || data.sources.length === 0) {
+                    throw new Error('未在页面中找到视频源');
+                }
+
+                return data.sources;
+
+            } catch (error) {
+                lastError = error;
+                console.warn('[sniff] 第 ' + attempt + ' 次尝试失败:', error.message);
+
+                if (attempt < MAX_RETRIES) {
+                    this.showToast('嗅探第 ' + attempt + ' 次失败，1秒后重试...', 'warning');
+                    await this.delay(1000);
+                }
+            }
+        }
+
+        // 所有重试均失败，给出明确提示
+        const isOffline = typeof navigator !== 'undefined' && !navigator.onLine;
+        if (isOffline) {
+            throw new Error('网络已断开，请检查网络连接后重试');
+        }
+        throw new Error('请求后端失败，请检查后端服务是否可用。' +
+            (lastError ? '（' + lastError.message + '）' : ''));
     }
 
     // 检测是否为直接视频链接

@@ -183,7 +183,8 @@
     <!-- 消息提示 -->
     <div id="toast" class="toast"></div>
 
-    <!-- 脚本引用 -->
+    <!-- 脚本引用：config.js 必须最先加载，其他脚本依赖 window.APP_CONFIG -->
+    <script src="scripts/config.js"></script>
     <script src="scripts/utils.js"></script>
     <script src="scripts/github-manager.js"></script>
     <script src="scripts/main.js"></script>
