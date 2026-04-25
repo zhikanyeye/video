@@ -5,7 +5,6 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>青云播 - 视频播放器</title>
     
-    <!-- 网站图标 -->
     <link rel="icon" type="image/svg+xml" href="assets/favicon.svg">
     <link rel="icon" type="image/svg+xml" sizes="16x16" href="assets/favicon-16.svg">
     <link rel="shortcut icon" href="assets/favicon.svg">
@@ -19,37 +18,33 @@
     <script src="https://cdn.jsdelivr.net/npm/artplayer@5/dist/artplayer.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/hls.js@1/dist/hls.min.js"></script>
     
-    <!-- 备用CDN -->
     <script>
-        // 检查ArtPlayer是否加载成功，如果失败则使用备用CDN
         window.addEventListener('load', function() {
             if (typeof Artplayer === 'undefined') {
                 console.warn('主CDN加载失败，尝试备用CDN...');
-                var script1 = document.createElement('script');
-                script1.src = 'https://unpkg.com/artplayer@5/dist/artplayer.js';
-                script1.onload = function() {
-                    var script2 = document.createElement('script');
-                    script2.src = 'https://unpkg.com/hls.js@1/dist/hls.min.js';
-                    document.head.appendChild(script2);
+                var s1 = document.createElement('script');
+                s1.src = 'https://unpkg.com/artplayer@5/dist/artplayer.js';
+                s1.onload = function() {
+                    var s2 = document.createElement('script');
+                    s2.src = 'https://unpkg.com/hls.js@1/dist/hls.min.js';
+                    document.head.appendChild(s2);
                 };
-                document.head.appendChild(script1);
+                document.head.appendChild(s1);
             }
         });
     </script>
 </head>
 <body class="player-page">
     <div class="player-container">
-        <!-- 顶部控制栏 -->
         <header class="player-header">
             <div class="header-left">
                 <button id="backBtn" class="header-btn" title="返回列表" aria-label="返回列表">
                     <i class="material-icons">arrow_back</i>
                 </button>
                 <div class="video-info">
-                    <h1 id="videoTitle" class="video-title">加载中...</h1>
+                    <h1 id="currentVideoTitle" class="video-title">加载中...</h1>
                     <div class="video-meta">
-                        <span id="videoIndex" class="video-index">1/1</span>
-                        <span id="videoType" class="video-type">unknown</span>
+                        <span id="currentVideoMeta" class="video-type">unknown</span>
                     </div>
                 </div>
             </div>
@@ -64,18 +59,15 @@
             </div>
         </header>
 
-        <!-- 主播放区域 -->
         <main class="player-main">
             <div id="videoPlayer" class="player-video" role="region" aria-label="视频播放器">
-                <!-- 视频播放器将在这里初始化 -->
-                <div id="loadingIndicator" class="loading-indicator">
+                <div id="playerLoading" class="loading-indicator" style="display:flex">
                     <div class="loading-spinner"></div>
                     <p>正在初始化播放器...</p>
                 </div>
             </div>
         </main>
 
-        <!-- 播放列表侧边栏 -->
         <aside id="playlistSidebar" class="playlist-sidebar">
             <div class="sidebar-header">
                 <h3>播放列表</h3>
@@ -83,21 +75,17 @@
                     <i class="material-icons">close</i>
                 </button>
             </div>
-            
             <div class="sidebar-content">
-                <div id="sidebarVideoList" class="sidebar-video-list">
-                    <!-- 播放列表项将在这里显示 -->
-                </div>
+                <div id="playlistItems" class="sidebar-video-list"></div>
             </div>
         </aside>
     </div>
 
-    <!-- 错误提示 -->
-    <div id="errorMessage" class="error-message">
+    <div id="playerError" class="error-message" style="display:none">
         <div class="error-content">
             <i class="material-icons">error</i>
             <h3>播放出错</h3>
-            <p id="errorText">无法播放视频，请检查链接是否有效</p>
+            <p id="playerErrorMessage">无法播放视频</p>
             <div class="error-actions">
                 <button id="playerRetryBtn" class="btn btn-primary">重试</button>
                 <button id="backToListBtn" class="btn btn-secondary">返回列表</button>
@@ -105,20 +93,9 @@
         </div>
     </div>
 
-    <!-- 加载提示 -->
-    <div id="loadingMessage" class="loading-message">
-        <div class="loading-content">
-            <div class="spinner"></div>
-            <p>正在加载视频...</p>
-        </div>
-    </div>
-
-    <!-- 消息提示 -->
     <div id="toast" class="toast"></div>
 
-    <!-- config.js 必须最先加载，player.js 依赖 window.APP_CONFIG -->
-    <script src="scripts/config.js"></script>
-    <script src="scripts/utils.js"></script>
-    <script src="scripts/player.js"></script>
+    <!-- Vite 入口 -->
+    <script type="module" src="/src/player-main.js"></script>
 </body>
 </html>

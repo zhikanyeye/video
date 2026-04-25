@@ -22,7 +22,8 @@
                 <h1 class="logo">
                     <i class="material-icons">videocam</i>
                     青云播
-                </h1>                <div class="header-actions">
+                </h1>
+                <div class="header-actions">
                     <div id="githubUserInfo" class="github-user-info hidden">
                         <span id="githubUsername"></span>
                         <button id="logoutBtn" class="btn btn-link">
@@ -62,9 +63,9 @@
                     
                     <!-- 批量添加功能 -->
                     <div class="form-group">
-                        <label for="bulkUrls">批量添加（每行一个链接）</label>
+                        <label for="bulkText">批量添加（每行一个链接）</label>
                         <textarea 
-                            id="bulkUrls" 
+                            id="bulkText" 
                             class="bulk-textarea"
                             placeholder="可以在这里粘贴多个视频链接，每行一个&#10;例如：&#10;https://example.com/video1.mp4&#10;https://example.com/video2.m3u8&#10;https://example.com/video3.flv"
                             rows="4"
@@ -106,11 +107,13 @@
                     <h2>
                         <i class="material-icons">queue_music</i>
                         播放列表 (<span id="videoCount">0</span>)
-                    </h2>                    <div class="section-actions">
+                    </h2>
+                    <div class="section-actions">
                         <button id="playAllBtn" class="btn btn-success">
                             <i class="material-icons">play_arrow</i>
                             播放全部
-                        </button>                        <button id="shareBtn" class="btn btn-primary">
+                        </button>
+                        <button id="shareBtn" class="btn btn-primary">
                             <i class="material-icons">share</i>
                             生成分享链接
                         </button>
@@ -136,7 +139,9 @@
                 </div>
             </section>
         </main>
-    </div>    <!-- GitHub导入模态框 -->
+    </div>
+
+    <!-- GitHub导入模态框 -->
     <div id="importModal" class="modal">
         <div class="modal-content">
             <div class="modal-header">
@@ -183,10 +188,7 @@
     <!-- 消息提示 -->
     <div id="toast" class="toast"></div>
 
-    <!-- 脚本引用：config.js 必须最先加载，其他脚本依赖 window.APP_CONFIG -->
-    <script src="scripts/config.js"></script>
-    <script src="scripts/utils.js"></script>
-    <script src="scripts/github-manager.js"></script>
-    <script src="scripts/main.js"></script>
+    <!-- Vite 入口 -->
+    <script type="module" src="/src/main.js"></script>
 </body>
 </html>
