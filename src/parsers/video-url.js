@@ -84,7 +84,7 @@ function isDirectVideoUrl(url) {
  * 调用后端嗅探API
  */
 async function sniffVideoSources(url) {
-  const apiBase = window.APP_CONFIG?.API_BASE || '';
+  const apiBase = import.meta.env.VITE_API_BASE || window.APP_CONFIG?.API_BASE || '';
   const resp = await fetch(`${apiBase}/api/sniff?url=${encodeURIComponent(url)}`);
   if (!resp.ok) throw new Error(`嗅探请求失败: ${resp.status}`);
   const data = await resp.json();
