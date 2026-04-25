@@ -4,6 +4,176 @@
 
 青云播是一款功能强大、界面优雅的现代化视频播放器，专为在线视频播放和管理而设计。采用双页面架构，分离视频管理和播放功能，提供流畅的用户体验和专业的播放质量。
 
+---
+
+## 🚀 部署指南（前后端分离）
+
+> 推荐方案：**GitHub Pages 托管前端 + Render / Railway / Fly.io / VPS 托管后端**
+
+### 整体架构
+
+```
+用户浏览器
+   │
+   ├─ 前端静态文件（HTML/CSS/JS）
+   │    └─ GitHub Pages: https://zhikanyeye.github.io/video/
+   │
+   └─ 后端 API（Node.js + Express）
+        └─ Render/Railway/VPS: https://your-backend.onrender.com
+```
+
+---
+
+### 1. 配置 `API_BASE`（前端配置文件）
+
+前端通过 `scripts/config.js` 中的 `window.APP_CONFIG.API_BASE` 自动切换环境：
+
+```js
+// scripts/config.js（已内置，无需手动创建）
+window.APP_CONFIG = {
+    API_BASE: isLocal
+        ? 'http://localhost:3000'          // 本地开发
+        : 'https://your-backend.onrender.com'  // ← 替换为你的后端实际地址
+};
+```
+
+**配置步骤：**
+
+1. 将后端部署到 Render（或 Railway/Fly.io/VPS），获得公网域名，例如：
+   `https://my-qingyunbo.onrender.com`
+2. 打开 `scripts/config.js`，将 `'https://your-backend.onrender.com'` 替换为真实地址。
+3. 提交并推送到 `master` 分支，GitHub Actions / Pages 会自动更新。
+
+> **本地开发时** 无需修改，`localhost`/`127.0.0.1` 会自动使用 `http://localhost:3000`。
+
+---
+
+### 2. GitHub Pages 设置步骤
+
+1. 进入仓库 `Settings → Pages`。
+2. **Source** 选择 `Deploy from a branch`。
+3. **Branch** 选择 `master`，路径选 `/ (root)`。
+4. 点击 `Save`，等待约 1~2 分钟后即可访问：
+   ```
+   https://zhikanyeye.github.io/video/
+   ```
+5. **注意**：所有前端资源路径均使用相对路径（`scripts/`、`styles/`、`assets/`），不含绝对路径，可在子路径 `/video/` 下正常工作。API 请求通过 `APP_CONFIG.API_BASE` 指向独立后端，不与静态资源路径混淆。
+
+---
+
+### 3. 后端部署关键要点
+
+#### 3.1 以 Render 为例（免费套餐可用）
+
+1. 在 [Render](https://render.com) 创建 **New → Web Service**。
+2. 关联 GitHub 仓库，**Root Directory** 填写 `backend`。
+3. **Build Command**: `npm install`
+4. **Start Command**: `npm start`
+5. 获得公网域名（如 `https://xxx.onrender.com`），填入 `scripts/config.js`。
+
+#### 3.2 监听端口
+
+后端已正确读取平台注入的端口：
+
+```js
+const PORT = process.env.PORT || 3000;
+app.listen(PORT, () => { ... });
+```
+
+部署平台会自动注入 `PORT` 环境变量，**无需手动修改**。
+
+#### 3.3 CORS 白名单
+
+`backend/server.js` 已内置如下允许来源（按需修改）：
+
+| 地址 | 用途 |
+|------|------|
+| `http://localhost:3000` | 本地开发 |
+| `http://localhost:8080` | 本地静态服务器 |
+| `https://zhikanyeye.github.io` | GitHub Pages 生产环境 |
+
+如果你 fork 了此仓库，请将 `zhikanyeye.github.io` 替换为你自己的 Pages 域名，  
+或者在服务器上设置环境变量：
+
+```bash
+ALLOWED_ORIGINS=https://yourusername.github.io,https://your-custom-domain.com
+```
+
+#### 3.4 超时与限流建议
+
+- 嗅探接口（`/api/sniff`）内置 8 秒超时，无需额外配置。
+- 如需限流，可添加 `express-rate-limit`：
+  ```bash
+  cd backend && npm install express-rate-limit
+  ```
+  ```js
+  const rateLimit = require('express-rate-limit');
+  app.use('/api/sniff', rateLimit({ windowMs: 60000, max: 20 }));
+  ```
+
+---
+
+### 4. 最小验收步骤
+
+#### 本地联调
+
+```bash
+# 1. 启动后端
+cd backend && npm install && npm start
+# 后端运行于 http://localhost:3000
+
+# 2. 启动前端（另开终端）
+npx serve -p 8080 .
+# 或：python -m http.server 8080
+
+# 3. 浏览器访问
+open http://localhost:8080
+
+# 4. 测试嗅探：添加一个包含 .mp4/.m3u8 链接的页面 URL，点击播放
+# 5. 检查 F12 → Network，可看到对 http://localhost:3000/api/sniff 的请求
+# 6. 断开后端进程，播放器应显示 "请求后端失败，请检查后端服务是否可用" 友好提示
+```
+
+#### 线上联调
+
+```bash
+# 1. 确认 scripts/config.js 中 API_BASE 已改为生产后端地址
+# 2. git add scripts/config.js && git commit -m "chore: set production API_BASE"
+# 3. git push origin master
+# 4. 等待 GitHub Pages 部署完成（约1分钟）
+# 5. 访问 https://zhikanyeye.github.io/video/
+# 6. F12 → Network，添加页面 URL 后可看到对生产后端 /api/sniff 的请求
+# 7. 后端健康检查：curl https://your-backend.onrender.com/api/health
+```
+
+---
+
+### 5. 项目文件结构（含新增文件）
+
+```
+video/
+├── index.html              # 视频管理中心
+├── player.html             # 视频播放器页面
+├── scripts/
+│   ├── config.js           # ★ 新增：前端环境配置（API_BASE）
+│   ├── utils.js            # 通用工具函数
+│   ├── github-manager.js   # GitHub Gist 管理
+│   ├── main.js             # 视频管理逻辑
+│   └── player.js           # 播放器（含嗅探/重试逻辑）
+├── styles/
+│   ├── main.css
+│   └── player.css
+├── assets/
+├── backend/
+│   ├── server.js           # Express 后端（含 /api/sniff 嗅探接口）
+│   └── package.json
+├── start-backend.sh        # Linux/macOS 一键启动后端
+├── start-backend.bat       # Windows 一键启动后端
+└── README.md
+```
+
+---
+
 ### 🌟 核心亮点
 
 - **🎥 全格式支持**: 兼容MP4、M3U8、FLV、RTMP等主流视频格式

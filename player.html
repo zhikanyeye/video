@@ -116,6 +116,9 @@
     <!-- 消息提示 -->
     <div id="toast" class="toast"></div>
 
+    <!-- config.js 必须最先加载，player.js 依赖 window.APP_CONFIG -->
+    <script src="scripts/config.js"></script>
+    <script src="scripts/utils.js"></script>
     <script src="scripts/player.js"></script>
 </body>
 </html>
