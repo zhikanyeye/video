@@ -159,8 +159,10 @@ class VideoManager {
         const result = await github.sharePlaylist(this.videos);
         if (result) store.setPlaylistGistId(result.gist_id);
       }
+      return true;
     } catch (e) {
       console.warn('GitHub同步失败:', e);
+      throw e;
     }
   }
 
@@ -169,9 +171,14 @@ class VideoManager {
       github.showAuthGuide();
       return;
     }
-    await this.autoSyncToGitHub();
+    try {
+      await this.autoSyncToGitHub();
+    } catch (e) {
+      showToast(`GitHub同步失败: ${e.message}`, 'error');
+      return;
+    }
     const gistId = store.getPlaylistGistId();
-    if (!gistId) return showToast('同步失败，无法生成分享链接', 'error');
+    if (!gistId) return showToast('同步失败，无法生成分享链接。请重新授权后再试。', 'error');
     const shareUrl = github.getPlayerUrl(gistId);
     try {
       await navigator.clipboard.writeText(shareUrl);
