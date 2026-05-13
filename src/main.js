@@ -4,7 +4,7 @@
 import * as store from './store/index.js';
 import { escapeHtml, isValidVideoUrl, detectVideoType } from './utils/index.js';
 import { showToast } from './components/toast.js';
-import { showModal, hideModal, initModalListeners } from './components/modal.js';
+import { showModal, initModalListeners } from './components/modal.js';
 import { GitHubManager } from './components/github-manager.js';
 
 const github = new GitHubManager();
@@ -12,6 +12,7 @@ const github = new GitHubManager();
 class VideoManager {
   constructor() {
     this.videos = store.getVideoList();
+    this._videoListBound = false;
     this.bindEvents();
     this.renderVideoList();
     this.updateUI();
@@ -229,13 +230,16 @@ class VideoManager {
       userInfo.style.display = 'flex';
       userInfo.style.cursor = 'default';
       userInfo.onclick = null;
+      const logoutBtn = document.getElementById('logoutBtn');
+      if (logoutBtn) logoutBtn.style.display = 'flex';
     } else {
       username.textContent = '🔐 点击授权';
       userInfo.classList.remove('hidden');
       userInfo.style.display = 'flex';
       userInfo.style.cursor = 'pointer';
       userInfo.onclick = () => github.showAuthGuide();
-      document.getElementById('logoutBtn')?.style && (document.getElementById('logoutBtn').style.display = 'none');
+      const logoutBtn = document.getElementById('logoutBtn');
+      if (logoutBtn) logoutBtn.style.display = 'none';
     }
   }
 
@@ -278,14 +282,16 @@ class VideoManager {
       )
       .join('');
 
-    // 事件委托
-    list.addEventListener('click', (e) => {
-      const btn = e.target.closest('[data-action]');
-      if (!btn) return;
-      const id = parseInt(btn.dataset.id);
-      if (btn.dataset.action === 'play') this.playVideo(id);
-      if (btn.dataset.action === 'delete') this.deleteVideo(id);
-    });
+    if (!this._videoListBound) {
+      list.addEventListener('click', (e) => {
+        const btn = e.target.closest('[data-action]');
+        if (!btn) return;
+        const id = parseInt(btn.dataset.id);
+        if (btn.dataset.action === 'play') this.playVideo(id);
+        if (btn.dataset.action === 'delete') this.deleteVideo(id);
+      });
+      this._videoListBound = true;
+    }
   }
 
   updateUI() {
