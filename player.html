@@ -44,7 +44,9 @@
                 <div class="video-info">
                     <h1 id="currentVideoTitle" class="video-title">加载中...</h1>
                     <div class="video-meta">
+                        <span id="playlistCounter" class="video-counter">0 / 0</span>
                         <span id="currentVideoMeta" class="video-type">unknown</span>
+                        <span id="timeDisplay" class="video-time">00:00 / 00:00</span>
                     </div>
                 </div>
             </div>
@@ -71,7 +73,7 @@
         <aside id="playlistSidebar" class="playlist-sidebar">
             <div class="sidebar-header">
                 <h3>播放列表</h3>
-                <button id="closeSidebar" class="sidebar-close">
+                <button id="closeSidebar" class="sidebar-close" title="关闭" aria-label="关闭播放列表">
                     <i class="material-icons">close</i>
                 </button>
             </div>
@@ -89,6 +91,33 @@
             <div class="error-actions">
                 <button id="playerRetryBtn" class="btn btn-primary">重试</button>
                 <button id="backToListBtn" class="btn btn-secondary">返回列表</button>
+            </div>
+        </div>
+    </div>
+
+    <div id="playerSettingsModal" class="player-settings-modal" aria-hidden="true">
+        <div class="player-settings-panel" role="dialog" aria-modal="true" aria-labelledby="playerSettingsTitle">
+            <div class="settings-header">
+                <h3 id="playerSettingsTitle">播放设置</h3>
+                <button id="closePlayerSettingsModal" class="settings-close" title="关闭" aria-label="关闭设置">
+                    <i class="material-icons">close</i>
+                </button>
+            </div>
+            <div class="settings-body">
+                <label class="settings-toggle">
+                    <span>
+                        <strong>自动播放下一集</strong>
+                        <small>当前视频结束后继续播放列表</small>
+                    </span>
+                    <input id="autoplayNextSetting" type="checkbox">
+                </label>
+                <label class="settings-toggle">
+                    <span>
+                        <strong>标题显示进度</strong>
+                        <small>在浏览器标签页同步当前播放时间</small>
+                    </span>
+                    <input id="progressTitleSetting" type="checkbox">
+                </label>
             </div>
         </div>
     </div>

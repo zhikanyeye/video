@@ -17,6 +17,7 @@ class VideoPlayer {
     this.playlist = new PlaylistManager(() => this.onPlaylistChange());
     this.keyboard = new KeyboardHandler(this);
     this.settings = store.getPlayerSettings();
+    this._playlistClickBound = false;
     this._init();
   }
 
@@ -59,7 +60,7 @@ class VideoPlayer {
       this.playlist.load(pl, idx);
     } else {
       this.playlist.load([
-        { title: '测试视频 - Big Buck Bunny', url: 'https://commondatastorage.googleapis.com/gtv-videos-bucket/sample/BigBuckBunny.mp4', type: 'mp4' },
+        { title: '测试视频 - Flower', url: 'https://interactive-examples.mdn.mozilla.net/media/cc0-videos/flower.mp4', type: 'mp4' },
       ], 0);
       showToast('使用测试视频，请从主页添加您的视频', 'warning');
     }
@@ -74,6 +75,7 @@ class VideoPlayer {
     const container = document.querySelector('#videoPlayer');
     if (!container) return;
 
+    this._hideError();
     this._showLoading(true);
     try {
       await this.core.init(video, container, {
@@ -96,6 +98,10 @@ class VideoPlayer {
   }
 
   async _onVideoEnded() {
+    if (!this.settings.autoplayNext) {
+      showToast('当前视频已播放完成', 'info');
+      return;
+    }
     const next = this.playlist.next();
     if (next) {
       await this._playCurrent();
@@ -122,11 +128,15 @@ class VideoPlayer {
     document.getElementById('closeSidebar')?.addEventListener('click', () => this._togglePlaylist());
     document.getElementById('playerRetryBtn')?.addEventListener('click', () => this._retryPlay());
     document.getElementById('backToListBtn')?.addEventListener('click', () => this._goBack());
+    document.getElementById('autoplayNextSetting')?.addEventListener('change', (e) => this._updateSetting('autoplayNext', e.target.checked));
+    document.getElementById('progressTitleSetting')?.addEventListener('change', (e) => this._updateSetting('showProgressOnTitle', e.target.checked));
 
     const settingsModal = document.getElementById('playerSettingsModal');
     settingsModal?.addEventListener('click', (e) => {
       if (e.target === settingsModal) this._toggleSettings();
     });
+
+    this._renderSettings();
   }
 
   _goBack() {
@@ -161,8 +171,10 @@ class VideoPlayer {
     if (!video) return;
     const titleEl = document.getElementById('currentVideoTitle');
     const metaEl = document.getElementById('currentVideoMeta');
+    const counterEl = document.getElementById('playlistCounter');
     if (titleEl) titleEl.textContent = video.title;
     if (metaEl) metaEl.textContent = `${video.type?.toUpperCase() || 'VIDEO'}`;
+    if (counterEl) counterEl.textContent = `${this.playlist.index + 1} / ${this.playlist.length}`;
   }
 
   _updateTimeDisplay(time, duration) {
@@ -183,12 +195,27 @@ class VideoPlayer {
       )
       .join('');
 
+    if (this._playlistClickBound) return;
+    this._playlistClickBound = true;
     el.addEventListener('click', (e) => {
       const item = e.target.closest('[data-index]');
       if (!item) return;
       this.playlist.jumpTo(parseInt(item.dataset.index));
       this._playCurrent();
+      if (window.matchMedia('(max-width: 720px)').matches) this._togglePlaylist();
     });
+  }
+
+  _renderSettings() {
+    const autoplay = document.getElementById('autoplayNextSetting');
+    const progressTitle = document.getElementById('progressTitleSetting');
+    if (autoplay) autoplay.checked = !!this.settings.autoplayNext;
+    if (progressTitle) progressTitle.checked = !!this.settings.showProgressOnTitle;
+  }
+
+  _updateSetting(key, value) {
+    this.settings = { ...this.settings, [key]: value };
+    store.savePlayerSettings(this.settings);
   }
 
   onPlaylistChange() {
@@ -209,6 +236,11 @@ class VideoPlayer {
       msg.textContent = message;
       el.style.display = 'flex';
     }
+  }
+
+  _hideError() {
+    const el = document.getElementById('playerError');
+    if (el) el.style.display = 'none';
   }
 
   showToast(message, type = 'info') {

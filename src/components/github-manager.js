@@ -153,7 +153,7 @@ export class GitHubManager {
       headers: { Authorization: `Bearer ${this.getToken()}`, Accept: 'application/vnd.github.v3+json', 'Content-Type': 'application/json' },
       body: JSON.stringify(gistData),
     });
-    if (!resp.ok) throw new Error((await resp.json()).message || '分享失败');
+    if (!resp.ok) throw await this._createApiError(resp, '分享失败');
 
     const gist = await resp.json();
 
@@ -190,7 +190,7 @@ export class GitHubManager {
         },
       }),
     });
-    if (!resp.ok) throw new Error((await resp.json()).message || '更新失败');
+    if (!resp.ok) throw await this._createApiError(resp, '更新失败');
     return { success: true, gistId };
   }
 
@@ -214,7 +214,8 @@ export class GitHubManager {
   // ---- URL 生成 ----
 
   getPlayerUrl(gistId) {
-    const base = window.location.origin + window.location.pathname.replace(/\/index\.html$/, '');
+    const pathname = window.location.pathname.replace(/\/index\.html$/, '').replace(/\/$/, '');
+    const base = `${window.location.origin}${pathname}`;
     return gistId ? `${base}/player.html?gist=${gistId}` : `${base}/player.html`;
   }
 
@@ -234,5 +235,19 @@ export class GitHubManager {
   _generateReadme(title, description, videos, gistUrl, gistId) {
     const videoList = videos.map((v, i) => `${i + 1}. [${v.title}](${v.url})`).join('\n');
     return `# ${title}\n\n${description || ''}\n\n## 🎬 视频列表\n\n${videoList}\n\n---\n\n▶️ [在线播放](${this.getPlayerUrl(gistId)}) | 📄 [Gist](${gistUrl})\n`;
+  }
+
+  async _createApiError(resp, fallbackMessage) {
+    let detail = null;
+    try {
+      detail = await resp.json();
+    } catch {
+      detail = null;
+    }
+    const message = detail?.message || fallbackMessage;
+    const error = new Error(message);
+    error.status = resp.status;
+    error.apiMessage = message;
+    return error;
   }
 }

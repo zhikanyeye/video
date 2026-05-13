@@ -45,7 +45,7 @@ class VideoManager {
     window.addEventListener('github-auth-success', () => {
       this.initGitHubUI();
       showToast('GitHub授权成功，可以使用免费Gist同步和分享', 'success');
-      this.autoSyncToGitHub();
+      this.syncToGitHubSilently();
     });
   }
 
@@ -71,7 +71,7 @@ class VideoManager {
     urlEl.value = '';
     typeEl.value = 'auto';
     showToast('视频添加成功', 'success');
-    this.autoSyncToGitHub();
+    this.syncToGitHubSilently();
   }
 
   deleteVideo(id) {
@@ -79,7 +79,7 @@ class VideoManager {
       this.videos = this.videos.filter((v) => v.id !== id);
       this._save();
       showToast('视频删除成功', 'success');
-      this.autoSyncToGitHub();
+      this.syncToGitHubSilently();
     });
   }
 
@@ -94,7 +94,7 @@ class VideoManager {
       this.videos = [];
       this._save();
       showToast('播放列表已清空', 'success');
-      this.autoSyncToGitHub();
+      this.syncToGitHubSilently();
     });
   }
 
@@ -134,6 +134,7 @@ class VideoManager {
     this._save();
     textEl.value = '';
     showToast(`成功添加 ${added} 个视频`, 'success');
+    if (added > 0) this.syncToGitHubSilently();
   }
 
   clearBulkText() {
@@ -154,7 +155,15 @@ class VideoManager {
     try {
       const gistId = store.getPlaylistGistId();
       if (gistId) {
-        await github.updateGist(gistId, { title: '青云播播放列表', description: '', videos: this.videos });
+        try {
+          await github.updateGist(gistId, { title: '青云播播放列表', description: '', videos: this.videos });
+        } catch (error) {
+          if (!this._isExpiredGistError(error)) throw error;
+          store.removePlaylistGistId();
+          showToast('原分享链接已失效，正在重新生成...', 'warning');
+          const result = await github.sharePlaylist(this.videos);
+          if (result) store.setPlaylistGistId(result.gist_id);
+        }
       } else {
         const result = await github.sharePlaylist(this.videos);
         if (result) store.setPlaylistGistId(result.gist_id);
@@ -164,6 +173,17 @@ class VideoManager {
       console.warn('GitHub同步失败:', e);
       throw e;
     }
+  }
+
+  syncToGitHubSilently() {
+    this.autoSyncToGitHub().catch((e) => {
+      showToast(`GitHub自动同步失败: ${e.message}`, 'warning');
+    });
+  }
+
+  _isExpiredGistError(error) {
+    const message = (error?.message || '').toLowerCase();
+    return error?.status === 404 || error?.status === 410 || message.includes('not found');
   }
 
   async handleShare() {
