@@ -1,1 +1,6 @@
-node_modules/\ndist/\n.env\n.env.local\n.env.production.local\n.DS_Store
+node_modules/
+dist/
+.env
+.env.local
+.env.production.local
+.DS_Store

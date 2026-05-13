@@ -84,9 +84,20 @@ function isDirectVideoUrl(url) {
  * 调用后端嗅探API
  */
 async function sniffVideoSources(url) {
-  const apiBase = import.meta.env.VITE_API_BASE || window.APP_CONFIG?.API_BASE || '';
+  const apiBase = getApiBase();
   const resp = await fetch(`${apiBase}/api/sniff?url=${encodeURIComponent(url)}`);
   if (!resp.ok) throw new Error(`嗅探请求失败: ${resp.status}`);
   const data = await resp.json();
   return data.sources || [];
+}
+
+function getApiBase() {
+  const envBase = import.meta.env.VITE_API_BASE?.trim();
+  if (envBase) return envBase.replace(/\/+$/, '');
+
+  const runtimeBase = window.APP_CONFIG?.API_BASE?.trim();
+  if (runtimeBase) return runtimeBase.replace(/\/+$/, '');
+
+  const isLocal = window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1';
+  return isLocal ? 'http://localhost:3000' : '';
 }

@@ -24,27 +24,24 @@
 
 ---
 
-### 1. 配置 `API_BASE`（前端配置文件）
+### 1. 配置 `VITE_API_BASE`（前端环境变量）
 
-前端通过 `scripts/config.js` 中的 `window.APP_CONFIG.API_BASE` 自动切换环境：
+前端通过环境变量读取后端地址：
 
-```js
-// scripts/config.js（已内置，无需手动创建）
-window.APP_CONFIG = {
-    API_BASE: isLocal
-        ? 'http://localhost:3000'          // 本地开发
-        : 'https://your-backend.onrender.com'  // ← 替换为你的后端实际地址
-};
+```bash
+# .env.production（建议由 CI 注入）
+VITE_API_BASE=https://your-backend.onrender.com
 ```
 
 **配置步骤：**
 
 1. 将后端部署到 Render（或 Railway/Fly.io/VPS），获得公网域名，例如：
    `https://my-qingyunbo.onrender.com`
-2. 打开 `scripts/config.js`，将 `'https://your-backend.onrender.com'` 替换为真实地址。
-3. 提交并推送到 `master` 分支，GitHub Actions / Pages 会自动更新。
+2. 在仓库 `Settings → Secrets and variables → Actions` 中添加：
+   `VITE_API_BASE=https://my-qingyunbo.onrender.com`
+3. 推送到 `master` 分支，GitHub Actions / Pages 会自动构建并注入变量。
 
-> **本地开发时** 无需修改，`localhost`/`127.0.0.1` 会自动使用 `http://localhost:3000`。
+> 默认行为：本地 `localhost/127.0.0.1` 自动回退到 `http://localhost:3000`；未配置时生产环境请求同源 `/api`。
 
 ---
 
@@ -57,7 +54,7 @@ window.APP_CONFIG = {
    ```
    https://zhikanyeye.github.io/video/
    ```
-5. **注意**：所有前端资源路径均使用相对路径（`scripts/`、`styles/`、`assets/`），不含绝对路径，可在子路径 `/video/` 下正常工作。API 请求通过 `APP_CONFIG.API_BASE` 指向独立后端，不与静态资源路径混淆。
+5. **注意**：所有前端资源路径均使用相对路径（`scripts/`、`styles/`、`assets/`），不含绝对路径，可在子路径 `/video/` 下正常工作。API 请求通过 `VITE_API_BASE`（或默认回退）指向后端，不与静态资源路径混淆。
 
 ---
 
@@ -69,7 +66,7 @@ window.APP_CONFIG = {
 2. 关联 GitHub 仓库，**Root Directory** 填写 `backend`。
 3. **Build Command**: `npm install`
 4. **Start Command**: `npm start`
-5. 获得公网域名（如 `https://xxx.onrender.com`），填入 `scripts/config.js`。
+5. 获得公网域名（如 `https://xxx.onrender.com`），配置为前端环境变量 `VITE_API_BASE`。
 
 #### 3.2 监听端口
 
@@ -137,13 +134,12 @@ open http://localhost:8080
 #### 线上联调
 
 ```bash
-# 1. 确认 scripts/config.js 中 API_BASE 已改为生产后端地址
-# 2. git add scripts/config.js && git commit -m "chore: set production API_BASE"
-# 3. git push origin master
-# 4. 等待 GitHub Pages 部署完成（约1分钟）
-# 5. 访问 https://zhikanyeye.github.io/video/
-# 6. F12 → Network，添加页面 URL 后可看到对生产后端 /api/sniff 的请求
-# 7. 后端健康检查：curl https://your-backend.onrender.com/api/health
+# 1. 确认 Actions Secret: VITE_API_BASE 已配置为生产后端地址
+# 2. git push origin master
+# 3. 等待 GitHub Pages 部署完成（约1分钟）
+# 4. 访问 https://zhikanyeye.github.io/video/
+# 5. F12 → Network，添加页面 URL 后可看到对生产后端 /api/sniff 的请求
+# 6. 后端健康检查：curl https://your-backend.onrender.com/api/health
 ```
 
 ---
