@@ -1,0 +1,195 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>青云播 - 视频管理</title>
+    
+    <!-- 网站图标 -->
+    <link rel="icon" type="image/svg+xml" href="./assets/favicon-D4u_O9Q9.svg">
+    <link rel="icon" type="image/svg+xml" sizes="16x16" href="./assets/favicon-16-B0_UbhCD.svg">
+    <link rel="shortcut icon" href="./assets/favicon-D4u_O9Q9.svg">
+    <link rel="apple-touch-icon" href="./assets/favicon-D4u_O9Q9.svg">
+    
+    <link href="https://fonts.googleapis.com/icon?family=Material+Icons" rel="stylesheet">
+  <script type="module" crossorigin src="./assets/main-BUIkvDPx.js"></script>
+  <link rel="modulepreload" crossorigin href="./assets/github-manager-BwwH_jAk.js">
+  <link rel="stylesheet" crossorigin href="./assets/github-manager-C6Vu0T3A.css">
+</head>
+<body>
+    <div class="app-container">
+        <!-- 头部 -->
+        <header class="header">
+            <div class="header-content">
+                <h1 class="logo">
+                    <i class="material-icons">videocam</i>
+                    青云播
+                </h1>
+                <div class="header-actions">
+                    <div id="githubUserInfo" class="github-user-info hidden">
+                        <span id="githubUsername"></span>
+                        <button id="logoutBtn" class="btn btn-link">
+                            <i class="material-icons">logout</i>
+                            退出
+                        </button>
+                    </div>
+                    <button id="clearAllBtn" class="btn btn-danger">
+                        <i class="material-icons">delete_sweep</i>
+                        清空列表
+                    </button>
+                </div>
+            </div>
+        </header>
+
+        <main class="main-content">
+            <!-- 添加视频区域 -->
+            <section class="add-video-section">
+                <h2>
+                    <i class="material-icons">add_circle</i>
+                    添加视频
+                </h2>
+                
+                <form id="addVideoForm" class="add-form">
+                    <div class="form-group">
+                        <label for="videoTitle">视频标题</label>
+                        <input type="text" id="videoTitle" placeholder="请输入视频标题" required>
+                    </div>
+                    
+                    <div class="form-group">
+                        <label for="videoUrl">视频链接</label>
+                        <input type="url" id="videoUrl" placeholder="请输入视频链接（支持多种格式）" required>
+                        <div class="url-help">
+                            支持：MP4、M3U8、FLV、RTMP等格式
+                        </div>
+                    </div>
+                    
+                    <!-- 批量添加功能 -->
+                    <div class="form-group">
+                        <label for="bulkText">批量添加（每行一个链接）</label>
+                        <textarea 
+                            id="bulkText" 
+                            class="bulk-textarea"
+                            placeholder="可以在这里粘贴多个视频链接，每行一个&#10;例如：&#10;https://example.com/video1.mp4&#10;https://example.com/video2.m3u8&#10;https://example.com/video3.flv"
+                            rows="4"
+                            aria-label="批量添加视频链接"
+                        ></textarea>
+                        <div class="bulk-help">
+                            <small>批量添加时，视频标题将自动从链接中提取</small>
+                            <button type="button" id="clearBulkTextBtn" class="btn-link">清空</button>
+                        </div>
+                    </div>
+                    
+                    <div class="form-group">
+                        <label for="videoType">视频类型</label>
+                        <select id="videoType">
+                            <option value="auto">自动检测</option>
+                            <option value="mp4">MP4</option>
+                            <option value="m3u8">M3U8 (HLS)</option>
+                            <option value="flv">FLV</option>
+                            <option value="rtmp">RTMP</option>
+                        </select>
+                    </div>
+                    
+                    <div class="form-actions">
+                        <button type="submit" class="btn btn-primary">
+                            <i class="material-icons">add</i>
+                            添加到播放列表
+                        </button>
+                        <button type="button" id="bulkAddBtn" class="btn btn-secondary">
+                            <i class="material-icons">playlist_add</i>
+                            批量添加
+                        </button>
+                    </div>
+                </form>
+            </section>
+
+            <!-- 播放列表区域 -->
+            <section class="playlist-section">
+                <div class="section-header">
+                    <h2>
+                        <i class="material-icons">queue_music</i>
+                        播放列表 (<span id="videoCount">0</span>)
+                    </h2>
+                    <div class="section-actions">
+                        <button id="playAllBtn" class="btn btn-success">
+                            <i class="material-icons">play_arrow</i>
+                            播放全部
+                        </button>
+                        <button id="shareBtn" class="btn btn-primary">
+                            <i class="material-icons">share</i>
+                            生成分享链接
+                        </button>
+                        <button id="importBtn" class="btn btn-secondary">
+                            <i class="material-icons">cloud_download</i>
+                            从GitHub导入
+                        </button>
+                        <button id="exportBtn" class="btn btn-secondary">
+                            <i class="material-icons">download</i>
+                            导出列表
+                        </button>
+                    </div>
+                </div>
+                
+                <div class="playlist-container">
+                    <div id="emptyState" class="empty-state">
+                        <i class="material-icons">video_library</i>
+                        <h3>暂无视频</h3>
+                        <p>请添加视频到播放列表</p>
+                    </div>
+                    
+                    <div id="videoList" class="video-list"></div>
+                </div>
+            </section>
+        </main>
+    </div>
+
+    <!-- GitHub导入模态框 -->
+    <div id="importModal" class="modal">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h3>从GitHub导入播放列表</h3>
+                <button id="importModalClose" class="modal-close">
+                    <i class="material-icons">close</i>
+                </button>
+            </div>
+            <div class="modal-body">
+                <div class="form-group">
+                    <label for="gistUrl">Gist URL或ID</label>
+                    <input type="text" id="gistUrl" placeholder="请输入Gist链接或ID" />
+                    <div class="url-help">
+                        支持：https://gist.github.com/user/xxxxx 或直接输入Gist ID
+                    </div>
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button id="importCancel" class="btn btn-secondary">取消</button>
+                <button id="importConfirm" class="btn btn-primary">导入</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- 弹窗 -->
+    <div id="modal" class="modal">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h3 id="modalTitle">确认操作</h3>
+                <button id="modalClose" class="modal-close">
+                    <i class="material-icons">close</i>
+                </button>
+            </div>
+            <div class="modal-body">
+                <p id="modalMessage">确定要执行此操作吗？</p>
+            </div>
+            <div class="modal-footer">
+                <button id="modalCancel" class="btn btn-secondary">取消</button>
+                <button id="modalConfirm" class="btn btn-primary">确定</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- 消息提示 -->
+    <div id="toast" class="toast"></div>
+
+    <!-- Vite 入口 -->
+</body>
+</html>
