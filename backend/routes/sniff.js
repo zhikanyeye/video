@@ -122,6 +122,7 @@ function extractVideoSources(html, baseUrl) {
 
   for (const m of html.matchAll(/<video[^>]+\bsrc=["']([^"']+)["']/gi)) add(m[1], 'dom-video');
   for (const m of html.matchAll(/<source[^>]+\bsrc=["']([^"']+)["']/gi)) add(m[1], 'dom-source');
+  for (const m of html.matchAll(/https?:\/\/[^\s"'<>\\]+?\.mpd(?:[?#][^\s"'<>\\]*)?/gi)) add(m[0], 'regex-mpd');
   for (const m of html.matchAll(/https?:\/\/[^\s"'<>\\]+?\.m3u8(?:[?#][^\s"'<>\\]*)?/gi)) add(m[0], 'regex-m3u8');
   for (const m of html.matchAll(/https?:\/\/[^\s"'<>\\]+?\.mp4(?:[?#][^\s"'<>\\]*)?/gi)) add(m[0], 'regex-mp4');
   for (const m of html.matchAll(/https?:\/\/[^\s"'<>\\]+?\.webm(?:[?#][^\s"'<>\\]*)?/gi)) add(m[0], 'regex-webm');
@@ -132,6 +133,7 @@ function extractVideoSources(html, baseUrl) {
 }
 
 function detectVideoType(url) {
+  if (/\.mpd/i.test(url)) return 'mpd';
   if (/\.m3u8/i.test(url)) return 'm3u8';
   if (/\.mp4/i.test(url)) return 'mp4';
   if (/\.flv/i.test(url)) return 'flv';
@@ -147,6 +149,7 @@ function detectVideoType(url) {
 function scoreSource(url, type) {
   let s = 0;
   if (type === 'm3u8') s += 10;
+  else if (type === 'mpd') s += 9;
   else if (type === 'mp4') s += 8;
   else if (type === 'webm') s += 6;
   else if (type === 'flv') s += 5;

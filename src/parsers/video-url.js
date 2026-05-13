@@ -64,6 +64,8 @@ export async function parseVideoUrl(url) {
 }
 
 function detectDirectType(url) {
+  if (/^rtmp:\/\//i.test(url)) return 'rtmp';
+  if (/\.mpd(?:[?#]|$)/i.test(url)) return 'mpd';
   if (/\.m3u8/i.test(url)) return 'm3u8';
   if (/\.flv/i.test(url)) return 'flv';
   if (/\.webm/i.test(url)) return 'webm';
@@ -71,6 +73,7 @@ function detectDirectType(url) {
   if (/\.mov/i.test(url)) return 'mov';
   if (/\.mkv/i.test(url)) return 'mkv';
   if (/\.avi/i.test(url)) return 'avi';
+  if (/\.ts(?:[?#]|$)/i.test(url)) return 'ts';
   if (/\.mp4/i.test(url)) return 'mp4';
   return 'mp4';
 }
@@ -81,7 +84,7 @@ function shouldSniff(url) {
 }
 
 function isDirectVideoUrl(url) {
-  return /\.(mp4|m3u8|flv|webm|ogg|ogv|mov|mkv|avi|ts)(\?|#|$)/i.test(url);
+  return /^rtmp:\/\//i.test(url) || /\.(mp4|mpd|m3u8|flv|webm|ogg|ogv|mov|mkv|avi|ts)(\?|#|$)/i.test(url);
 }
 
 /**

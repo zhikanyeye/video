@@ -64,6 +64,8 @@ export function isValidVideoUrl(url) {
 
 export function detectVideoType(url) {
   const lower = url.toLowerCase();
+  if (lower.startsWith('rtmp://')) return 'rtmp';
+  if (lower.includes('.mpd')) return 'mpd';
   if (lower.includes('.m3u8') || lower.includes('m3u8')) return 'm3u8';
   if (lower.includes('.flv') || lower.includes('flv')) return 'flv';
   if (lower.includes('.webm')) return 'webm';
@@ -71,7 +73,7 @@ export function detectVideoType(url) {
   if (lower.includes('.mov')) return 'mov';
   if (lower.includes('.mkv')) return 'mkv';
   if (lower.includes('.avi')) return 'avi';
-  if (lower.includes('rtmp://')) return 'rtmp';
+  if (lower.includes('.ts')) return 'ts';
   if (lower.includes('bilibili.com') || lower.includes('b23.tv')) return 'bilibili';
   if (lower.includes('youtube.com') || lower.includes('youtu.be')) return 'youtube';
   return 'mp4';

@@ -9,6 +9,7 @@ export class PlayerCore {
     this.art = null;
     this.playerType = null; // 'artplayer' | 'iframe'
     this.parsedVideo = null;
+    this.externalPlayers = [];
   }
 
   /**
@@ -26,6 +27,8 @@ export class PlayerCore {
     if (parsed.type === 'iframe') {
       this.playerType = 'iframe';
       this._initIframe(parsed, container, callbacks);
+    } else if (parsed.type === 'rtmp') {
+      throw new Error('浏览器不支持 RTMP 直连播放，请转换为 HLS/M3U8、MP4 或 WebRTC。');
     } else {
       this.playerType = 'artplayer';
       await this._initArtPlayer(parsed, video, container, callbacks);
@@ -78,8 +81,10 @@ export class PlayerCore {
       miniProgressBar: true,
       playsInline: true,
       customType: {
+        mpd: this._playDash.bind(this),
         m3u8: this._playM3u8.bind(this),
         flv: this._playFlv.bind(this),
+        ts: this._playMpegTs.bind(this),
       },
     });
 
@@ -146,6 +151,7 @@ export class PlayerCore {
       const hls = new Hls();
       hls.loadSource(url);
       hls.attachMedia(video);
+      this._registerExternalPlayer(hls);
     } else if (video.canPlayType('application/vnd.apple.mpegurl')) {
       video.src = url;
     }
@@ -157,7 +163,24 @@ export class PlayerCore {
       const player = flvjs.createPlayer({ type: 'flv', url });
       player.attachMediaElement(video);
       player.load();
+      this._registerExternalPlayer(player);
     }
+  }
+
+  async _playDash(video, url) {
+    const dashjs = await this._loadDash();
+    const player = dashjs.MediaPlayer().create();
+    player.initialize(video, url, true);
+    this._registerExternalPlayer(player);
+  }
+
+  async _playMpegTs(video, url) {
+    const mpegts = await this._loadMpegTs();
+    if (!mpegts.isSupported()) throw new Error('当前浏览器不支持 MPEG-TS 播放');
+    const player = mpegts.createPlayer({ type: 'mse', isLive: false, url });
+    player.attachMediaElement(video);
+    player.load();
+    this._registerExternalPlayer(player);
   }
 
   async _loadHls() {
@@ -179,6 +202,34 @@ export class PlayerCore {
       s.onload = () => resolve(window.flvjs);
       s.onerror = reject;
       document.head.appendChild(s);
+    });
+  }
+
+  async _loadDash() {
+    if (window.dashjs) return window.dashjs;
+    return this._loadScript('https://cdn.jsdelivr.net/npm/dashjs@4/dist/dash.all.min.js', () => window.dashjs);
+  }
+
+  async _loadMpegTs() {
+    if (window.mpegts) return window.mpegts;
+    return this._loadScript('https://cdn.jsdelivr.net/npm/mpegts.js@1/dist/mpegts.min.js', () => window.mpegts);
+  }
+
+  async _loadScript(src, getGlobal) {
+    return new Promise((resolve, reject) => {
+      const existing = [...document.scripts].find((script) => script.src === src);
+      if (existing) {
+        existing.addEventListener('load', () => resolve(getGlobal()), { once: true });
+        existing.addEventListener('error', reject, { once: true });
+        const global = getGlobal();
+        if (global) resolve(global);
+        return;
+      }
+      const script = document.createElement('script');
+      script.src = src;
+      script.onload = () => resolve(getGlobal());
+      script.onerror = reject;
+      document.head.appendChild(script);
     });
   }
 
@@ -238,7 +289,16 @@ export class PlayerCore {
     return error;
   }
 
+  _registerExternalPlayer(player) {
+    if (player) this.externalPlayers.push(player);
+  }
+
   cleanup() {
+    for (const player of this.externalPlayers.splice(0)) {
+      try {
+        player.destroy?.();
+      } catch { /* ignore */ }
+    }
     if (this.art) {
       this.art.destroy(false);
       this.art = null;
