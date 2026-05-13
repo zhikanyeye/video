@@ -342,7 +342,7 @@
 }
 
 .error-content {
-    width: min(420px, 100%);
+    width: min(520px, 100%);
     padding: 28px;
     border: 1px solid rgba(255, 255, 255, 0.14);
     border-radius: 8px;
@@ -379,6 +379,7 @@
     min-height: 38px;
     padding: 0 15px;
     border-radius: 8px;
+    white-space: nowrap;
 }
 
 .player-settings-modal {

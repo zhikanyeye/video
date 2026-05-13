@@ -129,6 +129,7 @@ class VideoPlayer {
     document.getElementById('closePlayerSettingsModal')?.addEventListener('click', () => this._toggleSettings());
     document.getElementById('closeSidebar')?.addEventListener('click', () => this._togglePlaylist());
     document.getElementById('playerRetryBtn')?.addEventListener('click', () => this._retryPlay());
+    document.getElementById('openSourceBtn')?.addEventListener('click', () => this._openCurrentSource());
     document.getElementById('backToListBtn')?.addEventListener('click', () => this._goBack());
     document.getElementById('autoplayNextSetting')?.addEventListener('change', (e) => this._updateSetting('autoplayNext', e.target.checked));
     document.getElementById('progressTitleSetting')?.addEventListener('change', (e) => this._updateSetting('showProgressOnTitle', e.target.checked));
@@ -151,6 +152,11 @@ class VideoPlayer {
   async _retryPlay() {
     this.core.cleanup();
     await this._playCurrent();
+  }
+
+  _openCurrentSource() {
+    const url = this.core.parsedVideo?.url || this.playlist.current?.url;
+    if (url) window.open(url, '_blank', 'noopener,noreferrer');
   }
 
   _togglePlaylist() {
@@ -253,6 +259,11 @@ class VideoPlayer {
   _showPlaybackNotice(message) {
     if (!message) return;
     console.warn('播放兼容性提示:', message);
+    const normalized = message.toLowerCase();
+    if (normalized.includes('没有解码出视频画面') || normalized.includes('编码不受浏览器支持')) {
+      this._showError(`${message} 这个文件下载后本地播放器能播放，通常是因为本地播放器支持 HEVC/H.265 等编码，而当前浏览器不支持。`);
+      return;
+    }
     showToast(message, 'warning', 6000);
   }
 
