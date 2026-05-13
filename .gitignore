@@ -4,3 +4,6 @@ dist/
 .env.local
 .env.production.local
 .DS_Store
+.playwright-mcp/
+*.log
+backend/*.db

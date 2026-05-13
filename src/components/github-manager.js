@@ -10,7 +10,7 @@ export class GitHubManager {
   // ---- 授权 ----
 
   isAuthenticated() {
-    return !!store.getGitHubToken();
+    return !!store.getGitHubToken() && !!store.getGitHubUser();
   }
 
   getToken() {
@@ -23,7 +23,7 @@ export class GitHubManager {
 
   async saveToken(token) {
     const resp = await fetch(`${GITHUB_API}/user`, {
-      headers: { Authorization: `token ${token}`, Accept: 'application/vnd.github.v3+json' },
+      headers: { Authorization: `Bearer ${token}`, Accept: 'application/vnd.github.v3+json' },
     });
     if (!resp.ok) throw new Error('Token验证失败，请检查Token是否正确');
     const user = await resp.json();
@@ -34,6 +34,99 @@ export class GitHubManager {
 
   logout() {
     store.clearGitHubAuth();
+  }
+
+  showAuthGuide() {
+    const existing = document.querySelector('.auth-modal');
+    if (existing) {
+      existing.querySelector('#githubToken')?.focus();
+      return existing;
+    }
+
+    const modal = document.createElement('div');
+    modal.className = 'auth-modal';
+    modal.setAttribute('role', 'dialog');
+    modal.setAttribute('aria-modal', 'true');
+    modal.setAttribute('aria-labelledby', 'githubAuthTitle');
+    modal.innerHTML = `
+      <div class="auth-modal-content">
+        <div class="auth-header">
+          <h3 id="githubAuthTitle">GitHub Gist 授权</h3>
+          <button type="button" class="auth-close" aria-label="关闭授权弹窗">&times;</button>
+        </div>
+        <div class="auth-body">
+          <p>使用免费的 GitHub Gist 保存和分享播放列表，需要一个只包含 <strong>gist</strong> 权限的 Token。</p>
+          <ol class="auth-steps">
+            <li>点击下方按钮打开 GitHub Token 创建页</li>
+            <li>确认只勾选 <strong>gist</strong> 权限</li>
+            <li>复制生成的 Token，粘贴到这里保存</li>
+          </ol>
+          <div class="auth-actions">
+            <a href="https://github.com/settings/tokens/new?description=%E9%9D%92%E4%BA%91%E6%92%AD%E8%A7%86%E9%A2%91%E5%88%86%E4%BA%AB&scopes=gist"
+               target="_blank"
+               rel="noopener noreferrer"
+               class="auth-btn primary">
+              创建 GitHub Token
+            </a>
+          </div>
+          <div class="auth-input-group">
+            <label for="githubToken">粘贴 GitHub Token</label>
+            <input type="password" id="githubToken" autocomplete="off" placeholder="ghp_... 或 github_pat_..." />
+            <button type="button" id="saveTokenBtn" class="auth-btn secondary">保存授权</button>
+            <div id="authMessage" class="auth-message" aria-live="polite"></div>
+          </div>
+          <div class="auth-note">
+            <small>Token 只保存在当前浏览器的 localStorage 中。后续会用它通过 GitHub Gist API 创建和更新播放列表。</small>
+          </div>
+        </div>
+      </div>
+    `;
+
+    document.body.appendChild(modal);
+
+    const close = () => modal.remove();
+    const closeBtn = modal.querySelector('.auth-close');
+    const saveBtn = modal.querySelector('#saveTokenBtn');
+    const tokenInput = modal.querySelector('#githubToken');
+    const message = modal.querySelector('#authMessage');
+
+    closeBtn?.addEventListener('click', close);
+    modal.addEventListener('click', (event) => {
+      if (event.target === modal) close();
+    });
+    modal.addEventListener('keydown', (event) => {
+      if (event.key === 'Escape') close();
+    });
+
+    saveBtn?.addEventListener('click', async () => {
+      const token = tokenInput?.value.trim();
+      if (!token) {
+        message.textContent = '请先粘贴 GitHub Token';
+        message.className = 'auth-message error';
+        tokenInput?.focus();
+        return;
+      }
+
+      try {
+        saveBtn.disabled = true;
+        saveBtn.textContent = '验证中...';
+        message.textContent = '';
+        message.className = 'auth-message';
+
+        const user = await this.saveToken(token);
+        close();
+        window.dispatchEvent(new CustomEvent('github-auth-success', { detail: { user } }));
+      } catch (error) {
+        message.textContent = error.message || '授权失败，请检查 Token';
+        message.className = 'auth-message error';
+      } finally {
+        saveBtn.disabled = false;
+        saveBtn.textContent = '保存授权';
+      }
+    });
+
+    tokenInput?.focus();
+    return modal;
   }
 
   // ---- Gist 操作 ----
@@ -57,7 +150,7 @@ export class GitHubManager {
 
     const resp = await fetch(GIST_API, {
       method: 'POST',
-      headers: { Authorization: `token ${this.getToken()}`, Accept: 'application/vnd.github.v3+json', 'Content-Type': 'application/json' },
+      headers: { Authorization: `Bearer ${this.getToken()}`, Accept: 'application/vnd.github.v3+json', 'Content-Type': 'application/json' },
       body: JSON.stringify(gistData),
     });
     if (!resp.ok) throw new Error((await resp.json()).message || '分享失败');
@@ -67,7 +160,7 @@ export class GitHubManager {
     // 更新 Gist 添加 README
     await fetch(`${GIST_API}/${gist.id}`, {
       method: 'PATCH',
-      headers: { Authorization: `token ${this.getToken()}`, Accept: 'application/vnd.github.v3+json', 'Content-Type': 'application/json' },
+      headers: { Authorization: `Bearer ${this.getToken()}`, Accept: 'application/vnd.github.v3+json', 'Content-Type': 'application/json' },
       body: JSON.stringify({
         files: { 'README.md': { content: this._generateReadme(title, description, videos, gist.html_url, gist.id) } },
       }),
@@ -84,7 +177,7 @@ export class GitHubManager {
     if (!this.isAuthenticated()) throw new Error('未授权');
     const resp = await fetch(`${GIST_API}/${gistId}`, {
       method: 'PATCH',
-      headers: { Authorization: `token ${this.getToken()}`, Accept: 'application/vnd.github.v3+json', 'Content-Type': 'application/json' },
+      headers: { Authorization: `Bearer ${this.getToken()}`, Accept: 'application/vnd.github.v3+json', 'Content-Type': 'application/json' },
       body: JSON.stringify({
         files: {
           'playlist.json': {

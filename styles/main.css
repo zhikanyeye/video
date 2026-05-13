@@ -1289,6 +1289,17 @@ body::after {
     box-shadow: 0 0 0 3px rgba(108, 92, 231, 0.12);
 }
 
+.auth-message {
+    min-height: 20px;
+    margin-top: var(--space-sm);
+    color: var(--text-secondary);
+    font-size: var(--font-sm);
+}
+
+.auth-message.error {
+    color: var(--danger-color);
+}
+
 .auth-note {
     margin-top: var(--space-2xl);
     padding: var(--space-lg);

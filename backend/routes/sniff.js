@@ -2,6 +2,10 @@
  * 嗅探路由 — 从网页提取视频源
  */
 import { Router } from 'express';
+import dns from 'dns/promises';
+import http from 'http';
+import https from 'https';
+import net from 'net';
 import { FETCH_TIMEOUT_MS, MAX_PAGE_SIZE_BYTES } from '../config.js';
 
 export function createSniffRouter() {
@@ -12,10 +16,7 @@ export function createSniffRouter() {
     if (!url) return res.status(400).json({ error: '缺少 url 参数' });
 
     try {
-      const parsed = new URL(url);
-
-      // SSRF 防护
-      if (isInternalHost(parsed.hostname)) {
+      if (!(await isSafeFetchUrl(url))) {
         return res.status(403).json({ error: '不允许访问内网地址' });
       }
 
@@ -35,23 +36,39 @@ export function createSniffRouter() {
 const INTERNAL_PATTERNS = [
   /^localhost$/i, /^127\./, /^0\.0\.0\.0$/, /^::1$/,
   /^10\./, /^192\.168\./, /^172\.(1[6-9]|2\d|3[01])\./, /^169\.254\./,
-  /^fc00:/i, /^fe80:/i,
+  /^f[cd][0-9a-f]{2}:/i, /^fe80:/i, /^::ffff:(127|10|192\.168|172\.(1[6-9]|2\d|3[01])|169\.254)\./i,
 ];
 
 function isInternalHost(hostname) {
   return INTERNAL_PATTERNS.some((p) => p.test(hostname));
 }
 
-function fetchPage(url, redirectCount = 0) {
-  if (redirectCount > 1) return Promise.reject(new Error('重定向次数过多'));
+async function isSafeFetchUrl(url) {
+  let parsed;
+  try { parsed = new URL(url); } catch { return false; }
+  if (!['http:', 'https:'].includes(parsed.protocol)) return false;
+  if (isInternalHost(parsed.hostname)) return false;
 
+  const ipVersion = net.isIP(parsed.hostname);
+  if (ipVersion) return !isInternalHost(parsed.hostname);
+
+  try {
+    const addresses = await dns.lookup(parsed.hostname, { all: true, verbatim: false });
+    return addresses.length > 0 && addresses.every(({ address }) => !isInternalHost(address));
+  } catch {
+    return false;
+  }
+}
+
+async function fetchPage(url, redirectCount = 0) {
+  if (redirectCount > 1) throw new Error('重定向次数过多');
+
+  if (!(await isSafeFetchUrl(url))) throw new Error('不允许访问内网地址');
   return new Promise((resolve, reject) => {
     let parsedUrl;
     try { parsedUrl = new URL(url); } catch { return reject(new Error('无效URL')); }
 
-    if (isInternalHost(parsedUrl.hostname)) return reject(new Error('重定向目标为内网地址'));
-
-    const lib = parsedUrl.protocol === 'https:' ? require('https') : require('http');
+    const lib = parsedUrl.protocol === 'https:' ? https : http;
     const req = lib.request({
       hostname: parsedUrl.hostname,
       path: parsedUrl.pathname + parsedUrl.search,

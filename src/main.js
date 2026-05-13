@@ -41,6 +41,12 @@ class VideoManager {
     document.getElementById('importModal')?.addEventListener('click', (e) => {
       if (e.target.id === 'importModal') this.hideImportModal();
     });
+
+    window.addEventListener('github-auth-success', () => {
+      this.initGitHubUI();
+      showToast('GitHub授权成功，可以使用免费Gist同步和分享', 'success');
+      this.autoSyncToGitHub();
+    });
   }
 
   // ---- 视频操作 ----

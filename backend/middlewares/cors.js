@@ -3,11 +3,16 @@
  */
 import { CORS_ORIGINS, DEFAULT_ORIGINS } from '../config.js';
 
-const allowedOrigins = CORS_ORIGINS.length ? CORS_ORIGINS : DEFAULT_ORIGINS;
+const allowedOrigins = new Set([...DEFAULT_ORIGINS, ...CORS_ORIGINS]);
+const LOCAL_ORIGIN_RE = /^https?:\/\/(?:localhost|127\.0\.0\.1)(?::\d+)?$/;
+
+function isAllowedOrigin(origin) {
+  return allowedOrigins.has(origin) || LOCAL_ORIGIN_RE.test(origin);
+}
 
 export function corsMiddleware(req, res, next) {
   const origin = req.headers.origin;
-  if (!origin || allowedOrigins.includes(origin)) {
+  if (!origin || isAllowedOrigin(origin)) {
     res.setHeader('Access-Control-Allow-Origin', origin || '*');
     res.setHeader('Access-Control-Allow-Credentials', 'true');
     res.setHeader('Access-Control-Allow-Methods', 'GET, POST, PUT, DELETE, OPTIONS');

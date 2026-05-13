@@ -16,10 +16,10 @@ const app = express();
 // 中间件
 app.use(corsMiddleware);
 app.use(express.json());
-app.use(express.static(path.join(__dirname, '..')));
 
 // 数据库
-const db = new sqlite3.Database('playlists.db');
+const dbPath = path.join(__dirname, 'playlists.db');
+const db = new sqlite3.Database(dbPath);
 db.serialize(() => {
   db.run(`CREATE TABLE IF NOT EXISTS playlists (
     id INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -31,6 +31,9 @@ db.serialize(() => {
 });
 
 // 路由
+app.get('/api/health', (req, res) => {
+  res.json({ status: 'ok', service: 'qingyunbo-backend' });
+});
 app.use('/api/playlists', createPlaylistRouter(db));
 app.use('/api/sniff', createSniffRouter());
 
