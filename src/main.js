@@ -170,7 +170,8 @@ class VideoManager {
     const validation = isValidVideoUrl(url);
     if (!validation.valid) return showToast(`链接验证失败: ${validation.reason}`, 'error');
 
-    if (!this.getApiBase()) {
+    const apiBase = this.getApiBase();
+    if (!apiBase) {
       this.showProbeModal(this.renderApiConfigPrompt());
       return;
     }
@@ -180,14 +181,19 @@ class VideoManager {
       const result = await this.fetchProbe(url);
       this.showProbeModal(this.renderProbeResult(result));
     } catch (e) {
-      this.showProbeModal(`<div class="probe-error">检测失败：${escapeHtml(e.message)}</div>`);
+      this.showProbeModal(this.renderProbeError(e, apiBase));
     }
   }
 
   async fetchProbe(url) {
     const apiBase = this.getApiBase();
     if (!apiBase) throw new Error('后端 API 未配置，无法检测播放源');
-    const resp = await fetch(`${apiBase}/api/probe?url=${encodeURIComponent(url)}`);
+    let resp;
+    try {
+      resp = await fetch(`${apiBase}/api/probe?url=${encodeURIComponent(url)}`);
+    } catch (error) {
+      throw new Error(`无法连接后端 API：${error.message || '网络请求失败'}`);
+    }
     const data = await resp.json().catch(() => ({}));
     if (!resp.ok) throw new Error(data.error || `检测请求失败: ${resp.status}`);
     return data;
@@ -326,6 +332,26 @@ class VideoManager {
 
   hideProbeModal() {
     document.getElementById('probeModal')?.classList.remove('show');
+  }
+
+  renderProbeError(error, apiBase) {
+    return `
+      <div class="probe-error">检测失败：${escapeHtml(error.message)}</div>
+      <div class="probe-section">
+        <h4>当前后端地址</h4>
+        <div class="probe-code">${escapeHtml(apiBase)}</div>
+        <ul>
+          <li>确认这个地址能直接打开 <strong>/api/health</strong>。</li>
+          <li>Render 免费服务可能正在冷启动，请等 30 秒后重试。</li>
+          <li>如果浏览器控制台提示 CORS，请等待后端重新部署到最新版本。</li>
+          <li>如果地址填错，可在下方重新保存。</li>
+        </ul>
+        <div class="api-base-form">
+          <input id="apiBaseInput" type="url" placeholder="https://你的后端.onrender.com" value="${escapeHtml(apiBase)}">
+          <button id="saveApiBaseBtn" class="btn btn-primary" type="button">保存</button>
+        </div>
+      </div>
+    `;
   }
 
   renderProbeResult(result) {
