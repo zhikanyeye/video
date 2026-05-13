@@ -978,6 +978,29 @@ body::after {
     line-height: 1.5;
 }
 
+.api-base-form {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) auto;
+    gap: var(--space-sm);
+    margin-top: var(--space-sm);
+}
+
+.api-base-form input {
+    min-width: 0;
+    padding: 10px var(--space-md);
+    border: 1px solid var(--border-color);
+    border-radius: var(--radius-medium);
+    background: var(--bg-primary);
+    color: var(--text-primary);
+}
+
+.probe-help {
+    margin-top: var(--space-sm);
+    color: var(--text-muted);
+    font-size: var(--font-sm);
+    line-height: 1.5;
+}
+
 .share-qr-section {
     margin-bottom: var(--space-2xl);
     text-align: center;
@@ -1646,6 +1669,10 @@ body::after {
     }
 
     .probe-grid {
+        grid-template-columns: 1fr;
+    }
+
+    .api-base-form {
         grid-template-columns: 1fr;
     }
 

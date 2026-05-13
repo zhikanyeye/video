@@ -52,6 +52,9 @@ class VideoManager {
     });
     document.getElementById('probeModalClose')?.addEventListener('click', () => this.hideProbeModal());
     document.getElementById('probeModalDone')?.addEventListener('click', () => this.hideProbeModal());
+    document.getElementById('probeResult')?.addEventListener('click', (e) => {
+      if (e.target.closest('#saveApiBaseBtn')) this.saveApiBaseFromProbeModal();
+    });
     document.getElementById('probeModal')?.addEventListener('click', (e) => {
       if (e.target.id === 'probeModal') this.hideProbeModal();
     });
@@ -167,6 +170,11 @@ class VideoManager {
     const validation = isValidVideoUrl(url);
     if (!validation.valid) return showToast(`链接验证失败: ${validation.reason}`, 'error');
 
+    if (!this.getApiBase()) {
+      this.showProbeModal(this.renderApiConfigPrompt());
+      return;
+    }
+
     this.showProbeModal('<div class="probe-loading">正在检测播放源...</div>');
     try {
       const result = await this.fetchProbe(url);
@@ -186,12 +194,43 @@ class VideoManager {
   }
 
   getApiBase() {
-    const envBase = import.meta.env.VITE_API_BASE?.trim();
+    const envBase = import.meta.env?.VITE_API_BASE?.trim();
     if (envBase) return envBase.replace(/\/+$/, '');
     const runtimeBase = window.APP_CONFIG?.API_BASE?.trim();
-    if (runtimeBase) return runtimeBase.replace(/\/+$/, '');
+    if (runtimeBase && !runtimeBase.includes('your-backend')) return runtimeBase.replace(/\/+$/, '');
+    const savedBase = localStorage.getItem('qingyunbo_api_base')?.trim();
+    if (savedBase) return savedBase.replace(/\/+$/, '');
     const isLocal = window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1';
     return isLocal ? 'http://localhost:3000' : '';
+  }
+
+  renderApiConfigPrompt() {
+    return `
+      <div class="probe-error">检测失败：前端没有配置后端 API 地址。</div>
+      <div class="probe-section">
+        <h4>填写 Render 后端地址</h4>
+        <div class="api-base-form">
+          <input id="apiBaseInput" type="url" placeholder="https://你的后端.onrender.com" value="${escapeHtml(localStorage.getItem('qingyunbo_api_base') || '')}">
+          <button id="saveApiBaseBtn" class="btn btn-primary" type="button">保存</button>
+        </div>
+        <p class="probe-help">这会保存到当前浏览器。正式修复还需要在 GitHub 仓库的 Actions Secret 里配置 VITE_API_BASE，然后重新触发 Pages 构建。</p>
+      </div>
+    `;
+  }
+
+  saveApiBaseFromProbeModal() {
+    const input = document.getElementById('apiBaseInput');
+    const value = input?.value.trim().replace(/\/+$/, '');
+    if (!value) return showToast('请填写后端 API 地址', 'warning');
+    try {
+      const parsed = new URL(value);
+      if (!['http:', 'https:'].includes(parsed.protocol)) throw new Error('invalid');
+      localStorage.setItem('qingyunbo_api_base', value);
+      showToast('后端 API 地址已保存，请重新点击检测源', 'success');
+      this.hideProbeModal();
+    } catch {
+      showToast('后端 API 地址格式不正确', 'error');
+    }
   }
 
   openPlayer(playlist, startIndex = 0) {

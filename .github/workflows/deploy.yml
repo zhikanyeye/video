@@ -34,7 +34,7 @@ jobs:
       - name: Build
         run: npm run build
         env:
-          VITE_API_BASE: ${{ secrets.VITE_API_BASE }}
+          VITE_API_BASE: ${{ secrets.VITE_API_BASE || vars.VITE_API_BASE }}
 
       - name: Upload artifact
         uses: actions/upload-pages-artifact@v3
