@@ -82,7 +82,6 @@ class VideoPlayer {
         onPlay: () => this._updateUI(),
         onPause: () => this._updateUI(),
         onTimeUpdate: (time, dur) => {
-          this._updateTimeDisplay(time, dur);
           if (this.settings.showProgressOnTitle) {
             document.title = `${formatTime(time)} / ${formatTime(dur)} - ${video.title}`;
           }
@@ -175,11 +174,6 @@ class VideoPlayer {
     if (titleEl) titleEl.textContent = video.title;
     if (metaEl) metaEl.textContent = `${video.type?.toUpperCase() || 'VIDEO'}`;
     if (counterEl) counterEl.textContent = `${this.playlist.index + 1} / ${this.playlist.length}`;
-  }
-
-  _updateTimeDisplay(time, duration) {
-    const el = document.getElementById('timeDisplay');
-    if (el) el.textContent = `${formatTime(time)} / ${formatTime(duration)}`;
   }
 
   _updatePlaylistSidebar() {
