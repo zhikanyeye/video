@@ -83,6 +83,7 @@ class VideoPlayer {
         onPlay: () => this._updateUI(),
         onPause: () => this._updateUI(),
         onVideoMeta: (meta) => this._updateResolution(meta),
+        onPlaybackWarning: (message) => this._showPlaybackNotice(message),
         onTimeUpdate: (time, dur) => {
           if (this.settings.showProgressOnTitle) {
             document.title = `${formatTime(time)} / ${formatTime(dur)} - ${video.title}`;
@@ -247,6 +248,12 @@ class VideoPlayer {
   _hideError() {
     const el = document.getElementById('playerError');
     if (el) el.style.display = 'none';
+  }
+
+  _showPlaybackNotice(message) {
+    if (!message) return;
+    console.warn('播放兼容性提示:', message);
+    showToast(message, 'warning', 6000);
   }
 
   showToast(message, type = 'info') {

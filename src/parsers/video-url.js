@@ -67,6 +67,10 @@ function detectDirectType(url) {
   if (/\.m3u8/i.test(url)) return 'm3u8';
   if (/\.flv/i.test(url)) return 'flv';
   if (/\.webm/i.test(url)) return 'webm';
+  if (/\.ogg|\.ogv/i.test(url)) return 'ogg';
+  if (/\.mov/i.test(url)) return 'mov';
+  if (/\.mkv/i.test(url)) return 'mkv';
+  if (/\.avi/i.test(url)) return 'avi';
   if (/\.mp4/i.test(url)) return 'mp4';
   return 'mp4';
 }
@@ -77,7 +81,7 @@ function shouldSniff(url) {
 }
 
 function isDirectVideoUrl(url) {
-  return /\.(mp4|m3u8|flv|webm|ts)(\?|#|$)/i.test(url);
+  return /\.(mp4|m3u8|flv|webm|ogg|ogv|mov|mkv|avi|ts)(\?|#|$)/i.test(url);
 }
 
 /**

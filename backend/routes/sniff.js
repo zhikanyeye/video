@@ -125,6 +125,7 @@ function extractVideoSources(html, baseUrl) {
   for (const m of html.matchAll(/https?:\/\/[^\s"'<>\\]+?\.m3u8(?:[?#][^\s"'<>\\]*)?/gi)) add(m[0], 'regex-m3u8');
   for (const m of html.matchAll(/https?:\/\/[^\s"'<>\\]+?\.mp4(?:[?#][^\s"'<>\\]*)?/gi)) add(m[0], 'regex-mp4');
   for (const m of html.matchAll(/https?:\/\/[^\s"'<>\\]+?\.webm(?:[?#][^\s"'<>\\]*)?/gi)) add(m[0], 'regex-webm');
+  for (const m of html.matchAll(/https?:\/\/[^\s"'<>\\]+?\.(?:ogg|ogv|mov|mkv|avi)(?:[?#][^\s"'<>\\]*)?/gi)) add(m[0], 'regex-video');
 
   sources.sort((a, b) => b.score - a.score);
   return sources.slice(0, 10);
@@ -135,6 +136,10 @@ function detectVideoType(url) {
   if (/\.mp4/i.test(url)) return 'mp4';
   if (/\.flv/i.test(url)) return 'flv';
   if (/\.webm/i.test(url)) return 'webm';
+  if (/\.(ogg|ogv)/i.test(url)) return 'ogg';
+  if (/\.mov/i.test(url)) return 'mov';
+  if (/\.mkv/i.test(url)) return 'mkv';
+  if (/\.avi/i.test(url)) return 'avi';
   if (/\.ts\b/i.test(url)) return 'ts';
   return 'unknown';
 }
@@ -145,6 +150,7 @@ function scoreSource(url, type) {
   else if (type === 'mp4') s += 8;
   else if (type === 'webm') s += 6;
   else if (type === 'flv') s += 5;
+  else if (['ogg', 'mov', 'mkv', 'avi'].includes(type)) s += 4;
   if (/1080/i.test(url)) s += 3;
   else if (/720/i.test(url)) s += 2;
   if (/\bhd\b/i.test(url)) s += 1;

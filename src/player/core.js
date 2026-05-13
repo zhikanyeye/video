@@ -2,7 +2,6 @@
  * 播放器核心 — ArtPlayer / iframe 播放器初始化与控制
  */
 import * as store from '../store/index.js';
-import { delay, formatTime } from '../utils/index.js';
 import { parseVideoUrl } from '../parsers/video-url.js';
 
 export class PlayerCore {
@@ -52,6 +51,9 @@ export class PlayerCore {
       throw new Error('ArtPlayer库未加载，请检查网络连接');
     }
 
+    const support = this._checkNativeSupport(parsed);
+    if (support.warning) callbacks.onPlaybackWarning?.(support.warning);
+
     const art = new Artplayer({
       container,
       url: parsed.url,
@@ -75,9 +77,6 @@ export class PlayerCore {
       subtitleOffset: false,
       miniProgressBar: true,
       playsInline: true,
-      moreVideoAttr: {
-        crossOrigin: 'anonymous',
-      },
       customType: {
         m3u8: this._playM3u8.bind(this),
         flv: this._playFlv.bind(this),
@@ -108,7 +107,7 @@ export class PlayerCore {
       store.clearProgress(video.url);
       callbacks.onEnded?.();
     });
-    art.on('error', () => callbacks.onError?.(new Error('播放错误')));
+    art.on('error', () => callbacks.onError?.(this._createPlaybackError(art.video, parsed)));
     art.on('volume', (vol) => {
       store.setVolume(vol);
       store.setMuted(art.muted);
@@ -125,9 +124,18 @@ export class PlayerCore {
       }
     };
 
+    const checkMissingVideoTrack = () => {
+      const media = art.video;
+      if (!media || media.paused || media.ended) return;
+      if (media.currentTime > 2 && media.videoWidth === 0 && media.videoHeight === 0) {
+        callbacks.onPlaybackWarning?.('浏览器没有解码出视频画面，常见原因是视频编码不受浏览器支持，例如 H.265/HEVC、10bit 或特殊封装。');
+      }
+    };
+
     art.video?.addEventListener('loadedmetadata', reportResolution);
     art.video?.addEventListener('canplay', reportResolution);
     art.video?.addEventListener('resize', reportResolution);
+    art.video?.addEventListener('timeupdate', checkMissingVideoTrack);
 
     this.art = art;
   }
@@ -190,6 +198,45 @@ export class PlayerCore {
   get currentTime() { return this.art?.currentTime ?? 0; }
   get duration() { return this.art?.duration ?? 0; }
   get isPlaying() { return this.art?.playing ?? false; }
+
+  _checkNativeSupport(parsed) {
+    if (!['mp4', 'webm', 'ogg', 'mov', 'mkv', 'avi'].includes(parsed.type)) return {};
+
+    const media = document.createElement('video');
+    const mimeByType = {
+      mp4: 'video/mp4',
+      webm: 'video/webm',
+      ogg: 'video/ogg',
+      mov: 'video/quicktime',
+      mkv: 'video/x-matroska',
+      avi: 'video/x-msvideo',
+    };
+    const mime = mimeByType[parsed.type] || 'video/mp4';
+    const result = media.canPlayType(mime);
+
+    if (!result) {
+      return {
+        warning: `当前浏览器可能不支持 ${parsed.type.toUpperCase()} 容器或其中的编码。本地播放器能播不代表浏览器能解码。`,
+      };
+    }
+    return {};
+  }
+
+  _createPlaybackError(media, parsed) {
+    const code = media?.error?.code;
+    const base = '播放失败';
+    const suffix = '。如果下载后本地能播，多半是浏览器不支持该视频编码，建议使用 H.264 + AAC 的 MP4 或 HLS。';
+    const messages = {
+      1: `${base}: 加载被中止`,
+      2: `${base}: 网络或跨域限制导致资源无法继续加载`,
+      3: `${base}: 浏览器解码失败，可能是不支持当前视频编码`,
+      4: `${base}: 当前格式或编码不被浏览器支持`,
+    };
+    const message = messages[code] || `${base}: 无法播放该资源`;
+    const error = new Error(`${message}${['mp4', 'mov', 'mkv', 'avi'].includes(parsed?.type) ? suffix : ''}`);
+    error.mediaErrorCode = code;
+    return error;
+  }
 
   cleanup() {
     if (this.art) {
