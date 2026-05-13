@@ -33,6 +33,7 @@ class VideoManager {
     document.getElementById('logoutBtn')?.addEventListener('click', () => this.handleLogout());
     document.getElementById('clearBulkTextBtn')?.addEventListener('click', () => this.clearBulkText());
     document.getElementById('bulkAddBtn')?.addEventListener('click', () => this.handleBulkAdd());
+    document.getElementById('probeCurrentBtn')?.addEventListener('click', () => this.handleProbeCurrent());
 
     // 导入模态框
     document.getElementById('importModalClose')?.addEventListener('click', () => this.hideImportModal());
@@ -48,6 +49,11 @@ class VideoManager {
     document.getElementById('shareUrlInput')?.addEventListener('focus', (e) => e.target.select());
     document.getElementById('shareModal')?.addEventListener('click', (e) => {
       if (e.target.id === 'shareModal') this.hideShareModal();
+    });
+    document.getElementById('probeModalClose')?.addEventListener('click', () => this.hideProbeModal());
+    document.getElementById('probeModalDone')?.addEventListener('click', () => this.hideProbeModal());
+    document.getElementById('probeModal')?.addEventListener('click', (e) => {
+      if (e.target.id === 'probeModal') this.hideProbeModal();
     });
 
     window.addEventListener('github-auth-success', () => {
@@ -150,6 +156,44 @@ class VideoManager {
     if (el) el.value = '';
   }
 
+  async handleProbeCurrent() {
+    const input = document.getElementById('videoUrl');
+    const url = input?.value.trim();
+    if (!url) return showToast('请先输入视频链接', 'warning');
+    await this.probeVideoSource(url);
+  }
+
+  async probeVideoSource(url) {
+    const validation = isValidVideoUrl(url);
+    if (!validation.valid) return showToast(`链接验证失败: ${validation.reason}`, 'error');
+
+    this.showProbeModal('<div class="probe-loading">正在检测播放源...</div>');
+    try {
+      const result = await this.fetchProbe(url);
+      this.showProbeModal(this.renderProbeResult(result));
+    } catch (e) {
+      this.showProbeModal(`<div class="probe-error">检测失败：${escapeHtml(e.message)}</div>`);
+    }
+  }
+
+  async fetchProbe(url) {
+    const apiBase = this.getApiBase();
+    if (!apiBase) throw new Error('后端 API 未配置，无法检测播放源');
+    const resp = await fetch(`${apiBase}/api/probe?url=${encodeURIComponent(url)}`);
+    const data = await resp.json().catch(() => ({}));
+    if (!resp.ok) throw new Error(data.error || `检测请求失败: ${resp.status}`);
+    return data;
+  }
+
+  getApiBase() {
+    const envBase = import.meta.env.VITE_API_BASE?.trim();
+    if (envBase) return envBase.replace(/\/+$/, '');
+    const runtimeBase = window.APP_CONFIG?.API_BASE?.trim();
+    if (runtimeBase) return runtimeBase.replace(/\/+$/, '');
+    const isLocal = window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1';
+    return isLocal ? 'http://localhost:3000' : '';
+  }
+
   openPlayer(playlist, startIndex = 0) {
     store.setCurrentPlaylist(playlist);
     store.setCurrentIndex(startIndex);
@@ -231,6 +275,84 @@ class VideoManager {
 
   hideShareModal() {
     document.getElementById('shareModal')?.classList.remove('show');
+  }
+
+  showProbeModal(html) {
+    const modal = document.getElementById('probeModal');
+    const result = document.getElementById('probeResult');
+    if (!modal || !result) return;
+    result.innerHTML = html;
+    modal.classList.add('show');
+  }
+
+  hideProbeModal() {
+    document.getElementById('probeModal')?.classList.remove('show');
+  }
+
+  renderProbeResult(result) {
+    const headers = result.headers || {};
+    const media = result.media || {};
+    const diagnosis = result.diagnosis || {};
+    const video = media.video;
+    const audio = media.audio;
+    const format = media.format || {};
+    const warnings = diagnosis.warnings || [];
+    const suggestions = diagnosis.suggestions || [];
+
+    return `
+      <div class="probe-summary ${diagnosis.playableHint === 'likely' ? 'ok' : 'warn'}">
+        ${diagnosis.playableHint === 'likely' ? '未发现明显兼容性问题' : '发现可能影响网页播放的问题'}
+      </div>
+      <div class="probe-grid">
+        ${this.renderProbeItem('HTTP 状态', headers.statusCode || '未知')}
+        ${this.renderProbeItem('Content-Type', headers.contentType || '未知')}
+        ${this.renderProbeItem('文件大小', this.formatBytes(headers.contentLength || format.size))}
+        ${this.renderProbeItem('Range', headers.acceptRanges || headers.contentRange || '未声明')}
+        ${this.renderProbeItem('容器', format.longName || format.name || '未知')}
+        ${this.renderProbeItem('时长', this.formatDuration(format.duration))}
+        ${this.renderProbeItem('视频编码', video ? `${video.codec}${video.profile ? ` / ${video.profile}` : ''}` : '未检测到')}
+        ${this.renderProbeItem('分辨率', video?.width && video?.height ? `${video.width} x ${video.height}` : '未知')}
+        ${this.renderProbeItem('像素格式', video?.pixelFormat || '未知')}
+        ${this.renderProbeItem('音频编码', audio ? `${audio.codec}${audio.profile ? ` / ${audio.profile}` : ''}` : '未检测到')}
+      </div>
+      ${this.renderProbeList('风险提示', warnings)}
+      ${this.renderProbeList('建议', suggestions)}
+    `;
+  }
+
+  renderProbeItem(label, value) {
+    return `<div class="probe-item"><span>${escapeHtml(label)}</span><strong>${escapeHtml(String(value ?? '未知'))}</strong></div>`;
+  }
+
+  renderProbeList(title, items) {
+    if (!items?.length) return '';
+    return `
+      <div class="probe-section">
+        <h4>${escapeHtml(title)}</h4>
+        <ul>${items.map((item) => `<li>${escapeHtml(item)}</li>`).join('')}</ul>
+      </div>
+    `;
+  }
+
+  formatBytes(bytes) {
+    if (!bytes) return '未知';
+    const units = ['B', 'KB', 'MB', 'GB'];
+    let value = bytes;
+    let index = 0;
+    while (value >= 1024 && index < units.length - 1) {
+      value /= 1024;
+      index++;
+    }
+    return `${value.toFixed(index === 0 ? 0 : 1)} ${units[index]}`;
+  }
+
+  formatDuration(seconds) {
+    if (!seconds) return '未知';
+    const total = Math.round(seconds);
+    const h = Math.floor(total / 3600);
+    const m = Math.floor((total % 3600) / 60);
+    const s = total % 60;
+    return h > 0 ? `${h}:${String(m).padStart(2, '0')}:${String(s).padStart(2, '0')}` : `${m}:${String(s).padStart(2, '0')}`;
   }
 
   async copyShareUrlFromModal() {
@@ -354,6 +476,9 @@ class VideoManager {
           <button class="action-btn play-btn" data-action="play" data-id="${v.id}" title="播放">
             <i class="material-icons">play_arrow</i>
           </button>
+          <button class="action-btn probe-btn" data-action="probe" data-id="${v.id}" title="检测播放源">
+            <i class="material-icons">manage_search</i>
+          </button>
           <button class="action-btn delete-btn" data-action="delete" data-id="${v.id}" title="删除">
             <i class="material-icons">delete</i>
           </button>
@@ -368,6 +493,10 @@ class VideoManager {
         if (!btn) return;
         const id = parseInt(btn.dataset.id);
         if (btn.dataset.action === 'play') this.playVideo(id);
+        if (btn.dataset.action === 'probe') {
+          const video = this.videos.find((item) => item.id === id);
+          if (video) this.probeVideoSource(video.url);
+        }
         if (btn.dataset.action === 'delete') this.deleteVideo(id);
       });
       this._videoListBound = true;

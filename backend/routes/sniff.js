@@ -2,11 +2,10 @@
  * 嗅探路由 — 从网页提取视频源
  */
 import { Router } from 'express';
-import dns from 'dns/promises';
 import http from 'http';
 import https from 'https';
-import net from 'net';
 import { FETCH_TIMEOUT_MS, MAX_PAGE_SIZE_BYTES } from '../config.js';
+import { isSafeFetchUrl } from '../utils/safe-url.js';
 
 export function createSniffRouter() {
   const router = Router();
@@ -32,33 +31,6 @@ export function createSniffRouter() {
 }
 
 // ---- helpers ----
-
-const INTERNAL_PATTERNS = [
-  /^localhost$/i, /^127\./, /^0\.0\.0\.0$/, /^::1$/,
-  /^10\./, /^192\.168\./, /^172\.(1[6-9]|2\d|3[01])\./, /^169\.254\./,
-  /^f[cd][0-9a-f]{2}:/i, /^fe80:/i, /^::ffff:(127|10|192\.168|172\.(1[6-9]|2\d|3[01])|169\.254)\./i,
-];
-
-function isInternalHost(hostname) {
-  return INTERNAL_PATTERNS.some((p) => p.test(hostname));
-}
-
-async function isSafeFetchUrl(url) {
-  let parsed;
-  try { parsed = new URL(url); } catch { return false; }
-  if (!['http:', 'https:'].includes(parsed.protocol)) return false;
-  if (isInternalHost(parsed.hostname)) return false;
-
-  const ipVersion = net.isIP(parsed.hostname);
-  if (ipVersion) return !isInternalHost(parsed.hostname);
-
-  try {
-    const addresses = await dns.lookup(parsed.hostname, { all: true, verbatim: false });
-    return addresses.length > 0 && addresses.every(({ address }) => !isInternalHost(address));
-  } catch {
-    return false;
-  }
-}
 
 async function fetchPage(url, redirectCount = 0) {
   if (redirectCount > 1) throw new Error('重定向次数过多');

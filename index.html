@@ -97,6 +97,10 @@
                             <i class="material-icons">playlist_add</i>
                             批量添加
                         </button>
+                        <button type="button" id="probeCurrentBtn" class="btn btn-secondary">
+                            <i class="material-icons">manage_search</i>
+                            检测源
+                        </button>
                     </div>
                 </form>
             </section>
@@ -139,6 +143,24 @@
                 </div>
             </section>
         </main>
+    </div>
+
+    <!-- 播放源检测模态框 -->
+    <div id="probeModal" class="modal">
+        <div class="modal-content probe-modal-content">
+            <div class="modal-header">
+                <h3>播放源检测</h3>
+                <button id="probeModalClose" class="modal-close" aria-label="关闭检测弹窗">
+                    <i class="material-icons">close</i>
+                </button>
+            </div>
+            <div class="modal-body">
+                <div id="probeResult" class="probe-result"></div>
+            </div>
+            <div class="modal-footer">
+                <button id="probeModalDone" class="btn btn-secondary" type="button">完成</button>
+            </div>
+        </div>
     </div>
 
     <!-- 分享链接模态框 -->

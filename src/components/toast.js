@@ -8,6 +8,8 @@ export function showToast(message, type = 'info', duration = 3000) {
   if (!_toastEl) {
     _toastEl = document.createElement('div');
     _toastEl.className = 'toast-container';
+    _toastEl.setAttribute('role', 'status');
+    _toastEl.setAttribute('aria-live', 'polite');
     document.body.appendChild(_toastEl);
   }
 
@@ -17,5 +19,6 @@ export function showToast(message, type = 'info', duration = 3000) {
 
   _toastTimer = setTimeout(() => {
     _toastEl.classList.remove('toast-show');
+    _toastEl.textContent = '';
   }, duration);
 }
