@@ -135,7 +135,7 @@
 
 .video-counter,
 .video-type,
-.video-time {
+.video-resolution {
     display: inline-flex;
     align-items: center;
     min-height: 22px;
@@ -154,7 +154,7 @@
     font-weight: 700;
 }
 
-.video-time {
+.video-resolution {
     font-variant-numeric: tabular-nums;
 }
 
@@ -529,7 +529,7 @@
         gap: 5px;
     }
 
-    .video-time {
+    .video-resolution {
         display: none;
     }
 

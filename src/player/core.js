@@ -43,6 +43,7 @@ export class PlayerCore {
     iframe.setAttribute('sandbox', 'allow-scripts allow-same-origin allow-presentation allow-fullscreen');
     iframe.setAttribute('referrerpolicy', 'no-referrer-when-downgrade');
     container.appendChild(iframe);
+    callbacks.onVideoMeta?.({ width: 0, height: 0, type: 'iframe' });
     callbacks.onPlay?.();
   }
 
@@ -87,6 +88,7 @@ export class PlayerCore {
     art.on('ready', () => {
       const rate = store.getPlaybackRate();
       if (rate !== 1) art.playbackRate = rate;
+      reportResolution();
 
       // 恢复播放进度
       const progress = store.getProgress(video.url);
@@ -113,6 +115,19 @@ export class PlayerCore {
     });
     art.on('rate', (rate) => store.setPlaybackRate(rate));
     art.on('destroy', () => { this.art = null; });
+
+    const reportResolution = () => {
+      const media = art.video;
+      const width = media?.videoWidth || 0;
+      const height = media?.videoHeight || 0;
+      if (width > 0 && height > 0) {
+        callbacks.onVideoMeta?.({ width, height, type: parsed.type });
+      }
+    };
+
+    art.video?.addEventListener('loadedmetadata', reportResolution);
+    art.video?.addEventListener('canplay', reportResolution);
+    art.video?.addEventListener('resize', reportResolution);
 
     this.art = art;
   }

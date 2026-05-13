@@ -77,10 +77,12 @@ class VideoPlayer {
 
     this._hideError();
     this._showLoading(true);
+    this._updateResolution({ type: 'loading' });
     try {
       await this.core.init(video, container, {
         onPlay: () => this._updateUI(),
         onPause: () => this._updateUI(),
+        onVideoMeta: (meta) => this._updateResolution(meta),
         onTimeUpdate: (time, dur) => {
           if (this.settings.showProgressOnTitle) {
             document.title = `${formatTime(time)} / ${formatTime(dur)} - ${video.title}`;
@@ -174,6 +176,16 @@ class VideoPlayer {
     if (titleEl) titleEl.textContent = video.title;
     if (metaEl) metaEl.textContent = `${video.type?.toUpperCase() || 'VIDEO'}`;
     if (counterEl) counterEl.textContent = `${this.playlist.index + 1} / ${this.playlist.length}`;
+  }
+
+  _updateResolution(meta) {
+    const el = document.getElementById('videoResolution');
+    if (!el) return;
+    if (meta?.width > 0 && meta?.height > 0) {
+      el.textContent = `${meta.width} x ${meta.height}`;
+    } else {
+      el.textContent = meta?.type === 'iframe' ? '分辨率未知' : '分辨率检测中';
+    }
   }
 
   _updatePlaylistSidebar() {
