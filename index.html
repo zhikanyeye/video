@@ -141,6 +141,43 @@
         </main>
     </div>
 
+    <!-- 分享链接模态框 -->
+    <div id="shareModal" class="modal">
+        <div class="modal-content share-modal-content">
+            <div class="modal-header">
+                <h3>分享播放列表</h3>
+                <button id="shareModalClose" class="modal-close" aria-label="关闭分享弹窗">
+                    <i class="material-icons">close</i>
+                </button>
+            </div>
+            <div class="modal-body">
+                <div class="share-content">
+                    <div class="share-url-section">
+                        <label for="shareUrlInput">分享链接</label>
+                        <div class="url-input-group">
+                            <input type="text" id="shareUrlInput" readonly />
+                            <button id="copyShareUrlBtn" class="btn btn-primary" type="button">
+                                <i class="material-icons">content_copy</i>
+                                复制链接
+                            </button>
+                        </div>
+                        <div id="shareCopyStatus" class="share-copy-status" aria-live="polite"></div>
+                    </div>
+                    <div class="share-tips">
+                        <h4>分享说明</h4>
+                        <ul>
+                            <li>链接已保存到 GitHub Gist，可在其他设备打开播放。</li>
+                            <li>如果浏览器没有自动复制权限，请点击上方按钮复制。</li>
+                        </ul>
+                    </div>
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button id="shareModalDone" class="btn btn-secondary" type="button">完成</button>
+            </div>
+        </div>
+    </div>
+
     <!-- GitHub导入模态框 -->
     <div id="importModal" class="modal">
         <div class="modal-content">

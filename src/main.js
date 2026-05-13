@@ -42,6 +42,14 @@ class VideoManager {
       if (e.target.id === 'importModal') this.hideImportModal();
     });
 
+    document.getElementById('shareModalClose')?.addEventListener('click', () => this.hideShareModal());
+    document.getElementById('shareModalDone')?.addEventListener('click', () => this.hideShareModal());
+    document.getElementById('copyShareUrlBtn')?.addEventListener('click', () => this.copyShareUrlFromModal());
+    document.getElementById('shareUrlInput')?.addEventListener('focus', (e) => e.target.select());
+    document.getElementById('shareModal')?.addEventListener('click', (e) => {
+      if (e.target.id === 'shareModal') this.hideShareModal();
+    });
+
     window.addEventListener('github-auth-success', () => {
       this.initGitHubUI();
       showToast('GitHub授权成功，可以使用免费Gist同步和分享', 'success');
@@ -200,12 +208,51 @@ class VideoManager {
     const gistId = store.getPlaylistGistId();
     if (!gistId) return showToast('同步失败，无法生成分享链接。请重新授权后再试。', 'error');
     const shareUrl = github.getPlayerUrl(gistId);
+    this.showShareModal(shareUrl, '正在复制链接...');
     try {
       await navigator.clipboard.writeText(shareUrl);
-      showToast(`分享链接已复制到剪贴板！\n${shareUrl}`, 'success');
+      this.setShareCopyStatus('链接已复制到剪贴板', 'success');
+      showToast('分享链接已复制到剪贴板', 'success');
     } catch {
-      showToast(`分享链接: ${shareUrl}`, 'success');
+      this.setShareCopyStatus('浏览器未允许自动复制，请手动复制链接', 'warning');
+      showToast('已生成分享链接，请在弹窗中复制', 'warning');
     }
+  }
+
+  showShareModal(shareUrl, status = '') {
+    const modal = document.getElementById('shareModal');
+    const input = document.getElementById('shareUrlInput');
+    if (!modal || !input) return;
+    input.value = shareUrl;
+    modal.classList.add('show');
+    this.setShareCopyStatus(status, 'info');
+    setTimeout(() => input.select(), 0);
+  }
+
+  hideShareModal() {
+    document.getElementById('shareModal')?.classList.remove('show');
+  }
+
+  async copyShareUrlFromModal() {
+    const input = document.getElementById('shareUrlInput');
+    const shareUrl = input?.value;
+    if (!shareUrl) return;
+    try {
+      await navigator.clipboard.writeText(shareUrl);
+      this.setShareCopyStatus('链接已复制到剪贴板', 'success');
+      showToast('分享链接已复制到剪贴板', 'success');
+    } catch {
+      input.focus();
+      input.select();
+      this.setShareCopyStatus('自动复制失败，已选中链接，可按 Ctrl+C 复制', 'warning');
+    }
+  }
+
+  setShareCopyStatus(message, type = 'info') {
+    const el = document.getElementById('shareCopyStatus');
+    if (!el) return;
+    el.textContent = message;
+    el.className = `share-copy-status ${type}`;
   }
 
   showImportModal() {

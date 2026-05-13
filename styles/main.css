@@ -793,6 +793,10 @@ body::after {
 }
 
 /* 分享模态框样式 */
+.share-modal-content {
+    max-width: 640px;
+}
+
 .share-content {
     padding: var(--space-md) 0;
 }
@@ -827,6 +831,25 @@ body::after {
 
 .url-input-group button {
     white-space: nowrap;
+}
+
+.share-copy-status {
+    min-height: 22px;
+    margin-top: var(--space-sm);
+    color: var(--text-secondary);
+    font-size: var(--font-sm);
+}
+
+.share-copy-status.success {
+    color: var(--success-color);
+}
+
+.share-copy-status.warning {
+    color: var(--warning-color);
+}
+
+.share-copy-status.error {
+    color: var(--danger-color);
 }
 
 .share-qr-section {
