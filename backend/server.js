@@ -9,6 +9,7 @@ import { corsMiddleware } from './middlewares/cors.js';
 import { createPlaylistRouter } from './routes/playlists.js';
 import { createSniffRouter } from './routes/sniff.js';
 import { createProbeRouter } from './routes/probe.js';
+import { createHlsRouter } from './routes/hls.js';
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const app = express();
@@ -26,6 +27,7 @@ app.get('/api/health', (req, res) => {
 app.use('/api/playlists', createPlaylistRouter(playlistStorePath));
 app.use('/api/sniff', createSniffRouter());
 app.use('/api/probe', createProbeRouter());
+app.use('/api/hls', createHlsRouter());
 
 // 启动
 const server = app.listen(PORT, () => {

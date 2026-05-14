@@ -147,14 +147,42 @@ export class PlayerCore {
 
   async _playM3u8(video, url) {
     const Hls = await this._loadHls();
+    const sourceUrl = this._getHlsSourceUrl(url);
     if (Hls.isSupported()) {
-      const hls = new Hls();
-      hls.loadSource(url);
+      const hls = new Hls({
+        enableWorker: true,
+        lowLatencyMode: false,
+        backBufferLength: 30,
+        fragLoadingTimeOut: 20_000,
+        manifestLoadingTimeOut: 15_000,
+      });
+      hls.loadSource(sourceUrl);
       hls.attachMedia(video);
       this._registerExternalPlayer(hls);
     } else if (video.canPlayType('application/vnd.apple.mpegurl')) {
-      video.src = url;
+      video.src = sourceUrl;
     }
+  }
+
+  _getHlsSourceUrl(url) {
+    const apiBase = this._getApiBase();
+    if (!apiBase || url.startsWith(`${apiBase}/api/hls?`)) return url;
+    if (!/^https?:\/\//i.test(url)) return url;
+    return `${apiBase}/api/hls?url=${encodeURIComponent(url)}`;
+  }
+
+  _getApiBase() {
+    const envBase = import.meta.env?.VITE_API_BASE?.trim();
+    if (envBase) return envBase.replace(/\/+$/, '');
+
+    const runtimeBase = window.APP_CONFIG?.API_BASE?.trim();
+    if (runtimeBase && !runtimeBase.includes('your-backend')) return runtimeBase.replace(/\/+$/, '');
+
+    const savedBase = localStorage.getItem('qingyunbo_api_base')?.trim();
+    if (savedBase) return savedBase.replace(/\/+$/, '');
+
+    const isLocal = window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1';
+    return isLocal ? 'http://localhost:3000' : '';
   }
 
   async _playFlv(video, url) {
