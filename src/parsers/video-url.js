@@ -16,12 +16,22 @@ const YOUTUBE_PATTERNS = [
   /youtube\.com\/shorts\/([\w-]+)/i,
 ];
 
+const DOGECLOUD_PLAYER_RE = /^https?:\/\/player\.dogecloud\.com\/web\/player\.html(?:[?#].*)?$/i;
+
 /**
  * 解析视频URL，返回标准化信息
  * @param {string} url
  * @returns {Promise<{type: string, url: string, platform?: string}>}
  */
 export async function parseVideoUrl(url) {
+  if (DOGECLOUD_PLAYER_RE.test(url)) {
+    return {
+      type: 'iframe',
+      url: ensureQueryParam(url, 'autoPlay', 'true'),
+      platform: 'DogeCloud',
+    };
+  }
+
   // B站
   for (const pattern of BILIBILI_PATTERNS) {
     const match = url.match(pattern);
@@ -80,11 +90,25 @@ function detectDirectType(url) {
 
 function shouldSniff(url) {
   // 非直链且非已知平台时启用嗅探
-  return !isDirectVideoUrl(url) && !BILIBILI_PATTERNS.some((p) => p.test(url)) && !YOUTUBE_PATTERNS.some((p) => p.test(url));
+  return !isDirectVideoUrl(url) && !isKnownEmbedUrl(url);
 }
 
 function isDirectVideoUrl(url) {
   return /^rtmp:\/\//i.test(url) || /\.(mp4|mpd|m3u8|flv|webm|ogg|ogv|mov|mkv|avi|ts)(\?|#|$)/i.test(url);
+}
+
+function isKnownEmbedUrl(url) {
+  return DOGECLOUD_PLAYER_RE.test(url) || BILIBILI_PATTERNS.some((p) => p.test(url)) || YOUTUBE_PATTERNS.some((p) => p.test(url));
+}
+
+function ensureQueryParam(url, key, value) {
+  try {
+    const parsed = new URL(url);
+    if (!parsed.searchParams.has(key)) parsed.searchParams.set(key, value);
+    return parsed.href;
+  } catch {
+    return url;
+  }
 }
 
 /**

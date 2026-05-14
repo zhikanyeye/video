@@ -41,8 +41,8 @@ export class PlayerCore {
     iframe.src = parsed.url;
     iframe.style.cssText = 'width:100%;height:100%;border:none;background:#000;';
     iframe.allowFullscreen = true;
-    iframe.allow = 'autoplay; fullscreen; picture-in-picture';
-    iframe.setAttribute('sandbox', 'allow-scripts allow-same-origin allow-presentation allow-fullscreen');
+    iframe.allow = 'autoplay; fullscreen; picture-in-picture; encrypted-media';
+    iframe.setAttribute('sandbox', 'allow-scripts allow-same-origin allow-presentation allow-fullscreen allow-forms allow-popups allow-popups-to-escape-sandbox allow-top-navigation-by-user-activation');
     iframe.setAttribute('referrerpolicy', 'no-referrer-when-downgrade');
     container.appendChild(iframe);
     callbacks.onVideoMeta?.({ width: 0, height: 0, type: 'iframe' });
