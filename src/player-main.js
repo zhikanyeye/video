@@ -1,6 +1,7 @@
 /**
  * 播放器页面 — 组合 core / playlist / keyboard 模块
  */
+import 'material-icons/css/material-icons.min.css';
 import * as store from './store/index.js';
 import { formatTime, escapeHtml } from './utils/index.js';
 import { PlayerCore } from './player/core.js';
