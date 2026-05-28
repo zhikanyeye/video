@@ -371,13 +371,25 @@ class VideoManager {
 
   renderProbeResult(result) {
     const headers = result.headers || {};
-    const media = result.media || {};
+    const media = result.media || null;
     const diagnosis = result.diagnosis || {};
-    const video = media.video;
-    const audio = media.audio;
-    const format = media.format || {};
+    const video = media?.video;
+    const audio = media?.audio;
+    const format = media?.format || {};
     const warnings = diagnosis.warnings || [];
     const suggestions = diagnosis.suggestions || [];
+    const mediaError = result.mediaError;
+
+    const mediaSection = mediaError
+      ? `<div class="probe-media-error">编码检测不可用：${escapeHtml(mediaError)}</div>`
+      : `<div class="probe-grid">
+          ${this.renderProbeItem('容器', format.longName || format.name || '未知')}
+          ${this.renderProbeItem('时长', this.formatDuration(format.duration))}
+          ${this.renderProbeItem('视频编码', video ? `${video.codec}${video.profile ? ` / ${video.profile}` : ''}` : '未检测到')}
+          ${this.renderProbeItem('分辨率', video?.width && video?.height ? `${video.width} x ${video.height}` : '未知')}
+          ${this.renderProbeItem('像素格式', video?.pixelFormat || '未知')}
+          ${this.renderProbeItem('音频编码', audio ? `${audio.codec}${audio.profile ? ` / ${audio.profile}` : ''}` : '未检测到')}
+        </div>`;
 
     return `
       <div class="probe-summary ${diagnosis.playableHint === 'likely' ? 'ok' : 'warn'}">
@@ -388,13 +400,8 @@ class VideoManager {
         ${this.renderProbeItem('Content-Type', headers.contentType || '未知')}
         ${this.renderProbeItem('文件大小', this.formatBytes(headers.contentLength || format.size))}
         ${this.renderProbeItem('Range', headers.acceptRanges || headers.contentRange || '未声明')}
-        ${this.renderProbeItem('容器', format.longName || format.name || '未知')}
-        ${this.renderProbeItem('时长', this.formatDuration(format.duration))}
-        ${this.renderProbeItem('视频编码', video ? `${video.codec}${video.profile ? ` / ${video.profile}` : ''}` : '未检测到')}
-        ${this.renderProbeItem('分辨率', video?.width && video?.height ? `${video.width} x ${video.height}` : '未知')}
-        ${this.renderProbeItem('像素格式', video?.pixelFormat || '未知')}
-        ${this.renderProbeItem('音频编码', audio ? `${audio.codec}${audio.profile ? ` / ${audio.profile}` : ''}` : '未检测到')}
       </div>
+      ${mediaSection}
       ${this.renderProbeList('风险提示', warnings)}
       ${this.renderProbeList('建议', suggestions)}
     `;

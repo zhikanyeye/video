@@ -24,16 +24,21 @@ export function createProbeRouter() {
         return res.status(403).json({ error: '不允许访问内网地址' });
       }
 
-      const [headers, media] = await Promise.all([
+      const [headers, mediaResult] = await Promise.allSettled([
         probeHeaders(url),
         runFfprobe(url),
       ]);
 
+      const headersData = headers.status === 'fulfilled' ? headers.value : {};
+      const media = mediaResult.status === 'fulfilled' ? mediaResult.value : null;
+      const mediaError = mediaResult.status === 'rejected' ? mediaResult.reason?.message : null;
+
       res.json({
         url,
-        headers,
+        headers: headersData,
         media,
-        diagnosis: diagnose(headers, media),
+        mediaError,
+        diagnosis: diagnose(headersData, media || { video: null, audio: null, streams: [], format: {} }),
       });
     } catch (err) {
       res.status(500).json({ error: err.message });
@@ -104,6 +109,8 @@ function runFfprobe(url) {
   return new Promise((resolve, reject) => {
     const args = [
       '-v', 'error',
+      '-probesize', '5000000',       // 最多读取 5MB 头部数据
+      '-analyzeduration', '3000000', // 最多分析 3 秒
       '-show_entries', 'stream=index,codec_type,codec_name,profile,width,height,pix_fmt,level,bit_rate:format=format_name,format_long_name,duration,size,bit_rate',
       '-of', 'json',
       url,

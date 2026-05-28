@@ -1067,6 +1067,7 @@ body::after {
 
 .probe-loading,
 .probe-error,
+.probe-media-error,
 .probe-summary {
     padding: var(--space-md);
     border-radius: var(--radius-medium);
@@ -1075,6 +1076,7 @@ body::after {
 }
 
 .probe-error,
+.probe-media-error,
 .probe-summary.warn {
     border-left: 3px solid var(--warning-color);
 }
