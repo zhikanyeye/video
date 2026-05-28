@@ -56,16 +56,16 @@
 
 ```mermaid
 graph TB
-    subgraph 前端 GitHub Pages
-        A[index.html<br/>视频管理] -->|localStorage| B[player.html<br/>播放器]
-        A -->|Gist API| C[(GitHub Gist<br/>云同步)]
+    subgraph 前端["前端 · GitHub Pages"]
+        A["index.html 视频管理"] -->|localStorage| B["player.html 播放器"]
+        A -->|Gist API| C[("GitHub Gist 云同步")]
         B -->|读取| C
     end
 
-    subgraph 后端 Render / VPS
-        D[/api/sniff<br/>视频源嗅探]
-        E[/api/probe<br/>格式检测]
-        F[/api/hls<br/>HLS 代理]
+    subgraph 后端["后端 · Render / VPS"]
+        D["/api/sniff 视频源嗅探"]
+        E["/api/probe 格式检测"]
+        F["/api/hls HLS 代理"]
     end
 
     A -->|检测源| E
