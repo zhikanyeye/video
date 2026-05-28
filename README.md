@@ -1,510 +1,160 @@
-# 青云播 - 现代化视频播放器
+# 青云播 v2.0
 
-## 项目简介
+现代化视频播放器，支持 MP4、M3U8、FLV、DASH、MPEG-TS 等格式，基于 ArtPlayer 引擎，前后端分离架构。
 
-青云播是一款功能强大、界面优雅的现代化视频播放器，专为在线视频播放和管理而设计。采用双页面架构，分离视频管理和播放功能，提供流畅的用户体验和专业的播放质量。
+**在线体验**: https://zhikanyeye.github.io/video/
 
 ---
 
-## 🚀 部署指南（前后端分离）
-
-> 推荐方案：**GitHub Pages 托管前端 + Render / Railway / Fly.io / VPS 托管后端**
-
-### 整体架构
+## 架构概览
 
 ```
-用户浏览器
-   │
-   ├─ 前端静态文件（HTML/CSS/JS）
-   │    └─ GitHub Pages: https://zhikanyeye.github.io/video/
-   │
-   └─ 后端 API（Node.js + Express）
-        └─ Render/Railway/VPS: https://your-backend.onrender.com
+前端（GitHub Pages）          后端（Render / Railway / VPS）
+Vite + 原生 JS ES Modules     Node.js + Express
+        │                              │
+        ├─ index.html  视频管理         ├─ /api/sniff   视频源嗅探
+        ├─ player.html 播放器           ├─ /api/probe   格式检测
+        └─ GitHub Gist 云同步           └─ /api/hls     HLS 代理
 ```
 
 ---
 
-### 1. 配置 `VITE_API_BASE`（前端环境变量）
+## 快速开始
 
-前端通过环境变量读取后端地址：
+### 本地开发
 
 ```bash
-# .env.production（建议由 CI 注入）
-VITE_API_BASE=https://your-backend.onrender.com
-```
+# 安装前端依赖
+npm install
 
-**配置步骤：**
+# 启动前端开发服务器（含热更新）
+npm run dev
 
-1. 将后端部署到 Render（或 Railway/Fly.io/VPS），获得公网域名，例如：
-   `https://my-qingyunbo.onrender.com`
-2. 在仓库 `Settings → Secrets and variables → Actions` 中添加：
-   `VITE_API_BASE=https://my-qingyunbo.onrender.com`
-3. 推送到 `master` 分支，GitHub Actions / Pages 会自动构建并注入变量。
-
-> 默认行为：本地 `localhost/127.0.0.1` 自动回退到 `http://localhost:3000`；未配置时生产环境请求同源 `/api`。
-
----
-
-### 2. GitHub Pages 设置步骤
-
-1. 进入仓库 `Settings → Pages`。
-2. **Source** 选择 `Deploy from a branch`。
-3. **Branch** 选择 `master`，路径选 `/ (root)`。
-4. 点击 `Save`，等待约 1~2 分钟后即可访问：
-   ```
-   https://zhikanyeye.github.io/video/
-   ```
-5. **注意**：所有前端资源路径均使用相对路径（`scripts/`、`styles/`、`assets/`），不含绝对路径，可在子路径 `/video/` 下正常工作。API 请求通过 `VITE_API_BASE`（或默认回退）指向后端，不与静态资源路径混淆。
-
----
-
-### 3. 后端部署关键要点
-
-#### 3.1 以 Render 为例（免费套餐可用）
-
-1. 在 [Render](https://render.com) 创建 **New → Web Service**。
-2. 关联 GitHub 仓库，**Root Directory** 填写 `backend`。
-3. **Build Command**: `npm install`
-4. **Start Command**: `npm start`
-5. 获得公网域名（如 `https://xxx.onrender.com`），配置为前端环境变量 `VITE_API_BASE`。
-
-#### 3.2 监听端口
-
-后端已正确读取平台注入的端口：
-
-```js
-const PORT = process.env.PORT || 3000;
-app.listen(PORT, () => { ... });
-```
-
-部署平台会自动注入 `PORT` 环境变量，**无需手动修改**。
-
-#### 3.3 CORS 白名单
-
-`backend/server.js` 已内置如下允许来源（按需修改）：
-
-| 地址 | 用途 |
-|------|------|
-| `http://localhost:3000` | 本地开发 |
-| `http://localhost:8080` | 本地静态服务器 |
-| `https://zhikanyeye.github.io` | GitHub Pages 生产环境 |
-
-如果你 fork 了此仓库，请将 `zhikanyeye.github.io` 替换为你自己的 Pages 域名，  
-或者在服务器上设置环境变量：
-
-```bash
-ALLOWED_ORIGINS=https://yourusername.github.io,https://your-custom-domain.com
-```
-
-#### 3.4 超时与限流建议
-
-- 嗅探接口（`/api/sniff`）内置 8 秒超时，无需额外配置。
-- 如需限流，可添加 `express-rate-limit`：
-  ```bash
-  cd backend && npm install express-rate-limit
-  ```
-  ```js
-  const rateLimit = require('express-rate-limit');
-  app.use('/api/sniff', rateLimit({ windowMs: 60000, max: 20 }));
-  ```
-
----
-
-### 4. 最小验收步骤
-
-#### 本地联调
-
-```bash
-# 1. 启动后端
+# 启动后端（另开终端）
 cd backend && npm install && npm start
-# 后端运行于 http://localhost:3000
-
-# 2. 启动前端（另开终端）
-npx serve -p 8080 .
-# 或：python -m http.server 8080
-
-# 3. 浏览器访问
-open http://localhost:8080
-
-# 4. 测试嗅探：添加一个包含 .mp4/.m3u8 链接的页面 URL，点击播放
-# 5. 检查 F12 → Network，可看到对 http://localhost:3000/api/sniff 的请求
-# 6. 断开后端进程，播放器应显示 "请求后端失败，请检查后端服务是否可用" 友好提示
 ```
 
-#### 线上联调
+前端默认访问 `http://localhost:5173`，后端运行于 `http://localhost:3000`。
+
+### 构建生产版本
 
 ```bash
-# 1. 确认 Actions Secret: VITE_API_BASE 已配置为生产后端地址
-# 2. git push origin master
-# 3. 等待 GitHub Pages 部署完成（约1分钟）
-# 4. 访问 https://zhikanyeye.github.io/video/
-# 5. F12 → Network，添加页面 URL 后可看到对生产后端 /api/sniff 的请求
-# 6. 后端健康检查：curl https://your-backend.onrender.com/api/health
+npm run build   # 输出到 dist/
 ```
 
 ---
 
-### 5. 项目文件结构（含新增文件）
+## 部署
+
+### 前端 — GitHub Pages
+
+1. 在仓库 `Settings → Secrets and variables → Actions → Variables` 中添加：
+   ```
+   VITE_API_BASE = https://your-backend.onrender.com
+   ```
+2. 推送到 `master` 分支，GitHub Actions 自动构建并部署到 Pages。
+
+> 注意：`VITE_API_BASE` 是 **Repository Variable**（不是 Secret），Actions 工作流通过 `${{ vars.VITE_API_BASE }}` 读取。
+
+### 后端 — Render（免费套餐）
+
+1. 在 [Render](https://render.com) 创建 **New → Web Service**
+2. 关联此仓库，**Root Directory** 填 `backend`
+3. Build Command: `npm install`
+4. Start Command: `npm start`
+5. 将生成的域名填入前端的 `VITE_API_BASE`
+
+#### 后端环境变量
+
+| 变量 | 默认值 | 说明 |
+|------|--------|------|
+| `PORT` | `3000` | 监听端口（平台自动注入） |
+| `ALLOWED_ORIGINS` | — | 额外允许的 CORS 来源，逗号分隔 |
+| `CORS_ALLOW_ALL` | `false` | 设为 `true` 允许所有来源（不推荐） |
+
+默认 CORS 白名单已包含 `https://zhikanyeye.github.io`。如果你 fork 了此仓库，需在后端设置：
+```
+ALLOWED_ORIGINS=https://yourusername.github.io
+```
+
+---
+
+## 功能
+
+### 视频管理页（index.html）
+- 单个 / 批量添加视频链接（折叠面板）
+- 自动检测格式（MP4、M3U8、FLV、RTMP、DASH、MPEG-TS）
+- 播放源兼容性检测（编码 / 格式 / CORS）
+- 导出 / 从 GitHub Gist 导入播放列表
+- 生成分享链接（保存到 GitHub Gist，可跨设备打开）
+
+### 播放器页（player.html）
+- ArtPlayer 引擎，支持 HLS.js / flv.js / DASH
+- 顺序 / 列表循环 / 单曲循环 / 随机播放
+- 播放进度自动记忆（非 ASCII URL 安全存储）
+- 侧边栏播放列表，当前项高亮
+- 播放设置面板（自动播放下一集、HLS 代理开关）
+
+### 键盘快捷键
+
+| 按键 | 功能 |
+|------|------|
+| `Space` / `K` | 播放 / 暂停 |
+| `←` / `→` | 快退 / 快进 10 秒 |
+| `↑` / `↓` | 音量 +10% / -10% |
+| `Ctrl + ←` / `Ctrl + →` | 上一集 / 下一集 |
+| `M` | 静音切换 |
+| `F` | 全屏切换 |
+| `Esc` | 退出全屏 / 关闭面板 |
+| `1`–`9` | 跳转到 10%–90% 位置 |
+
+---
+
+## 项目结构
 
 ```
 video/
-├── index.html              # 视频管理中心
-├── player.html             # 视频播放器页面
-├── scripts/
-│   ├── config.js           # ★ 新增：前端环境配置（API_BASE）
-│   ├── utils.js            # 通用工具函数
-│   ├── github-manager.js   # GitHub Gist 管理
-│   ├── main.js             # 视频管理逻辑
-│   └── player.js           # 播放器（含嗅探/重试逻辑）
+├── index.html              # 视频管理页
+├── player.html             # 播放器页
+├── src/
+│   ├── main.js             # 管理页逻辑
+│   ├── player-main.js      # 播放器页逻辑
+│   ├── player/
+│   │   ├── core.js         # ArtPlayer 封装
+│   │   ├── keyboard.js     # 键盘快捷键
+│   │   └── playlist.js     # 播放列表 / 播放模式
+│   ├── parsers/
+│   │   └── video-url.js    # URL 格式解析
+│   ├── components/
+│   │   ├── github-manager.js  # GitHub Gist 管理
+│   │   ├── modal.js
+│   │   └── toast.js
+│   ├── store/
+│   │   └── index.js        # localStorage 状态管理
+│   └── utils/
+│       └── index.js        # 共享工具函数（含 getApiBase）
 ├── styles/
-│   ├── main.css
-│   └── player.css
-├── assets/
+│   ├── main.css            # 管理页样式
+│   └── player.css          # 播放器样式
 ├── backend/
-│   ├── server.js           # Express 后端（含 /api/sniff 嗅探接口）
-│   └── package.json
-├── start-backend.sh        # Linux/macOS 一键启动后端
-├── start-backend.bat       # Windows 一键启动后端
-└── README.md
+│   ├── server.js           # Express 入口
+│   ├── routes/
+│   │   ├── sniff.js        # 视频源嗅探
+│   │   ├── probe.js        # 格式 / 编码检测
+│   │   ├── hls.js          # HLS 代理
+│   │   └── playlists.js    # 播放列表持久化
+│   ├── middlewares/
+│   │   └── cors.js         # CORS 中间件
+│   └── utils/
+│       └── safe-url.js     # SSRF 防护
+├── .github/workflows/
+│   └── deploy.yml          # GitHub Actions 自动部署
+├── vite.config.js
+└── package.json
 ```
 
 ---
 
-### 🌟 核心亮点
+## License
 
-- **🎥 全格式支持**: 兼容MP4、M3U8、FLV、RTMP等主流视频格式
-- **⚡ 高性能播放**: 基于ArtPlayer引擎，支持HLS流媒体和自适应码率
-- **🎯 智能管理**: 批量添加、智能识别、本地存储，轻松管理视频库
-- **🎮 丰富交互**: 完整的键盘快捷键、触摸手势、播放模式控制
-- **📱 响应式设计**: 完美适配桌面端和移动端，深色主题护眼舒适
-- **🔧 零依赖**: 纯原生JavaScript实现，开箱即用，无需复杂配置
-
-### 📁 项目架构
-
-青云播采用清晰的双页面架构设计，功能分离明确：
-
-```
-video-main/
-├── index.html          # 视频管理中心（添加、管理播放列表）
-├── player.html         # 专业播放器页面（视频播放体验）
-├── styles/
-│   ├── main.css       # 主界面样式
-│   └── player.css     # 播放器专用样式
-└── scripts/
-    ├── main.js        # 视频管理逻辑
-    └── player.js      # 播放器核心功能
-```
-
-### 🚀 核心功能
-
-#### 🎥 视频管理中心 (index.html)
-- ✅ **多格式兼容**: 支持MP4、M3U8(HLS)、FLV、RTMP、WebM等主流格式
-- ✅ **批量操作**: 单个添加或批量导入，支持多行链接粘贴
-- ✅ **智能识别**: 自动检测视频格式和编码，智能提取标题
-- ✅ **列表管理**: 添加、删除、清空，支持JSON格式导出备份
-- ✅ **持久存储**: 本地存储技术，数据安全可靠
-- ✅ **实时统计**: 动态显示视频数量和格式分布
-- ✅ **响应式布局**: 自适应各种屏幕尺寸，移动端友好
-
-#### 🎬 专业播放器 (player.html)  
-- ✅ **高性能引擎**: 基于ArtPlayer构建，流畅播放体验
-- ✅ **流媒体支持**: 集成HLS.js，完美支持M3U8直播和点播
-- ✅ **画质自适应**: 智能码率调节，支持手动画质选择
-- ✅ **全功能控制**: 播放/暂停、进度跳转、音量调节、倍速播放
-- ✅ **播放模式**: 顺序、循环、单曲循环、随机播放多种模式
-- ✅ **沉浸体验**: 全屏播放、画中画、影院模式
-- ✅ **智能恢复**: 断线重连、错误处理、播放进度记忆
-
-#### 🎯 用户体验 
-- ✅ **快捷键操作**: 全套键盘快捷键，高效操作体验
-- ✅ **手势支持**: 移动端触摸手势，自然交互方式  
-- ✅ **播放列表**: 可搜索侧边栏，快速定位和切换
-- ✅ **状态反馈**: 实时进度显示、缓冲状态、播放统计
-- ✅ **消息系统**: 优雅的Toast提示，用户友好的反馈
-- ✅ **深色主题**: 护眼的深色界面，长时间使用舒适
-- ✅ **加载优化**: 异步加载机制，快速响应用户操作
-
-#### 💻 技术特色
-- ✅ **现代化开发**: ES6+语法，模块化架构，代码简洁高效
-- ✅ **零外部依赖**: 无需构建工具，下载即用，部署简单
-- ✅ **跨浏览器**: 兼容Chrome、Firefox、Safari、Edge主流浏览器
-- ✅ **性能优化**: 内存管理、异步处理、缓存策略
-- ✅ **安全防护**: XSS防护、URL验证、输入校验
-- ✅ **调试友好**: 完善的错误日志、调试模式、开发工具
-
-### 🛠️ 技术栈
-
-青云播采用现代化的前端技术栈，确保高性能和良好的用户体验：
-
-- **核心框架**: 原生 JavaScript (ES6+) - 轻量高效，无额外依赖
-- **视频引擎**: ArtPlayer - 专业级HTML5视频播放器
-- **流媒体**: HLS.js - 完美支持M3U8格式和自适应码率
-- **样式系统**: CSS3 + CSS Variables - 现代化样式，支持主题切换
-- **图标库**: Material Icons - Google设计规范，图标丰富
-- **数据存储**: localStorage - 本地持久化，隐私安全
-- **构建方式**: 无需构建 - 开箱即用，部署简单
-
-### 🔄 工作流程
-
-青云播的设计理念是简单高效，整个工作流程只需三步：
-
-1. **📝 添加视频** - 在管理页面添加视频链接到播放列表
-2. **💾 数据同步** - 通过localStorage在页面间无缝传递数据  
-3. **🎬 享受播放** - 在专业播放器中享受高质量的视频体验
-
-```mermaid
-graph LR
-    A[视频管理页面] --> B[localStorage存储]
-    B --> C[播放器页面]
-    C --> D[ArtPlayer播放]
-    D --> E[用户体验]
-```
-
-### 📹 支持格式
-
-青云播凭借先进的技术架构，支持广泛的视频和音频格式：
-
-#### 🎥 视频格式全覆盖
-- **MP4**: 最主流的H.264/H.265编码视频，兼容性最佳
-- **WebM**: Google推出的开源格式，高压缩比和画质
-- **AVI**: 经典的Windows视频格式，广泛支持
-- **MOV**: Apple QuickTime格式，高质量视频首选
-
-#### 🌊 流媒体技术领先  
-- **M3U8 (HLS)**: HTTP Live Streaming，支持自适应码率和直播
-- **DASH**: MPEG动态自适应流媒体，国际标准
-- **FLV**: Flash Video格式，网络视频经典格式
-- **RTMP**: 实时流媒体协议，支持低延迟直播
-
-#### 🎵 音频格式丰富
-- **MP3**: 标准音频格式，普及度最高
-- **AAC**: 高级音频编码，音质优秀压缩率高
-- **OGG**: 开源音频格式，无专利限制
-- **WAV**: 无损音频格式，录音首选
-
-#### 🌐 网络协议完备
-- **HTTP/HTTPS**: 标准网络传输协议
-- **WebSocket**: 实时双向通信支持
-- **WebRTC**: P2P实时通信技术
-- **CORS**: 跨域资源共享，支持CDN加速
-
-### 🎮 快捷键大全
-
-青云播提供完整的键盘操作支持，让你像专业播放器一样高效操作：
-
-#### 🕹️ 播放控制
-- `空格键` / `K`: 播放/暂停切换
-- `←` / `→`: 快退/快进 10秒
-- `↑` / `↓`: 音量增减 10%  
-- `Ctrl + ←` / `Ctrl + →`: 上一个/下一个视频
-- `Home` / `End`: 跳转到视频开头/结尾
-
-#### 🖥️ 界面操作
-- `F` / `F11`: 全屏模式切换
-- `M`: 静音/取消静音
-- `P`: 画中画模式
-- `Esc`: 退出全屏/关闭面板
-- `Tab`: 焦点切换
-
-#### ⚡ 精准控制
-- `数字键 1-9`: 跳转到视频 10%-90% 位置
-- `数字键 0`: 跳转到视频开头
-- `Shift + ←/→`: 精确调整 ±3秒
-- `Ctrl + Shift + ←/→`: 逐帧前进/后退
-
-### 📖 完整使用指南
-
-#### 🚀 快速上手
-1. **环境准备**: 
-   ```bash
-   # 推荐方式: Python内置服务器（免安装）
-   python -m http.server 8080
-   
-   # 或者: Node.js serve（需要先安装）
-   npx serve -p 8080
-   
-   # 或者: PHP内置服务器（如果已安装PHP）
-   php -S localhost:8080
-   ```
-
-2. **开始使用**: 浏览器访问 `http://localhost:8080` 即可开始使用
-
-#### 📹 视频添加攻略
-1. **单个添加模式**:
-   - 💡 输入视频标题（支持中英文混合、emoji表情）
-   - 🔗 粘贴视频链接（支持各大视频平台和直链）
-   - 🎯 选择格式（推荐使用自动检测）
-   - ➕ 点击"添加到播放列表"
-
-2. **批量添加模式**:
-   - 📝 在批量输入框中每行粘贴一个视频链接
-   - 🤖 系统自动从URL提取文件名作为标题  
-   - 🎭 支持混合格式批量添加
-   - 🚀 一键批量导入，效率超高
-
-3. **智能功能**:
-   - 🧠 自动识别B站、YouTube、优酷等平台
-   - 📊 自动提取视频元信息和封面
-   - 🎨 智能判断最佳播放参数
-   - 💾 支持播放列表导入导出
-
-#### 🎬 播放体验升级
-1. **基础播放**:
-   - 🎯 点击任意视频立即开始播放
-   - 📍 拖拽进度条精准定位
-   - 🖼️ 鼠标悬停预览缩略图（支持的格式）
-   - 🎚️ 实时调节音量和播放速度
-
-2. **专业功能**:
-   - ⚡ 倍速播放（0.25x - 4x），学习娱乐两不误
-   - 🔄 A-B段落循环，重点内容反复观看
-   - 📝 字幕文件支持，多语言无障碍  
-   - 💬 弹幕系统集成，互动观看体验
-
-3. **播放模式全覆盖**:
-   - 🔀 **随机播放**: 意外发现，惊喜不断
-   - 🔁 **列表循环**: 无限播放，永不停歇
-   - 🔂 **单曲循环**: 经典重现，百听不厌
-   - ➡️ **顺序播放**: 按序观看，逻辑清晰
-
-#### 📂 列表管理专家
-1. **组织功能**:
-   - 🏷️ 拖拽排序，自由调整播放顺序
-   - ✅ 批量选择，高效删除和操作
-   - 🔍 实时搜索，快速定位目标视频
-   - 📤 多格式导出，数据迁移无忧
-
-2. **分类系统**:
-   - 📁 创建自定义分类标签
-   - ⭐ 收藏夹功能，珍藏精彩内容
-   - 📈 播放历史自动记录，回顾观看轨迹
-   - 🏆 智能推荐，基于观看习惯
-
-#### ⚙️ 个性化设置  
-1. **播放器定制**:
-   - 🎨 多主题切换，深色/浅色任选
-   - 📐 播放器尺寸和比例调整
-   - 🔊 默认音量和播放速度设置
-   - ⌨️ 快捷键自定义绑定
-
-2. **网络优化**:
-   - 🌐 代理服务器配置支持
-   - ⏱️ 网络超时时间自定义
-   - 🔄 断线自动重连机制
-   - 💾 缓冲区大小智能调整
-
-### 🔧 问题解决方案
-
-青云播内置了完善的问题诊断和解决机制，遇到问题不用慌：
-
-#### ❓ 常见问题快速解决
-
-**🚫 视频无法播放怎么办？**
-- ✅ 检查视频链接是否可以正常访问
-- ✅ 确认网络连接稳定畅通
-- ✅ 尝试在浏览器新标签页直接打开视频链接
-- ✅ 检查视频格式是否受支持
-
-**📺 M3U8直播流播放异常？**
-- ✅ 确认HLS.js库正常加载（检查网络连接）
-- ✅ 验证服务器CORS跨域策略配置
-- ✅ 检查M3U8播放列表文件格式规范性
-- ✅ 尝试切换不同的CDN节点
-
-**💾 播放列表数据不见了？** 
-- ✅ 检查浏览器localStorage功能是否开启
-- ✅ 确认未清理浏览器数据和缓存
-- ✅ 养成定期导出播放列表的好习惯
-- ✅ 避免使用无痕模式长期管理数据
-
-**⌨️ 快捷键没反应？**
-- ✅ 确保播放器页面处于焦点状态
-- ✅ 检查是否与浏览器内置快捷键冲突
-- ✅ 先点击播放器区域再尝试快捷键
-- ✅ 关闭可能干扰的浏览器扩展
-
-#### ⚡ 性能优化秘籍
-
-**🚀 提升播放流畅度**:
-- 💻 使用有线网络连接，避免WiFi不稳定
-- 🔧 关闭不必要的浏览器标签页和扩展
-- 🧹 定期清理浏览器缓存释放空间
-- 📱 优先选择Chrome、Edge等现代浏览器
-
-**💾 减少内存占用**:
-- 📄 避免同时打开多个播放器窗口
-- 🔄 长时间使用后重启浏览器释放内存
-- 🗂️ 播放列表过长时考虑分组管理
-- ⚙️ 根据设备性能调整播放质量
-
-#### 🛠️ 开发者工具
-
-**🔍 启用调试模式**:
-```javascript
-// 在浏览器控制台执行以下代码
-localStorage.setItem('debug', 'true');
-// 刷新页面后可查看详细运行日志
-```
-
-**🔬 问题诊断步骤**:
-- 🔨 按F12打开浏览器开发者工具
-- 📊 查看Console选项卡的错误和警告信息
-- 🌐 检查Network选项卡的网络请求状态
-- 🐛 使用Sources选项卡设置断点调试
-
-### 🌍 浏览器支持
-
-青云播采用现代Web技术栈，在主流浏览器上都有出色表现：
-
-#### ✨ 完美支持（推荐）
-- **Chrome 88+**: 🏆 最佳性能，功能最完整，推荐首选
-- **Edge 88+**: 🚀 与Chrome同源，性能卓越，兼容性佳  
-- **Firefox 85+**: 🦊 开源稳定，隐私保护，体验良好
-- **Safari 14+**: 🍎 Mac用户首选，主要功能完整
-
-#### ⚠️ 基础支持
-- **老版Safari (<14)**: 部分CSS3特效可能显示异常
-- **Android浏览器**: 基础功能可用，建议升级到Chrome
-- **iOS Safari**: 支持核心功能，部分手势可能受限
-- **Internet Explorer**: ❌ 不支持，请升级到现代浏览器
-
-### 🚀 立即开始
-
-青云播已经为你准备就绪，现在就可以开始使用：
-
-#### 💻 本地运行
-```bash
-# 确保已安装Python（大多数系统都有）
-python -m http.server 8080
-
-# 打开浏览器访问
-http://localhost:8080
-```
-
-#### 📱 移动端体验  
-- 📶 确保手机和电脑在同一WiFi网络
-- 🔗 手机浏览器访问：`http://[电脑IP地址]:8080`
-- 📲 建议使用Chrome、Safari等现代移动浏览器
-- 👆 支持触摸手势，界面自适应移动端
-
-#### 🎯 最佳实践建议
-- **📁 文件组织**: 建议按类别创建不同的播放列表
-- **💾 数据备份**: 定期导出播放列表，避免意外丢失
-- **🌐 网络环境**: 使用稳定网络连接，确保流畅播放
-- **🔒 安全意识**: 只添加来源可靠的视频链接
-
-### 🎉 开源协议
-
-青云播遵循开源精神，欢迎参与贡献和改进：
-
-- **📄 开源协议**: MIT License - 自由使用、修改、分发
-- **🔗 项目地址**: [GitHub仓库链接]  
-- **🐛 问题反馈**: [Issues页面]
-- **💡 功能建议**: [Discussion区域]
-- **🤝 参与贡献**: 欢迎提交Pull Request
-
----
-
-**🌟 如果青云播对你有帮助，请不要忘记给个Star支持！**
-
-让我们一起打造更好的视频播放体验！ 🎬✨
+MIT

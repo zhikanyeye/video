@@ -920,6 +920,7 @@ body::after {
     color: var(--primary-light);
 }
 
+.bulk-textarea {
     resize: vertical;
     font-family: 'SF Mono', 'Fira Code', 'Consolas', monospace;
     font-size: 13px;
