@@ -1,7 +1,6 @@
 /**
  * 主页面 — 视频管理和播放列表
  */
-import 'material-icons/css/material-icons.min.css';
 import * as store from './store/index.js';
 import { escapeHtml, isValidVideoUrl, detectVideoType, getApiBase } from './utils/index.js';
 import { showToast } from './components/toast.js';
