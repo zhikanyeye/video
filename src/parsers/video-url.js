@@ -3,6 +3,8 @@
  * 将各种视频链接解析为播放器可用的格式
  */
 
+import { getApiBase } from '../utils/index.js';
+
 const BILIBILI_PATTERNS = [
   /bilibili\.com\/video\/(BV[\w]+)/i,
   /bilibili\.com\/video\/av(\d+)/i,
@@ -120,18 +122,4 @@ async function sniffVideoSources(url) {
   if (!resp.ok) throw new Error(`嗅探请求失败: ${resp.status}`);
   const data = await resp.json();
   return data.sources || [];
-}
-
-function getApiBase() {
-  const envBase = import.meta.env?.VITE_API_BASE?.trim();
-  if (envBase) return envBase.replace(/\/+$/, '');
-
-  const runtimeBase = window.APP_CONFIG?.API_BASE?.trim();
-  if (runtimeBase && !runtimeBase.includes('your-backend')) return runtimeBase.replace(/\/+$/, '');
-
-  const savedBase = localStorage.getItem('qingyunbo_api_base')?.trim();
-  if (savedBase) return savedBase.replace(/\/+$/, '');
-
-  const isLocal = window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1';
-  return isLocal ? 'http://localhost:3000' : '';
 }

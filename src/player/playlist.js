@@ -31,7 +31,11 @@ export class PlaylistManager {
     if (this.repeatMode === 1) return this.current;
 
     if (this.shuffleMode) {
-      this.index = Math.floor(Math.random() * this.list.length);
+      if (this.list.length > 1) {
+        let next;
+        do { next = Math.floor(Math.random() * this.list.length); } while (next === this.index);
+        this.index = next;
+      }
     } else {
       this.index = (this.index + 1) % this.list.length;
       if (this.index === 0 && this.repeatMode === 0) return null; // 播放结束

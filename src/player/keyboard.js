@@ -20,11 +20,13 @@ export class KeyboardHandler {
         break;
       case 'ArrowLeft':
         e.preventDefault();
-        e.ctrlKey ? playlist.previous() : core.seekRelative(-10);
+        if (e.ctrlKey) { if (player.playlist.previous()) player._playCurrent(); }
+        else core.seekRelative(-10);
         break;
       case 'ArrowRight':
         e.preventDefault();
-        e.ctrlKey ? playlist.next() : core.seekRelative(10);
+        if (e.ctrlKey) { if (player.playlist.next()) player._playCurrent(); }
+        else core.seekRelative(10);
         break;
       case 'ArrowUp':
         e.preventDefault();

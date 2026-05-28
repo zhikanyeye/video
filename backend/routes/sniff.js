@@ -33,7 +33,7 @@ export function createSniffRouter() {
 // ---- helpers ----
 
 async function fetchPage(url, redirectCount = 0) {
-  if (redirectCount > 1) throw new Error('重定向次数过多');
+  if (redirectCount > 4) throw new Error('重定向次数过多');
 
   if (!(await isSafeFetchUrl(url))) throw new Error('不允许访问内网地址');
   return new Promise((resolve, reject) => {

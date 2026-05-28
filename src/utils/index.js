@@ -46,6 +46,17 @@ export function delay(ms) {
   return new Promise((resolve) => setTimeout(resolve, ms));
 }
 
+export function getApiBase() {
+  const envBase = import.meta.env?.VITE_API_BASE?.trim();
+  if (envBase) return envBase.replace(/\/+$/, '');
+  const runtimeBase = window.APP_CONFIG?.API_BASE?.trim();
+  if (runtimeBase && !runtimeBase.includes('your-backend')) return runtimeBase.replace(/\/+$/, '');
+  const savedBase = localStorage.getItem('qingyunbo_api_base')?.trim();
+  if (savedBase) return savedBase.replace(/\/+$/, '');
+  const isLocal = window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1';
+  return isLocal ? 'http://localhost:3000' : '';
+}
+
 export function isValidVideoUrl(url) {
   try {
     const parsed = new URL(url);

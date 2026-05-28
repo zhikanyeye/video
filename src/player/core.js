@@ -3,6 +3,7 @@
  */
 import * as store from '../store/index.js';
 import { parseVideoUrl } from '../parsers/video-url.js';
+import { getApiBase } from '../utils/index.js';
 
 export class PlayerCore {
   constructor() {
@@ -165,24 +166,10 @@ export class PlayerCore {
   }
 
   _getHlsSourceUrl(url) {
-    const apiBase = this._getApiBase();
+    const apiBase = getApiBase();
     if (!apiBase || url.startsWith(`${apiBase}/api/hls?`)) return url;
     if (!/^https?:\/\//i.test(url)) return url;
     return `${apiBase}/api/hls?url=${encodeURIComponent(url)}`;
-  }
-
-  _getApiBase() {
-    const envBase = import.meta.env?.VITE_API_BASE?.trim();
-    if (envBase) return envBase.replace(/\/+$/, '');
-
-    const runtimeBase = window.APP_CONFIG?.API_BASE?.trim();
-    if (runtimeBase && !runtimeBase.includes('your-backend')) return runtimeBase.replace(/\/+$/, '');
-
-    const savedBase = localStorage.getItem('qingyunbo_api_base')?.trim();
-    if (savedBase) return savedBase.replace(/\/+$/, '');
-
-    const isLocal = window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1';
-    return isLocal ? 'http://localhost:3000' : '';
   }
 
   async _playFlv(video, url) {

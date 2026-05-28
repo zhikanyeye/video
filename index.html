@@ -61,19 +61,31 @@
                         </div>
                     </div>
                     
-                    <!-- 批量添加功能 -->
-                    <div class="form-group">
-                        <label for="bulkText">批量添加（每行一个链接）</label>
-                        <textarea 
-                            id="bulkText" 
-                            class="bulk-textarea"
-                            placeholder="可以在这里粘贴多个视频链接，每行一个&#10;例如：&#10;https://example.com/video1.mp4&#10;https://example.com/video2.m3u8&#10;https://example.com/video3.flv"
-                            rows="4"
-                            aria-label="批量添加视频链接"
-                        ></textarea>
-                        <div class="bulk-help">
-                            <small>批量添加时，视频标题将自动从链接中提取</small>
-                            <button type="button" id="clearBulkTextBtn" class="btn-link">清空</button>
+                    <!-- 批量添加功能（折叠） -->
+                    <div class="form-group bulk-group">
+                        <button type="button" class="bulk-toggle" id="bulkToggleBtn" aria-expanded="false" aria-controls="bulkPanel">
+                            <i class="material-icons">playlist_add</i>
+                            批量添加
+                            <i class="material-icons bulk-toggle-arrow">expand_more</i>
+                        </button>
+                        <div id="bulkPanel" class="bulk-panel" hidden>
+                            <textarea
+                                id="bulkText"
+                                class="bulk-textarea"
+                                placeholder="每行一个链接，可在链接后加空格和标题&#10;例如：&#10;https://example.com/video1.mp4 第一集&#10;https://example.com/video2.m3u8"
+                                rows="4"
+                                aria-label="批量添加视频链接"
+                            ></textarea>
+                            <div class="bulk-help">
+                                <small>链接后加空格可指定标题，否则自动生成</small>
+                                <button type="button" id="clearBulkTextBtn" class="btn-link">清空</button>
+                            </div>
+                            <div class="bulk-actions">
+                                <button type="button" id="bulkAddBtn" class="btn btn-secondary">
+                                    <i class="material-icons">add</i>
+                                    确认批量添加
+                                </button>
+                            </div>
                         </div>
                     </div>
                     
@@ -121,14 +133,23 @@
                             <i class="material-icons">share</i>
                             生成分享链接
                         </button>
-                        <button id="importBtn" class="btn btn-secondary">
-                            <i class="material-icons">cloud_download</i>
-                            从GitHub导入
-                        </button>
-                        <button id="exportBtn" class="btn btn-secondary">
-                            <i class="material-icons">download</i>
-                            导出列表
-                        </button>
+                        <div class="dropdown">
+                            <button class="btn btn-secondary dropdown-trigger" id="moreActionsBtn" aria-haspopup="true" aria-expanded="false">
+                                <i class="material-icons">more_horiz</i>
+                                更多
+                                <i class="material-icons dropdown-arrow">expand_more</i>
+                            </button>
+                            <div class="dropdown-menu" id="moreActionsMenu" role="menu">
+                                <button class="dropdown-item" id="importBtn" role="menuitem">
+                                    <i class="material-icons">cloud_download</i>
+                                    从 GitHub 导入
+                                </button>
+                                <button class="dropdown-item" id="exportBtn" role="menuitem">
+                                    <i class="material-icons">download</i>
+                                    导出列表
+                                </button>
+                            </div>
+                        </div>
                     </div>
                 </div>
                 

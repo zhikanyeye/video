@@ -134,16 +134,20 @@ export class GitHubManager {
   async sharePlaylist(videos, title = '青云播视频播放列表', description = '') {
     if (!this.isAuthenticated()) return null;
 
+    const playerUrl = this.getPlayerUrl();
     const gistData = {
       description: description || `${title} - 共${videos.length}个视频`,
       public: true,
       files: {
         'playlist.json': {
           content: JSON.stringify(
-            { title, description, created: new Date().toISOString(), videos, player_url: this.getPlayerUrl() },
+            { title, description, created: new Date().toISOString(), videos, player_url: playerUrl },
             null,
             2
           ),
+        },
+        'README.md': {
+          content: this._generateReadme(title, description, videos, null, null),
         },
       },
     };
@@ -156,16 +160,6 @@ export class GitHubManager {
     if (!resp.ok) throw await this._createApiError(resp, '分享失败');
 
     const gist = await resp.json();
-
-    // 更新 Gist 添加 README
-    await fetch(`${GIST_API}/${gist.id}`, {
-      method: 'PATCH',
-      headers: { Authorization: `Bearer ${this.getToken()}`, Accept: 'application/vnd.github.v3+json', 'Content-Type': 'application/json' },
-      body: JSON.stringify({
-        files: { 'README.md': { content: this._generateReadme(title, description, videos, gist.html_url, gist.id) } },
-      }),
-    });
-
     return {
       gist_id: gist.id,
       gist_url: gist.html_url,
@@ -233,8 +227,10 @@ export class GitHubManager {
   }
 
   _generateReadme(title, description, videos, gistUrl, gistId) {
-    const videoList = videos.map((v, i) => `${i + 1}. [${v.title}](${v.url})`).join('\n');
-    return `# ${title}\n\n${description || ''}\n\n## 🎬 视频列表\n\n${videoList}\n\n---\n\n▶️ [在线播放](${this.getPlayerUrl(gistId)}) | 📄 [Gist](${gistUrl})\n`;
+    const videoList = videos.map((v, i) => `${i + 1}. ${v.title}`).join('\n');
+    const playerLink = gistId ? `[在线播放](${this.getPlayerUrl(gistId)})` : '在线播放链接创建后可用';
+    const gistLink = gistUrl ? ` | [Gist](${gistUrl})` : '';
+    return `# ${title}\n\n${description || ''}\n\n## 🎬 视频列表\n\n${videoList}\n\n---\n\n▶️ ${playerLink}${gistLink}\n`;
   }
 
   async _createApiError(resp, fallbackMessage) {

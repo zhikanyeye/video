@@ -144,9 +144,11 @@ class VideoPlayer {
 
   _goBack() {
     this.core.cleanup();
-    window.close();
-    // 如果 window.close() 不生效（非脚本打开的窗口），跳回主页
-    setTimeout(() => (window.location.href = 'index.html'), 300);
+    if (window.opener) {
+      window.close();
+    } else {
+      window.location.href = 'index.html';
+    }
   }
 
   async _retryPlay() {
@@ -198,25 +200,40 @@ class VideoPlayer {
   _updatePlaylistSidebar() {
     const el = document.getElementById('playlistItems');
     if (!el) return;
-    el.innerHTML = this.playlist.list
-      .map(
-        (v, i) => `
-      <div class="playlist-item ${i === this.playlist.index ? 'active' : ''}" data-index="${i}">
-        <span class="playlist-item-index">${i + 1}</span>
-        <span class="playlist-item-title">${escapeHtml(v.title)}</span>
-      </div>`
-      )
-      .join('');
 
-    if (this._playlistClickBound) return;
-    this._playlistClickBound = true;
-    el.addEventListener('click', (e) => {
-      const item = e.target.closest('[data-index]');
-      if (!item) return;
-      this.playlist.jumpTo(parseInt(item.dataset.index));
-      this._playCurrent();
-      if (window.matchMedia('(max-width: 720px)').matches) this._togglePlaylist();
-    });
+    // 首次渲染或列表内容变化时全量重建
+    if (el.children.length !== this.playlist.length) {
+      el.innerHTML = this.playlist.list
+        .map(
+          (v, i) => `
+        <div class="playlist-item${i === this.playlist.index ? ' active' : ''}" data-index="${i}">
+          <span class="playlist-item-index">${i + 1}</span>
+          <span class="playlist-item-title">${escapeHtml(v.title)}</span>
+        </div>`
+        )
+        .join('');
+
+      if (!this._playlistClickBound) {
+        this._playlistClickBound = true;
+        el.addEventListener('click', (e) => {
+          const item = e.target.closest('[data-index]');
+          if (!item) return;
+          this.playlist.jumpTo(parseInt(item.dataset.index));
+          this._playCurrent();
+          if (window.matchMedia('(max-width: 720px)').matches) this._togglePlaylist();
+        });
+      }
+    } else {
+      // 只更新 active 类，保留滚动位置
+      const prev = el.querySelector('.playlist-item.active');
+      if (prev) prev.classList.remove('active');
+      const next = el.querySelector(`[data-index="${this.playlist.index}"]`);
+      if (next) next.classList.add('active');
+    }
+
+    // 确保当前项可见
+    const active = el.querySelector('.playlist-item.active');
+    active?.scrollIntoView({ block: 'nearest', behavior: 'smooth' });
   }
 
   _renderSettings() {

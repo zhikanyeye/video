@@ -5,7 +5,8 @@ import { CORS_ORIGINS, DEFAULT_ORIGINS } from '../config.js';
 
 const allowedOrigins = new Set([...DEFAULT_ORIGINS, ...CORS_ORIGINS]);
 const LOCAL_ORIGIN_RE = /^https?:\/\/(?:localhost|127\.0\.0\.1)(?::\d+)?$/;
-const allowAllOrigins = process.env.CORS_ALLOW_ALL !== 'false';
+// 默认关闭全放行；开发时可设 CORS_ALLOW_ALL=true
+const allowAllOrigins = process.env.CORS_ALLOW_ALL === 'true';
 
 function isAllowedOrigin(origin) {
   return allowAllOrigins || allowedOrigins.has(origin) || LOCAL_ORIGIN_RE.test(origin);

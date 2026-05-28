@@ -112,9 +112,19 @@ export function setPlaybackRate(rate) {
 
 // ---- 播放进度 ----
 
+// djb2 hash，避免 btoa 在非 ASCII URL（中文路径等）时抛异常
+function hashUrl(url) {
+  let h = 5381;
+  for (let i = 0; i < url.length; i++) {
+    h = ((h << 5) + h) ^ url.charCodeAt(i);
+    h >>>= 0;
+  }
+  return `progress_${h.toString(36)}`;
+}
+
 export function getProgress(videoUrl) {
   try {
-    const id = `progress_${btoa(videoUrl).substring(0, 32)}`;
+    const id = hashUrl(videoUrl);
     const data = _get(id);
     if (data && Date.now() - data.savedAt < 24 * 60 * 60 * 1000) {
       return data;
@@ -125,7 +135,7 @@ export function getProgress(videoUrl) {
 
 export function saveProgress(videoUrl, time, duration) {
   try {
-    const id = `progress_${btoa(videoUrl).substring(0, 32)}`;
+    const id = hashUrl(videoUrl);
     if (time > 5 && time < duration - 5) {
       _set(id, { time, duration, savedAt: Date.now() });
     }
@@ -134,7 +144,7 @@ export function saveProgress(videoUrl, time, duration) {
 
 export function clearProgress(videoUrl) {
   try {
-    const id = `progress_${btoa(videoUrl).substring(0, 32)}`;
+    const id = hashUrl(videoUrl);
     _remove(id);
   } catch { /* ignore */ }
 }

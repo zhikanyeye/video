@@ -6,6 +6,13 @@
 import { Router } from 'express';
 import fs from 'fs/promises';
 
+// 简单串行写锁，防止并发请求同时写文件导致数据丢失
+let writeLock = Promise.resolve();
+function withWriteLock(fn) {
+  writeLock = writeLock.then(fn, fn);
+  return writeLock;
+}
+
 export function createPlaylistRouter(storePath) {
   const router = Router();
 
@@ -24,18 +31,21 @@ export function createPlaylistRouter(storePath) {
     if (validationError) return res.status(400).json({ error: validationError });
 
     try {
-      const store = await readStore(storePath);
-      const now = new Date().toISOString();
-      const playlist = {
-        id: store.nextId,
-        name: name.trim(),
-        videos,
-        created_at: now,
-        updated_at: now,
-      };
-      store.nextId += 1;
-      store.playlists.push(playlist);
-      await writeStore(storePath, store);
+      const playlist = await withWriteLock(async () => {
+        const store = await readStore(storePath);
+        const now = new Date().toISOString();
+        const item = {
+          id: store.nextId,
+          name: name.trim(),
+          videos,
+          created_at: now,
+          updated_at: now,
+        };
+        store.nextId += 1;
+        store.playlists.push(item);
+        await writeStore(storePath, store);
+        return item;
+      });
       res.json(playlist);
     } catch (err) {
       res.status(500).json({ error: err.message });
@@ -61,18 +71,21 @@ export function createPlaylistRouter(storePath) {
 
     try {
       const id = Number(req.params.id);
-      const store = await readStore(storePath);
-      const index = store.playlists.findIndex((item) => item.id === id);
-      if (index === -1) return res.status(404).json({ error: '播放列表不存在' });
-
-      store.playlists[index] = {
-        ...store.playlists[index],
-        name: name.trim(),
-        videos,
-        updated_at: new Date().toISOString(),
-      };
-      await writeStore(storePath, store);
-      res.json(store.playlists[index]);
+      const updated = await withWriteLock(async () => {
+        const store = await readStore(storePath);
+        const index = store.playlists.findIndex((item) => item.id === id);
+        if (index === -1) return null;
+        store.playlists[index] = {
+          ...store.playlists[index],
+          name: name.trim(),
+          videos,
+          updated_at: new Date().toISOString(),
+        };
+        await writeStore(storePath, store);
+        return store.playlists[index];
+      });
+      if (!updated) return res.status(404).json({ error: '播放列表不存在' });
+      res.json(updated);
     } catch (err) {
       res.status(500).json({ error: err.message });
     }
@@ -81,14 +94,15 @@ export function createPlaylistRouter(storePath) {
   router.delete('/:id', async (req, res) => {
     try {
       const id = Number(req.params.id);
-      const store = await readStore(storePath);
-      const nextPlaylists = store.playlists.filter((item) => item.id !== id);
-      if (nextPlaylists.length === store.playlists.length) {
-        return res.status(404).json({ error: '播放列表不存在' });
-      }
-
-      store.playlists = nextPlaylists;
-      await writeStore(storePath, store);
+      const found = await withWriteLock(async () => {
+        const store = await readStore(storePath);
+        const next = store.playlists.filter((item) => item.id !== id);
+        if (next.length === store.playlists.length) return false;
+        store.playlists = next;
+        await writeStore(storePath, store);
+        return true;
+      });
+      if (!found) return res.status(404).json({ error: '播放列表不存在' });
       res.json({ success: true });
     } catch (err) {
       res.status(500).json({ error: err.message });

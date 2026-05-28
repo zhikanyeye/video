@@ -2,7 +2,7 @@
  * 主页面 — 视频管理和播放列表
  */
 import * as store from './store/index.js';
-import { escapeHtml, isValidVideoUrl, detectVideoType } from './utils/index.js';
+import { escapeHtml, isValidVideoUrl, detectVideoType, getApiBase } from './utils/index.js';
 import { showToast } from './components/toast.js';
 import { showModal, initModalListeners } from './components/modal.js';
 import { GitHubManager } from './components/github-manager.js';
@@ -34,6 +34,28 @@ class VideoManager {
     document.getElementById('clearBulkTextBtn')?.addEventListener('click', () => this.clearBulkText());
     document.getElementById('bulkAddBtn')?.addEventListener('click', () => this.handleBulkAdd());
     document.getElementById('probeCurrentBtn')?.addEventListener('click', () => this.handleProbeCurrent());
+
+    // 批量添加折叠
+    document.getElementById('bulkToggleBtn')?.addEventListener('click', () => {
+      const btn = document.getElementById('bulkToggleBtn');
+      const panel = document.getElementById('bulkPanel');
+      const expanded = btn.getAttribute('aria-expanded') === 'true';
+      btn.setAttribute('aria-expanded', String(!expanded));
+      panel.hidden = expanded;
+    });
+
+    // 下拉菜单
+    const moreBtn = document.getElementById('moreActionsBtn');
+    const moreMenu = document.getElementById('moreActionsMenu');
+    moreBtn?.addEventListener('click', (e) => {
+      e.stopPropagation();
+      const open = moreMenu.classList.toggle('show');
+      moreBtn.setAttribute('aria-expanded', String(open));
+    });
+    document.addEventListener('click', () => {
+      moreMenu?.classList.remove('show');
+      moreBtn?.setAttribute('aria-expanded', 'false');
+    });
 
     // 导入模态框
     document.getElementById('importModalClose')?.addEventListener('click', () => this.hideImportModal());
@@ -200,14 +222,7 @@ class VideoManager {
   }
 
   getApiBase() {
-    const envBase = import.meta.env?.VITE_API_BASE?.trim();
-    if (envBase) return envBase.replace(/\/+$/, '');
-    const runtimeBase = window.APP_CONFIG?.API_BASE?.trim();
-    if (runtimeBase && !runtimeBase.includes('your-backend')) return runtimeBase.replace(/\/+$/, '');
-    const savedBase = localStorage.getItem('qingyunbo_api_base')?.trim();
-    if (savedBase) return savedBase.replace(/\/+$/, '');
-    const isLocal = window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1';
-    return isLocal ? 'http://localhost:3000' : '';
+    return getApiBase();
   }
 
   renderApiConfigPrompt() {
@@ -541,7 +556,7 @@ class VideoManager {
           <button class="action-btn play-btn" data-action="play" data-id="${v.id}" title="播放">
             <i class="material-icons">play_arrow</i>
           </button>
-          <button class="action-btn probe-btn" data-action="probe" data-id="${v.id}" title="检测播放源">
+          <button class="action-btn probe-btn" data-action="probe" data-id="${v.id}" title="检测播放源兼容性（编码/格式/CORS）">
             <i class="material-icons">manage_search</i>
           </button>
           <button class="action-btn delete-btn" data-action="delete" data-id="${v.id}" title="删除">
