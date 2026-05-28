@@ -1,16 +1,14 @@
 /**
- * 播放源检测与 ffprobe 编码诊断
+ * 播放源检测 — 纯 HTTP header + M3U8 内容解析，无需 ffprobe
  */
 import { Router } from 'express';
 import http from 'http';
 import https from 'https';
-import { spawn } from 'child_process';
-import ffprobeStatic from 'ffprobe-static';
-import { FETCH_TIMEOUT_MS } from '../config.js';
 import { isSafeFetchUrl } from '../utils/safe-url.js';
+import { FETCH_TIMEOUT_MS } from '../config.js';
 
-const PROBE_TIMEOUT_MS = 18_000;
 const HEADER_TIMEOUT_MS = 10_000;
+const M3U8_READ_BYTES = 32_768; // 最多读 32KB 用于解析 M3U8
 
 export function createProbeRouter() {
   const router = Router();
@@ -24,22 +22,11 @@ export function createProbeRouter() {
         return res.status(403).json({ error: '不允许访问内网地址' });
       }
 
-      const [headers, mediaResult] = await Promise.allSettled([
-        probeHeaders(url),
-        runFfprobe(url),
-      ]);
+      const headers = await probeHeaders(url);
+      const m3u8 = isM3u8(headers, url) ? await parseM3u8(headers.finalUrl || url) : null;
 
-      const headersData = headers.status === 'fulfilled' ? headers.value : {};
-      const media = mediaResult.status === 'fulfilled' ? mediaResult.value : null;
-      const mediaError = mediaResult.status === 'rejected' ? mediaResult.reason?.message : null;
-
-      res.json({
-        url,
-        headers: headersData,
-        media,
-        mediaError,
-        diagnosis: diagnose(headersData, media || { video: null, audio: null, streams: [], format: {} }),
-      });
+      const result = { url, headers, m3u8, diagnosis: diagnose(headers, m3u8) };
+      res.json(result);
     } catch (err) {
       res.status(500).json({ error: err.message });
     }
@@ -48,23 +35,28 @@ export function createProbeRouter() {
   return router;
 }
 
+// ---- HTTP header 探测 ----
+
 async function probeHeaders(url) {
   let result = await requestHeaders(url, 'HEAD');
-  if ([405, 403].includes(result.statusCode)) result = await requestHeaders(url, 'GET', { range: 'bytes=0-0' });
+  // 有些服务器不支持 HEAD，降级到 GET range
+  if (!result.statusCode || [405, 403, 501].includes(result.statusCode)) {
+    result = await requestHeaders(url, 'GET', { Range: 'bytes=0-0' });
+  }
   return normalizeHeaders(result);
 }
 
 function requestHeaders(url, method, extraHeaders = {}, redirectCount = 0) {
-  if (redirectCount > 2) throw new Error('重定向次数过多');
+  if (redirectCount > 5) throw new Error('重定向次数过多');
   return new Promise((resolve, reject) => {
-    let parsedUrl;
-    try { parsedUrl = new URL(url); } catch { return reject(new Error('无效URL')); }
-    const lib = parsedUrl.protocol === 'https:' ? https : http;
+    let parsed;
+    try { parsed = new URL(url); } catch { return reject(new Error('无效 URL')); }
+    const lib = parsed.protocol === 'https:' ? https : http;
 
     const req = lib.request({
-      hostname: parsedUrl.hostname,
-      path: parsedUrl.pathname + parsedUrl.search,
-      port: parsedUrl.port || (parsedUrl.protocol === 'https:' ? 443 : 80),
+      hostname: parsed.hostname,
+      path: parsed.pathname + parsed.search,
+      port: parsed.port || (parsed.protocol === 'https:' ? 443 : 80),
       method,
       headers: {
         'User-Agent': 'Mozilla/5.0 (compatible; QingyunboProbe/2.0)',
@@ -90,121 +82,130 @@ function requestHeaders(url, method, extraHeaders = {}, redirectCount = 0) {
 }
 
 function normalizeHeaders(result) {
-  const headers = result.headers || {};
+  const h = result.headers || {};
   return {
     statusCode: result.statusCode,
     finalUrl: result.finalUrl,
-    contentType: headers['content-type'] || '',
-    contentLength: parseInteger(headers['content-length']),
-    acceptRanges: headers['accept-ranges'] || '',
-    contentRange: headers['content-range'] || '',
-    accessControlAllowOrigin: headers['access-control-allow-origin'] || '',
-    cacheControl: headers['cache-control'] || '',
-    server: headers.server || '',
+    contentType: h['content-type'] || '',
+    contentLength: parseInteger(h['content-length']),
+    acceptRanges: h['accept-ranges'] || '',
+    contentRange: h['content-range'] || '',
+    accessControlAllowOrigin: h['access-control-allow-origin'] || '',
+    cacheControl: h['cache-control'] || '',
+    server: h['server'] || '',
   };
 }
 
-function runFfprobe(url) {
-  const ffprobePath = ffprobeStatic.path || ffprobeStatic;
-  return new Promise((resolve, reject) => {
-    const args = [
-      '-v', 'error',
-      '-probesize', '5000000',       // 最多读取 5MB 头部数据
-      '-analyzeduration', '3000000', // 最多分析 3 秒
-      '-show_entries', 'stream=index,codec_type,codec_name,profile,width,height,pix_fmt,level,bit_rate:format=format_name,format_long_name,duration,size,bit_rate',
-      '-of', 'json',
-      url,
-    ];
-    const child = spawn(ffprobePath, args, { windowsHide: true });
-    let stdout = '';
-    let stderr = '';
-    const timer = setTimeout(() => {
-      child.kill('SIGKILL');
-      reject(new Error('ffprobe 检测超时'));
-    }, PROBE_TIMEOUT_MS);
+// ---- M3U8 解析 ----
 
-    child.stdout.on('data', (chunk) => { stdout += chunk; });
-    child.stderr.on('data', (chunk) => { stderr += chunk; });
-    child.on('error', (err) => {
-      clearTimeout(timer);
-      reject(err);
+function isM3u8(headers, url) {
+  const ct = headers.contentType.toLowerCase();
+  if (ct.includes('mpegurl') || ct.includes('m3u')) return true;
+  return /\.m3u8?(\?|$)/i.test(url);
+}
+
+function parseM3u8(url) {
+  return new Promise((resolve) => {
+    let parsed;
+    try { parsed = new URL(url); } catch { return resolve(null); }
+    const lib = parsed.protocol === 'https:' ? https : http;
+
+    const req = lib.request({
+      hostname: parsed.hostname,
+      path: parsed.pathname + parsed.search,
+      port: parsed.port || (parsed.protocol === 'https:' ? 443 : 80),
+      method: 'GET',
+      headers: { 'User-Agent': 'Mozilla/5.0 (compatible; QingyunboProbe/2.0)', Accept: '*/*' },
+      timeout: HEADER_TIMEOUT_MS,
+    }, (resp) => {
+      let buf = '';
+      let bytes = 0;
+      resp.setEncoding('utf8');
+      resp.on('data', (chunk) => {
+        bytes += Buffer.byteLength(chunk);
+        buf += chunk;
+        if (bytes >= M3U8_READ_BYTES) req.destroy();
+      });
+      resp.on('end', () => resolve(analyzeM3u8(buf)));
+      resp.on('error', () => resolve(null));
     });
-    child.on('close', (code) => {
-      clearTimeout(timer);
-      if (code !== 0) {
-        reject(new Error(stderr.trim() || `ffprobe 退出码 ${code}`));
-        return;
-      }
-      try {
-        resolve(normalizeProbe(JSON.parse(stdout)));
-      } catch {
-        reject(new Error('ffprobe 返回无法解析'));
-      }
-    });
+
+    req.on('error', () => resolve(null));
+    req.on('timeout', () => { req.destroy(); resolve(null); });
+    req.end();
   });
 }
 
-function normalizeProbe(raw) {
-  const streams = Array.isArray(raw.streams) ? raw.streams.map((stream) => ({
-    index: stream.index,
-    type: stream.codec_type,
-    codec: stream.codec_name || 'unknown',
-    profile: stream.profile || '',
-    width: stream.width || null,
-    height: stream.height || null,
-    pixelFormat: stream.pix_fmt || '',
-    bitRate: parseInteger(stream.bit_rate),
-    level: stream.level || null,
-  })) : [];
+function analyzeM3u8(text) {
+  if (!text || !text.includes('#EXTM3U')) return null;
 
-  const format = raw.format || {};
-  return {
-    format: {
-      name: format.format_name || '',
-      longName: format.format_long_name || '',
-      duration: parseFloat(format.duration) || null,
-      size: parseInteger(format.size),
-      bitRate: parseInteger(format.bit_rate),
-    },
-    streams,
-    video: streams.find((stream) => stream.type === 'video') || null,
-    audio: streams.find((stream) => stream.type === 'audio') || null,
-  };
+  const isMaster = text.includes('#EXT-X-STREAM-INF');
+  const isLive = !text.includes('#EXT-X-ENDLIST');
+  const hasEncryption = text.includes('#EXT-X-KEY');
+
+  // 解析多码率
+  const streams = [];
+  const streamRe = /#EXT-X-STREAM-INF:([^\n]+)\n([^\n]+)/g;
+  let m;
+  while ((m = streamRe.exec(text)) !== null) {
+    const attrs = parseM3u8Attrs(m[1]);
+    streams.push({
+      bandwidth: parseInteger(attrs.BANDWIDTH),
+      resolution: attrs.RESOLUTION || null,
+      codecs: attrs.CODECS || null,
+      uri: m[2].trim(),
+    });
+  }
+
+  // 估算分片数量
+  const segmentCount = (text.match(/#EXTINF:/g) || []).length;
+
+  return { isMaster, isLive, hasEncryption, streams, segmentCount };
 }
 
-function diagnose(headers, media) {
+function parseM3u8Attrs(str) {
+  const result = {};
+  const re = /([A-Z0-9-]+)=(?:"([^"]*)"|([^,]*))/g;
+  let m;
+  while ((m = re.exec(str)) !== null) {
+    result[m[1]] = m[2] !== undefined ? m[2] : m[3];
+  }
+  return result;
+}
+
+// ---- 诊断 ----
+
+function diagnose(headers, m3u8) {
   const warnings = [];
   const suggestions = [];
-  const video = media.video;
-  const audio = media.audio;
+  const ct = headers.contentType.toLowerCase();
 
   if (headers.statusCode && headers.statusCode >= 400) {
-    warnings.push(`源站返回 HTTP ${headers.statusCode}`);
+    warnings.push(`源站返回 HTTP ${headers.statusCode}，视频可能已失效`);
   }
   if (!headers.acceptRanges && !headers.contentRange) {
-    warnings.push('源站未明确支持 Range 请求，长视频拖动或加载可能不稳定');
+    warnings.push('源站未声明 Range 支持，长视频拖动可能不稳定');
   }
   if (!headers.accessControlAllowOrigin) {
-    warnings.push('源站未返回 CORS 头，部分浏览器能力可能受限');
+    warnings.push('源站未返回 CORS 头，跨域播放可能被浏览器拦截');
+    suggestions.push('如果视频无法播放，可尝试开启播放器的 HLS 代理选项');
   }
-  if (video && ['hevc', 'h265'].includes(video.codec)) {
-    warnings.push('视频编码是 HEVC/H.265，很多浏览器会出现有声音无画面');
-    suggestions.push('转码为 H.264 + AAC 的 MP4，可最大化网页端兼容性');
+  if (ct.includes('text/html') || ct.includes('text/plain')) {
+    warnings.push(`Content-Type 是 ${headers.contentType}，这可能是网页而非视频文件`);
+    suggestions.push('请确认链接是直链视频地址，而非视频页面 URL');
   }
-  if (video && ['av1', 'vp9'].includes(video.codec)) {
-    warnings.push(`${video.codec.toUpperCase()} 编码在旧设备或旧浏览器上可能无法播放`);
+
+  if (m3u8) {
+    if (m3u8.hasEncryption) {
+      warnings.push('M3U8 包含加密分片（#EXT-X-KEY），需要密钥才能播放');
+    }
+    if (m3u8.isMaster && m3u8.streams.length > 0) {
+      suggestions.push(`检测到 ${m3u8.streams.length} 个码率档位，播放器会自动选择最佳码率`);
+    }
   }
-  if (video && video.pixelFormat && /(10|12)le|p10|p12/i.test(video.pixelFormat)) {
-    warnings.push(`视频像素格式 ${video.pixelFormat} 可能是高位深，网页端兼容性较差`);
-  }
-  if (audio && !['aac', 'mp3', 'opus', 'vorbis'].includes(audio.codec)) {
-    warnings.push(`音频编码 ${audio.codec} 可能不被浏览器支持`);
-  }
-  if (!video) warnings.push('未检测到视频轨');
-  if (!audio) warnings.push('未检测到音频轨');
 
   if (warnings.length === 0) {
-    suggestions.push('未发现明显兼容性问题，若仍无法播放，请检查防盗链、签名过期或浏览器控制台错误');
+    suggestions.push('未发现明显兼容性问题，若仍无法播放请检查防盗链或浏览器控制台');
   }
 
   return {
@@ -215,6 +216,6 @@ function diagnose(headers, media) {
 }
 
 function parseInteger(value) {
-  const parsed = Number.parseInt(value, 10);
-  return Number.isFinite(parsed) ? parsed : null;
+  const n = Number.parseInt(value, 10);
+  return Number.isFinite(n) ? n : null;
 }
