@@ -1,7 +1,7 @@
 /**
- * 嗅探路由 — 分层提取视频源 v2
- * Layer 1: DOM / meta / data-* / script 内容 / iframe 收集（无额外请求）
- * Layer 2: iframe 跟进（最多 2 个）+ 可疑 URL HEAD 验证（最多 8 个）
+ * 嗅探路由 — 分层提取视频源 v3
+ * Layer 1: DOM / meta / JSON-LD / __NEXT_DATA__ / 已知播放器 / data-* / script / iframe 收集（无额外请求）
+ * Layer 2: iframe 跟进（最多 2 个）+ 可疑 URL HEAD 验证（最多 8 个，带 Referer 绕过防盗链）
  * 总请求数 ≤ 11，总超时预算 20s
  */
 import { Router } from 'express';
@@ -42,7 +42,7 @@ export function createSniffRouter() {
       const startTime = Date.now();
       const html = await fetchPage(url);
       const layer1 = extractLayer1(html, url);
-      const layer2Sources = await runLayer2(layer1, startTime);
+      const layer2Sources = await runLayer2(layer1, startTime, url);
 
       const allSources = mergeAndScore([...layer1.confirmed, ...layer2Sources]);
       res.json({
@@ -180,6 +180,26 @@ function extractLayer1(html, baseUrl) {
     extractFromScript(body.slice(0, 80_000), addConfirmed, addSuspicious, addSuspiciousPriority);
   }
 
+  // 1.4b JSON-LD VideoObject（contentUrl / embedUrl，SEO 标准结构）
+  for (const m of html.matchAll(/<script[^>]+type=["']application\/ld\+json["'][^>]*>([^]*?)<\/script>/gi)) {
+    extractJsonLd(m[1].trim(), addConfirmed, addSuspiciousPriority);
+  }
+
+  // 1.4c __NEXT_DATA__ 专项解析（Next.js 站点标配）
+  const nextData = html.match(/<script[^>]+id=["']__NEXT_DATA__["'][^>]*>([^]*?)<\/script>/i);
+  if (nextData) {
+    try {
+      const obj = JSON.parse(nextData[1].trim());
+      const urls = [], susp = [];
+      collectUrlsFromObject(obj, urls, susp);
+      for (const u of urls) addConfirmed(unescUrl(u), 'next-data');
+      for (const u of susp) addSuspiciousPriority(unescUrl(u));
+    } catch { /* skip */ }
+  }
+
+  // 1.4d 已知播放器特征识别（JW Player / Video.js / DPlayer / ArtPlayer 等）
+  extractKnownPlayers(html, addConfirmed, addSuspiciousPriority);
+
   // 1.5 全文 URL（带扩展名，含 escaped slash 形式）
   const extPats = [
     [/https?:\/\/[^\s"'<>\\]+?\.mpd(?:[?#][^\s"'<>\\]*)?/gi, 'regex-ext'],
@@ -226,6 +246,71 @@ function extractJsonBlock(text, addConfirmed, addSuspiciousPriority) {
     // 解析失败时走正则兜底
     const keyRe = new RegExp(`"(?:${VIDEO_KEY_PAT})":\\s*"(https?:[^"]{10,})"`, 'gi');
     for (const m of text.matchAll(keyRe)) addSuspiciousPriority(unescUrl(m[1]));
+  }
+}
+
+/** JSON-LD VideoObject：优先提取 contentUrl / embedUrl */
+function extractJsonLd(text, addConfirmed, addSuspiciousPriority) {
+  let obj;
+  try { obj = JSON.parse(text); } catch { return; }
+
+  const visit = (node, depth = 0) => {
+    if (depth > 8 || !node) return;
+    if (Array.isArray(node)) { node.forEach(n => visit(n, depth + 1)); return; }
+    if (typeof node !== 'object') return;
+
+    const type = node['@type'];
+    const isVideo = type === 'VideoObject' || (Array.isArray(type) && type.includes('VideoObject'));
+    if (isVideo || node.contentUrl || node.embedUrl) {
+      for (const key of ['contentUrl', 'embedUrl', 'url']) {
+        const v = node[key];
+        if (typeof v === 'string' && /^https?:\/\//.test(v)) {
+          const u = unescUrl(v);
+          if (detectVideoType(u) !== 'unknown') addConfirmed(u, 'json-ld');
+          else if (!NON_VIDEO_EXT.test(u)) addSuspiciousPriority(u);
+        }
+      }
+    }
+    Object.values(node).forEach(v => { if (v && typeof v === 'object') visit(v, depth + 1); });
+  };
+  visit(obj);
+}
+
+/** 已知播放器特征识别 — 命中率高于通用正则 */
+function extractKnownPlayers(html, addConfirmed, addSuspiciousPriority) {
+  // JW Player: jwplayer().setup({ file: "..." }) / sources:[{file:"..."}]
+  for (const m of html.matchAll(/\bfile\s*:\s*["'](https?:[^"']{10,})["']/gi)) {
+    const u = unescUrl(m[1]);
+    if (detectVideoType(u) !== 'unknown') addConfirmed(u, 'player-jwplayer');
+    else addSuspiciousPriority(u);
+  }
+
+  // DPlayer: new DPlayer({ video: { url: "..." } })
+  for (const m of html.matchAll(/new\s+DPlayer\s*\(\s*\{[\s\S]{0,500}?\burl\s*:\s*["'](https?:[^"']{10,})["']/gi)) {
+    addConfirmed(unescUrl(m[1]), 'player-dplayer');
+  }
+
+  // ArtPlayer: new Artplayer({ url: "..." })
+  for (const m of html.matchAll(/new\s+Artplayer\s*\(\s*\{[\s\S]{0,500}?\burl\s*:\s*["'](https?:[^"']{10,})["']/gi)) {
+    addConfirmed(unescUrl(m[1]), 'player-artplayer');
+  }
+
+  // Video.js: data-setup='{"sources":[{"src":"..."}]}'
+  for (const m of html.matchAll(/data-setup=["'](\{[^"']+\})["']/gi)) {
+    try {
+      const obj = JSON.parse(m[1].replace(/&quot;/g, '"'));
+      const urls = [], susp = [];
+      collectUrlsFromObject(obj, urls, susp);
+      for (const u of urls) addConfirmed(unescUrl(u), 'player-videojs');
+      for (const u of susp) addSuspiciousPriority(unescUrl(u));
+    } catch { /* skip */ }
+  }
+
+  // Plyr / 通用 sources: [{ src: "...", type: "..." }]
+  for (const m of html.matchAll(/\bsources\s*:\s*\[\s*\{[\s\S]{0,300}?\bsrc\s*:\s*["'](https?:[^"']{10,})["']/gi)) {
+    const u = unescUrl(m[1]);
+    if (detectVideoType(u) !== 'unknown') addConfirmed(u, 'player-sources');
+    else addSuspiciousPriority(u);
   }
 }
 
@@ -323,7 +408,7 @@ function collectUrlsFromObject(obj, confirmed, suspicious = [], depth = 0) {
 
 // ---- Layer 2：有限额外请求 ----
 
-async function runLayer2(layer1, startTime) {
+async function runLayer2(layer1, startTime, pageUrl) {
   if (Date.now() - startTime > TOTAL_BUDGET_MS - 3_000) return [];
 
   const extra = [];
@@ -343,10 +428,10 @@ async function runLayer2(layer1, startTime) {
     }
   }
 
-  // 2.2 可疑 URL HEAD 验证（高置信可疑排前面，最多 8 个）
+  // 2.2 可疑 URL HEAD 验证（高置信可疑排前面，最多 8 个，带 Referer 绕过防盗链）
   if (Date.now() - startTime < TOTAL_BUDGET_MS - 2_000) {
     const toCheck = layer1.suspicious.slice(0, MAX_HEAD_CHECKS);
-    const headResults = await Promise.allSettled(toCheck.map(headCheck));
+    const headResults = await Promise.allSettled(toCheck.map((u) => headCheck(u, pageUrl)));
     for (const r of headResults) {
       if (r.status === 'fulfilled' && r.value) {
         const { url, contentType } = r.value;
@@ -361,21 +446,28 @@ async function runLayer2(layer1, startTime) {
   return extra;
 }
 
-async function headCheck(url) {
+async function headCheck(url, referer) {
   return new Promise((resolve) => {
     let parsed;
     try { parsed = new URL(url); } catch { return resolve(null); }
     const lib = parsed.protocol === 'https:' ? https : http;
+
+    const headers = {
+      'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/124.0.0.0 Safari/537.36',
+      Accept: '*/*',
+    };
+    // 防盗链：很多 CDN 校验 Referer 必须来自来源页
+    if (referer) {
+      headers.Referer = referer;
+      try { headers.Origin = new URL(referer).origin; } catch { /* skip */ }
+    }
 
     const req = lib.request({
       hostname: parsed.hostname,
       path: parsed.pathname + parsed.search,
       port: parsed.port || (parsed.protocol === 'https:' ? 443 : 80),
       method: 'HEAD',
-      headers: {
-        'User-Agent': 'Mozilla/5.0 (compatible; QingyunboProbe/2.0)',
-        Accept: '*/*',
-      },
+      headers,
       timeout: HEAD_TIMEOUT_MS,
     }, (resp) => {
       resp.resume();
@@ -464,6 +556,9 @@ function scoreSource(url, type, from = '') {
   if (from.includes('script-json-key')) s += 2;
   if (from.includes('script-json-block')) s += 2;
   if (from.includes('head-verified')) s += 3;
+  if (from.includes('json-ld')) s += 2;
+  if (from.includes('next-data')) s += 2;
+  if (from.includes('player-')) s += 2;
   if (from.includes('meta-og')) s += 1;
   if (from.includes('dom-')) s += 1;
   if (from.includes('/iframe')) s -= 1;

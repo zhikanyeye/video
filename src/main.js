@@ -413,10 +413,16 @@ class VideoManager {
 
     const fromLabels = {
       'dom-src': 'DOM', 'dom-data-src': 'DOM', 'dom-a': 'DOM',
+      'meta-og': 'Meta', 'meta-twitter': 'Meta',
       'data-attr': 'data-*',
-      'script-json-key': 'Script/JSON', 'script-global-state': 'Script/State',
-      'script-var': 'Script/Var', 'script-json-parse': 'Script/Parse',
-      'regex-ext': '正则', 'head-verified': '已验证',
+      'json-ld': 'JSON-LD', 'next-data': 'Next.js',
+      'player-jwplayer': 'JW Player', 'player-dplayer': 'DPlayer',
+      'player-artplayer': 'ArtPlayer', 'player-videojs': 'Video.js',
+      'player-sources': '播放器', 'script-base64': 'Base64',
+      'script-json-key': 'Script/JSON', 'script-json-block': 'Script/JSON',
+      'script-global-state': 'Script/State', 'script-json-parse': 'Script/Parse',
+      'script-var': 'Script/Var',
+      'regex-ext': '正则', 'regex-ext-esc': '正则', 'head-verified': '已验证',
     };
 
     const rows = sources.map((s, i) => {
