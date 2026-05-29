@@ -463,6 +463,63 @@
     accent-color: var(--player-green);
 }
 
+.settings-group {
+    padding: 12px;
+    border: 1px solid rgba(255, 255, 255, 0.09);
+    border-radius: 8px;
+    background: rgba(255, 255, 255, 0.045);
+}
+
+.settings-label {
+    display: block;
+    margin-bottom: 12px;
+}
+
+.settings-label strong {
+    display: block;
+    color: var(--player-text);
+    font-size: 14px;
+}
+
+.settings-label small {
+    display: block;
+    margin-top: 4px;
+    color: var(--player-muted);
+    font-size: 12px;
+    line-height: 1.35;
+}
+
+.playback-rate-buttons {
+    display: flex;
+    gap: 8px;
+    flex-wrap: wrap;
+}
+
+.rate-btn {
+    flex: 1;
+    min-width: 60px;
+    padding: 8px 12px;
+    border: 1px solid rgba(255, 255, 255, 0.15);
+    border-radius: 6px;
+    background: rgba(255, 255, 255, 0.08);
+    color: var(--player-text);
+    font-size: 13px;
+    font-weight: 500;
+    cursor: pointer;
+    transition: all 0.2s ease;
+}
+
+.rate-btn:hover {
+    background: rgba(255, 255, 255, 0.12);
+    border-color: rgba(255, 255, 255, 0.25);
+}
+
+.rate-btn.active {
+    background: var(--player-green);
+    border-color: var(--player-green);
+    color: #fff;
+}
+
 .toast-container {
     position: fixed;
     top: 88px;

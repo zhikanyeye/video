@@ -150,6 +150,14 @@ class VideoPlayer {
       }
     });
 
+    // 倍速按钮
+    document.querySelectorAll('.rate-btn').forEach((btn) => {
+      btn.addEventListener('click', () => {
+        const rate = parseFloat(btn.dataset.rate);
+        this._setPlaybackRate(rate);
+      });
+    });
+
     const settingsModal = document.getElementById('playerSettingsModal');
     settingsModal?.addEventListener('click', (e) => {
       if (e.target === settingsModal) this._toggleSettings();
@@ -259,6 +267,21 @@ class VideoPlayer {
     if (autoplay) autoplay.checked = !!this.settings.autoplayNext;
     if (progressTitle) progressTitle.checked = !!this.settings.showProgressOnTitle;
     if (hlsProxy) hlsProxy.checked = !!this.settings.useHlsProxy;
+
+    // 高亮当前倍速按钮
+    const currentRate = store.getPlaybackRate();
+    document.querySelectorAll('.rate-btn').forEach((btn) => {
+      const rate = parseFloat(btn.dataset.rate);
+      btn.classList.toggle('active', Math.abs(rate - currentRate) < 0.01);
+    });
+  }
+
+  _setPlaybackRate(rate) {
+    if (!this.core.art) return;
+    this.core.art.playbackRate = rate;
+    store.setPlaybackRate(rate);
+    this._renderSettings(); // 更新按钮高亮
+    showToast(`播放速度：${rate}x`, 'info', 1500);
   }
 
   _updateSetting(key, value) {
