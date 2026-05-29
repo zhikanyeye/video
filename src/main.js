@@ -78,6 +78,7 @@ class VideoManager {
     document.getElementById('probeModalDone')?.addEventListener('click', () => this.hideProbeModal());
     document.getElementById('probeResult')?.addEventListener('click', (e) => {
       if (e.target.closest('#saveApiBaseBtn')) this.saveApiBaseFromProbeModal();
+      if (e.target.closest('#probeSwitchToSniffBtn')) this.switchProbeToSniff();
     });
     document.getElementById('probeModal')?.addEventListener('click', (e) => {
       if (e.target.id === 'probeModal') this.hideProbeModal();
@@ -361,6 +362,12 @@ class VideoManager {
     document.getElementById('probeModal')?.classList.remove('show');
   }
 
+  /** probe 弹窗里点击"改用嗅探"：关掉 probe，立刻调嗅探 */
+  switchProbeToSniff() {
+    this.hideProbeModal();
+    this.handleSniffCurrent();
+  }
+
   // ---- 嗅探 ----
 
   async handleSniffCurrent() {
@@ -495,6 +502,27 @@ class VideoManager {
     const diagnosis = result.diagnosis || {};
     const warnings = diagnosis.warnings || [];
     const suggestions = diagnosis.suggestions || [];
+
+    // 命中"错对象"：当前链接是网页页面而非视频直链
+    if (diagnosis.wrongTarget) {
+      return `
+        <div class="probe-summary wrong-target">
+          这是一个网页地址，不是视频直链
+        </div>
+        <p class="probe-help">CORS / Range / 文件大小等指标对网页都不适用。要播放页面里的视频，请改用"嗅探视频源"自动提取真正的视频地址。</p>
+        <div class="probe-grid probe-grid-compact">
+          ${this.renderProbeItem('HTTP 状态', headers.statusCode || '未知')}
+          ${this.renderProbeItem('Content-Type', headers.contentType || '未知')}
+          ${this.renderProbeItem('服务器', headers.server || '未知')}
+        </div>
+        <div class="probe-actions">
+          <button id="probeSwitchToSniffBtn" class="btn btn-primary" type="button">
+            <i class="material-icons">travel_explore</i>
+            改用嗅探视频源
+          </button>
+        </div>
+      `;
+    }
 
     const m3u8Section = m3u8 ? `
       <div class="probe-section">

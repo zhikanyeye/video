@@ -180,19 +180,27 @@ function diagnose(headers, m3u8) {
   const suggestions = [];
   const ct = headers.contentType.toLowerCase();
 
+  // 命中"错对象"：用户把网页 URL 当成视频直链来检测
+  const wrongTarget = (ct.includes('text/html') || ct.includes('application/xhtml')) && !m3u8;
+
   if (headers.statusCode && headers.statusCode >= 400) {
     warnings.push(`源站返回 HTTP ${headers.statusCode}，视频可能已失效`);
   }
-  if (!headers.acceptRanges && !headers.contentRange) {
-    warnings.push('源站未声明 Range 支持，长视频拖动可能不稳定');
-  }
-  if (!headers.accessControlAllowOrigin) {
-    warnings.push('源站未返回 CORS 头，跨域播放可能被浏览器拦截');
-    suggestions.push('如果视频无法播放，可尝试开启播放器的 HLS 代理选项');
-  }
-  if (ct.includes('text/html') || ct.includes('text/plain')) {
-    warnings.push(`Content-Type 是 ${headers.contentType}，这可能是网页而非视频文件`);
-    suggestions.push('请确认链接是直链视频地址，而非视频页面 URL');
+
+  if (wrongTarget) {
+    // 网页页面：CORS / Range / 服务器这些指标毫无意义，只给一条建议
+    suggestions.push('当前链接是网页而不是视频直链。请改用"嗅探视频源"从页面中提取真正的视频地址');
+  } else {
+    if (!headers.acceptRanges && !headers.contentRange) {
+      warnings.push('源站未声明 Range 支持，长视频拖动可能不稳定');
+    }
+    if (!headers.accessControlAllowOrigin) {
+      warnings.push('源站未返回 CORS 头，跨域播放可能被浏览器拦截');
+      suggestions.push('如果视频无法播放，可尝试开启播放器的 HLS 代理选项');
+    }
+    if (ct.includes('text/plain')) {
+      warnings.push(`Content-Type 是 ${headers.contentType}，这可能不是视频文件`);
+    }
   }
 
   if (m3u8) {
@@ -204,12 +212,13 @@ function diagnose(headers, m3u8) {
     }
   }
 
-  if (warnings.length === 0) {
+  if (warnings.length === 0 && !wrongTarget) {
     suggestions.push('未发现明显兼容性问题，若仍无法播放请检查防盗链或浏览器控制台');
   }
 
   return {
-    playableHint: warnings.length === 0 ? 'likely' : 'risky',
+    playableHint: wrongTarget ? 'wrong-target' : (warnings.length === 0 ? 'likely' : 'risky'),
+    wrongTarget,
     warnings,
     suggestions,
   };
