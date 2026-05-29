@@ -74,6 +74,7 @@ const DEFAULT_SETTINGS = {
   showNotifications: true,
   showProgressOnTitle: false,
   defaultQuality: 'auto',
+  useHlsProxy: false,
 };
 
 export function getPlayerSettings() {

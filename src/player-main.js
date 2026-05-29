@@ -133,6 +133,14 @@ class VideoPlayer {
     document.getElementById('backToListBtn')?.addEventListener('click', () => this._goBack());
     document.getElementById('autoplayNextSetting')?.addEventListener('change', (e) => this._updateSetting('autoplayNext', e.target.checked));
     document.getElementById('progressTitleSetting')?.addEventListener('change', (e) => this._updateSetting('showProgressOnTitle', e.target.checked));
+    document.getElementById('hlsProxySetting')?.addEventListener('change', (e) => {
+      this._updateSetting('useHlsProxy', e.target.checked);
+      const parsed = this.core.parsedVideo;
+      if (parsed && parsed.type === 'm3u8') {
+        showToast('已切换 HLS 代理设置，重新加载当前视频...', 'info');
+        this._retryPlay();
+      }
+    });
 
     const settingsModal = document.getElementById('playerSettingsModal');
     settingsModal?.addEventListener('click', (e) => {
@@ -239,8 +247,10 @@ class VideoPlayer {
   _renderSettings() {
     const autoplay = document.getElementById('autoplayNextSetting');
     const progressTitle = document.getElementById('progressTitleSetting');
+    const hlsProxy = document.getElementById('hlsProxySetting');
     if (autoplay) autoplay.checked = !!this.settings.autoplayNext;
     if (progressTitle) progressTitle.checked = !!this.settings.showProgressOnTitle;
+    if (hlsProxy) hlsProxy.checked = !!this.settings.useHlsProxy;
   }
 
   _updateSetting(key, value) {

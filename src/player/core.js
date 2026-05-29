@@ -148,34 +148,88 @@ export class PlayerCore {
 
   async _playM3u8(video, url) {
     const Hls = await this._loadHls();
-    const sourceUrl = this._getHlsSourceUrl(url);
+    const useProxy = !!store.getPlayerSettings().useHlsProxy;
+    const directUrl = url;
+    const proxyUrl = this._toProxyUrl(url);
+    const initialUrl = useProxy && proxyUrl ? proxyUrl : directUrl;
+
     if (Hls.isSupported()) {
-      const hls = new Hls({
-        enableWorker: true,
-        lowLatencyMode: false,
-        backBufferLength: 30,
-        fragLoadingTimeOut: 20_000,
-        manifestLoadingTimeOut: 15_000,
-      });
-      hls.loadSource(sourceUrl);
-      hls.attachMedia(video);
+      const hls = this._createHlsInstance(Hls);
       this._registerExternalPlayer(hls);
+
+      // 仅在直连时挂回退监听；已经走代理的失败就直接抛错
+      let fallbackTried = false;
+      const tryFallback = () => {
+        if (fallbackTried || !proxyUrl || initialUrl === proxyUrl) return false;
+        fallbackTried = true;
+        try { hls.destroy(); } catch { /* ignore */ }
+        const fbHls = this._createHlsInstance(Hls);
+        this._registerExternalPlayer(fbHls);
+        fbHls.loadSource(proxyUrl);
+        fbHls.attachMedia(video);
+        return true;
+      };
+
+      hls.on(Hls.Events.ERROR, (_evt, data) => {
+        if (!data?.fatal) return;
+        // 跨域 / 网络 / 加载相关错误自动回退到代理
+        const isNetwork = data.type === Hls.ErrorTypes.NETWORK_ERROR;
+        if (isNetwork && tryFallback()) return;
+        // 其他致命错误尝试 hls.js 自带恢复
+        if (data.type === Hls.ErrorTypes.MEDIA_ERROR) {
+          try { hls.recoverMediaError(); } catch { /* ignore */ }
+        }
+      });
+
+      hls.loadSource(initialUrl);
+      hls.attachMedia(video);
     } else if (video.canPlayType('application/vnd.apple.mpegurl')) {
-      video.src = sourceUrl;
+      // Safari 原生 HLS：直连为主，无回退路径
+      video.src = initialUrl;
     }
   }
 
-  _getHlsSourceUrl(url) {
+  /** 创建已调优的 HLS 实例 */
+  _createHlsInstance(Hls) {
+    return new Hls({
+      enableWorker: true,
+      lowLatencyMode: false,
+      backBufferLength: 30,
+      // 起播带宽估计：默认 50 万 bps 偏低，提高到 1.5 Mbps 让首帧选清晰档
+      abrEwmaDefaultEstimate: 1_500_000,
+      // 根据播放器尺寸限制最高档，避免选超过显示区域的码率
+      capLevelToPlayerSize: true,
+      // 网络超时
+      fragLoadingTimeOut: 20_000,
+      manifestLoadingTimeOut: 15_000,
+      // 失败重试
+      manifestLoadingMaxRetry: 2,
+      levelLoadingMaxRetry: 4,
+      fragLoadingMaxRetry: 6,
+    });
+  }
+
+  _toProxyUrl(url) {
     const apiBase = getApiBase();
-    if (!apiBase || url.startsWith(`${apiBase}/api/hls?`)) return url;
-    if (!/^https?:\/\//i.test(url)) return url;
+    if (!apiBase) return null;
+    if (url.startsWith(`${apiBase}/api/hls?`)) return url;
+    if (!/^https?:\/\//i.test(url)) return null;
     return `${apiBase}/api/hls?url=${encodeURIComponent(url)}`;
   }
 
   async _playFlv(video, url) {
     const flvjs = await this._loadFlv();
     if (flvjs.isSupported()) {
-      const player = flvjs.createPlayer({ type: 'flv', url });
+      const player = flvjs.createPlayer(
+        { type: 'flv', url, isLive: false, cors: true },
+        {
+          enableWorker: true,
+          enableStashBuffer: false,
+          stashInitialSize: 128,
+          lazyLoadMaxDuration: 60,
+          autoCleanupSourceBuffer: true,
+        },
+      );
       player.attachMediaElement(video);
       player.load();
       this._registerExternalPlayer(player);
