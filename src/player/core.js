@@ -58,7 +58,7 @@ export class PlayerCore {
     const support = this._checkNativeSupport(parsed);
     if (support.warning) callbacks.onPlaybackWarning?.(support.warning);
 
-    const art = new Artplayer({
+    const config = {
       container,
       url: parsed.url,
       title: video.title,
@@ -87,7 +87,21 @@ export class PlayerCore {
         flv: this._playFlv.bind(this),
         ts: this._playMpegTs.bind(this),
       },
-    });
+    };
+
+    // 加载字幕（如果有）
+    if (video.subtitleUrl) {
+      config.subtitle = {
+        url: video.subtitleUrl,
+        type: this._detectSubtitleType(video.subtitleUrl),
+        style: {
+          color: '#fff',
+          fontSize: '20px',
+        },
+      };
+    }
+
+    const art = new Artplayer(config);
 
     // 恢复播放速度
     art.on('ready', () => {
@@ -300,6 +314,12 @@ export class PlayerCore {
       script.onerror = reject;
       document.head.appendChild(script);
     });
+  }
+
+  _detectSubtitleType(url) {
+    if (/\.vtt(\?|$)/i.test(url)) return 'vtt';
+    if (/\.srt(\?|$)/i.test(url)) return 'srt';
+    return 'vtt'; // 默认 vtt
   }
 
   // ---- 播放控制 ----

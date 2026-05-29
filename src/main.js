@@ -115,19 +115,25 @@ class VideoManager {
     const titleEl = document.getElementById('videoTitle');
     const urlEl = document.getElementById('videoUrl');
     const typeEl = document.getElementById('videoType');
+    const subtitleEl = document.getElementById('subtitleUrl');
 
     const title = titleEl.value.trim();
     const url = urlEl.value.trim();
+    const subtitleUrl = subtitleEl?.value.trim() || '';
     if (!title || !url) return showToast('请填写完整的视频信息', 'error');
 
     const validation = isValidVideoUrl(url);
     if (!validation.valid) return showToast(`链接验证失败: ${validation.reason}`, 'error');
 
     const type = typeEl.value === 'auto' ? detectVideoType(url) : typeEl.value;
-    this.videos.push({ id: Date.now(), title, url, type, addedAt: new Date().toISOString() });
+    const video = { id: Date.now(), title, url, type, addedAt: new Date().toISOString() };
+    if (subtitleUrl) video.subtitleUrl = subtitleUrl;
+
+    this.videos.push(video);
     this._save();
     titleEl.value = '';
     urlEl.value = '';
+    if (subtitleEl) subtitleEl.value = '';
     typeEl.value = 'auto';
     showToast('视频添加成功', 'success');
     this.syncToGitHubSilently();
