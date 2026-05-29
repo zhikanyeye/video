@@ -450,6 +450,42 @@ body::after {
     opacity: 0.6;
 }
 
+.playlist-tabs {
+    display: flex;
+    gap: var(--space-xs);
+    padding: var(--space-md) var(--space-lg) 0;
+    border-bottom: 1px solid var(--border-color);
+}
+
+.playlist-tab {
+    display: flex;
+    align-items: center;
+    gap: var(--space-xs);
+    padding: var(--space-sm) var(--space-md);
+    border: none;
+    background: transparent;
+    color: var(--text-muted);
+    font-size: var(--font-sm);
+    font-weight: 500;
+    cursor: pointer;
+    border-bottom: 2px solid transparent;
+    transition: all 0.2s ease;
+}
+
+.playlist-tab:hover {
+    color: var(--text-primary);
+    background: rgba(255, 255, 255, 0.05);
+}
+
+.playlist-tab.active {
+    color: var(--primary-color);
+    border-bottom-color: var(--primary-color);
+}
+
+.playlist-tab .material-icons {
+    font-size: 18px;
+}
+
 .section-header {
     display: flex;
     align-items: center;

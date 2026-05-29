@@ -14,6 +14,7 @@ class VideoManager {
   constructor() {
     this.videos = store.getVideoList();
     this._videoListBound = false;
+    this.currentTab = 'playlist'; // 'playlist' | 'history'
     this.bindEvents();
     this.renderVideoList();
     this.updateUI();
@@ -36,6 +37,12 @@ class VideoManager {
     document.getElementById('bulkAddBtn')?.addEventListener('click', () => this.handleBulkAdd());
     document.getElementById('probeCurrentBtn')?.addEventListener('click', () => this.handleProbeCurrent());
     document.getElementById('sniffCurrentBtn')?.addEventListener('click', () => this.handleSniffCurrent());
+    document.getElementById('clearHistoryBtn')?.addEventListener('click', () => this.handleClearHistory());
+
+    // Tab 切换
+    document.querySelectorAll('.playlist-tab').forEach((tab) => {
+      tab.addEventListener('click', () => this.switchTab(tab.dataset.tab));
+    });
 
     // 批量添加折叠
     document.getElementById('bulkToggleBtn')?.addEventListener('click', () => {
@@ -651,6 +658,144 @@ class VideoManager {
     github.logout();
     this.initGitHubUI();
     showToast('已退出GitHub登录', 'info');
+  }
+
+  // ---- Tab 切换 ----
+
+  switchTab(tab) {
+    if (this.currentTab === tab) return;
+    this.currentTab = tab;
+
+    // 更新 tab 激活状态
+    document.querySelectorAll('.playlist-tab').forEach((t) => {
+      t.classList.toggle('active', t.dataset.tab === tab);
+    });
+
+    // 切换显示内容
+    const videoList = document.getElementById('videoList');
+    const historyList = document.getElementById('historyList');
+    const emptyState = document.getElementById('emptyState');
+    const sectionTitle = document.getElementById('sectionTitle');
+    const videoCount = document.getElementById('videoCount');
+    const playAllBtn = document.getElementById('playAllBtn');
+    const shareBtn = document.getElementById('shareBtn');
+    const clearHistoryBtn = document.getElementById('clearHistoryBtn');
+    const moreActionsBtn = document.getElementById('moreActionsBtn');
+
+    if (tab === 'history') {
+      videoList.style.display = 'none';
+      historyList.style.display = 'grid';
+      sectionTitle.textContent = '播放历史';
+      const history = store.getHistory();
+      videoCount.textContent = history.length;
+      emptyState.style.display = history.length === 0 ? 'flex' : 'none';
+      emptyState.querySelector('h3').textContent = '暂无播放历史';
+      emptyState.querySelector('p').textContent = '播放视频后会自动记录';
+      playAllBtn.style.display = 'none';
+      shareBtn.style.display = 'none';
+      clearHistoryBtn.style.display = history.length > 0 ? 'inline-flex' : 'none';
+      moreActionsBtn.style.display = 'none';
+      this.renderHistory();
+    } else {
+      videoList.style.display = 'grid';
+      historyList.style.display = 'none';
+      sectionTitle.textContent = '播放列表';
+      videoCount.textContent = this.videos.length;
+      emptyState.style.display = this.videos.length === 0 ? 'flex' : 'none';
+      emptyState.querySelector('h3').textContent = '暂无视频';
+      emptyState.querySelector('p').textContent = '请添加视频到播放列表';
+      playAllBtn.style.display = 'inline-flex';
+      shareBtn.style.display = 'inline-flex';
+      clearHistoryBtn.style.display = 'none';
+      moreActionsBtn.style.display = 'inline-flex';
+    }
+  }
+
+  renderHistory() {
+    const container = document.getElementById('historyList');
+    if (!container) return;
+
+    const history = store.getHistory();
+    if (history.length === 0) {
+      container.innerHTML = '';
+      return;
+    }
+
+    container.innerHTML = history
+      .map(
+        (item, index) => `
+      <div class="video-item" data-history-index="${index}">
+        <div class="video-info">
+          <h3 class="video-title">${escapeHtml(item.title)}</h3>
+          <div class="video-meta">
+            <span class="video-type">${item.type?.toUpperCase() || 'VIDEO'}</span>
+            <span class="video-time">${this.formatTimeAgo(item.playedAt)}</span>
+          </div>
+        </div>
+        <div class="video-actions">
+          <button class="btn-icon" data-history-play="${index}" title="播放">
+            <i class="material-icons">play_arrow</i>
+          </button>
+          <button class="btn-icon" data-history-delete="${index}" title="删除">
+            <i class="material-icons">delete</i>
+          </button>
+        </div>
+      </div>
+    `
+      )
+      .join('');
+
+    // 事件委托
+    container.addEventListener('click', (e) => {
+      const playBtn = e.target.closest('[data-history-play]');
+      const deleteBtn = e.target.closest('[data-history-delete]');
+      if (playBtn) {
+        const index = parseInt(playBtn.dataset.historyPlay);
+        this.playFromHistory(index);
+      } else if (deleteBtn) {
+        const index = parseInt(deleteBtn.dataset.historyDelete);
+        this.deleteFromHistory(index);
+      }
+    });
+  }
+
+  playFromHistory(index) {
+    const history = store.getHistory();
+    const item = history[index];
+    if (!item) return;
+    this.openPlayer([item], 0);
+  }
+
+  deleteFromHistory(index) {
+    const history = store.getHistory();
+    const item = history[index];
+    if (!item) return;
+    store.removeFromHistory(item.url);
+    this.renderHistory();
+    this.switchTab('history'); // 刷新计数
+    showToast('已从历史中删除', 'success');
+  }
+
+  handleClearHistory() {
+    if (!confirm('确定要清空全部播放历史吗？')) return;
+    store.clearHistory();
+    this.renderHistory();
+    this.switchTab('history'); // 刷新计数
+    showToast('播放历史已清空', 'success');
+  }
+
+  formatTimeAgo(timestamp) {
+    const now = Date.now();
+    const diff = now - timestamp;
+    const minutes = Math.floor(diff / 60000);
+    const hours = Math.floor(diff / 3600000);
+    const days = Math.floor(diff / 86400000);
+
+    if (minutes < 1) return '刚刚';
+    if (minutes < 60) return `${minutes} 分钟前`;
+    if (hours < 24) return `${hours} 小时前`;
+    if (days < 7) return `${days} 天前`;
+    return new Date(timestamp).toLocaleDateString('zh-CN');
   }
 
   initGitHubUI() {

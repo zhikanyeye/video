@@ -78,9 +78,17 @@ class VideoPlayer {
     this._hideError();
     this._showLoading(true);
     this._updateResolution({ type: 'loading' });
+    this._historyRecorded = false; // 重置历史记录标记
     try {
       await this.core.init(video, container, {
-        onPlay: () => this._updateUI(),
+        onPlay: () => {
+          this._updateUI();
+          // 首次播放时记录到历史
+          if (!this._historyRecorded) {
+            store.addToHistory(video);
+            this._historyRecorded = true;
+          }
+        },
         onPause: () => this._updateUI(),
         onVideoMeta: (meta) => this._updateResolution(meta),
         onPlaybackWarning: (message) => this._showPlaybackNotice(message),

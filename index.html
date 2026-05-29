@@ -122,10 +122,21 @@
 
             <!-- 播放列表区域 -->
             <section class="playlist-section">
+                <div class="playlist-tabs">
+                    <button class="playlist-tab active" data-tab="playlist">
+                        <i class="material-icons">queue_music</i>
+                        播放列表
+                    </button>
+                    <button class="playlist-tab" data-tab="history">
+                        <i class="material-icons">history</i>
+                        播放历史
+                    </button>
+                </div>
+
                 <div class="section-header">
                     <h2>
                         <i class="material-icons">queue_music</i>
-                        播放列表 (<span id="videoCount">0</span>)
+                        <span id="sectionTitle">播放列表</span> (<span id="videoCount">0</span>)
                     </h2>
                     <div class="section-actions">
                         <button id="playAllBtn" class="btn btn-success">
@@ -135,6 +146,10 @@
                         <button id="shareBtn" class="btn btn-primary">
                             <i class="material-icons">share</i>
                             生成分享链接
+                        </button>
+                        <button id="clearHistoryBtn" class="btn btn-danger" style="display:none">
+                            <i class="material-icons">delete_sweep</i>
+                            清空历史
                         </button>
                         <div class="dropdown">
                             <button class="btn btn-secondary dropdown-trigger" id="moreActionsBtn" aria-haspopup="true" aria-expanded="false">
@@ -155,15 +170,16 @@
                         </div>
                     </div>
                 </div>
-                
+
                 <div class="playlist-container">
                     <div id="emptyState" class="empty-state">
                         <i class="material-icons">video_library</i>
                         <h3>暂无视频</h3>
                         <p>请添加视频到播放列表</p>
                     </div>
-                    
+
                     <div id="videoList" class="video-list"></div>
+                    <div id="historyList" class="video-list" style="display:none"></div>
                 </div>
             </section>
         </main>

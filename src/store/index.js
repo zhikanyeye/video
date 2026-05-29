@@ -13,6 +13,7 @@ const STORAGE_KEYS = {
   PLAYLIST_GIST_ID: 'playlist_gist_id',
   GITHUB_TOKEN: 'github_token',
   GITHUB_USER: 'github_user',
+  PLAY_HISTORY: 'playHistory',
 };
 
 function _get(key, fallback = null) {
@@ -184,4 +185,55 @@ export function clearGitHubAuth() {
   _remove(STORAGE_KEYS.GITHUB_TOKEN);
   _remove(STORAGE_KEYS.GITHUB_USER);
   _remove(STORAGE_KEYS.PLAYLIST_GIST_ID);
+}
+
+// ---- 播放历史 ----
+
+const MAX_HISTORY = 50;
+
+/**
+ * 获取播放历史（按时间倒序）
+ * @returns {Array<{url, title, type, playedAt}>}
+ */
+export function getHistory() {
+  const history = _get(STORAGE_KEYS.PLAY_HISTORY, []);
+  return Array.isArray(history) ? history : [];
+}
+
+/**
+ * 添加到播放历史（去重 + 更新时间戳）
+ * @param {Object} video - { url, title, type }
+ */
+export function addToHistory(video) {
+  if (!video?.url) return;
+  let history = getHistory();
+  // 去重：移除相同 URL 的旧记录
+  history = history.filter((item) => item.url !== video.url);
+  // 插入到最前面
+  history.unshift({
+    url: video.url,
+    title: video.title || '未命名视频',
+    type: video.type || 'unknown',
+    playedAt: Date.now(),
+  });
+  // 限制最大条数
+  if (history.length > MAX_HISTORY) history = history.slice(0, MAX_HISTORY);
+  _set(STORAGE_KEYS.PLAY_HISTORY, history);
+}
+
+/**
+ * 从历史中删除单条
+ * @param {string} url
+ */
+export function removeFromHistory(url) {
+  let history = getHistory();
+  history = history.filter((item) => item.url !== url);
+  _set(STORAGE_KEYS.PLAY_HISTORY, history);
+}
+
+/**
+ * 清空播放历史
+ */
+export function clearHistory() {
+  _remove(STORAGE_KEYS.PLAY_HISTORY);
 }
