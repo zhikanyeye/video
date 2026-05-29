@@ -61,9 +61,10 @@ export async function parseVideoUrl(url) {
   // 嗅探模式：通过后端API解析
   if (shouldSniff(url)) {
     try {
-      const sniffed = await sniffVideoSources(url);
-      if (sniffed && sniffed.length > 0) {
-        const best = sniffed[0]; // 已按 score 排序
+      const data = await sniffVideoSources(url);
+      const sniffed = data.sources || [];
+      if (sniffed.length > 0) {
+        const best = sniffed[0];
         return { type: best.type, url: best.url };
       }
     } catch (e) {
@@ -114,12 +115,12 @@ function ensureQueryParam(url, key, value) {
 }
 
 /**
- * 调用后端嗅探API
+ * 调用后端嗅探API，返回完整 data（含 sources + meta）
  */
-async function sniffVideoSources(url) {
+export async function sniffVideoSources(url) {
   const apiBase = getApiBase();
+  if (!apiBase) throw new Error('后端 API 未配置');
   const resp = await fetch(`${apiBase}/api/sniff?url=${encodeURIComponent(url)}`);
   if (!resp.ok) throw new Error(`嗅探请求失败: ${resp.status}`);
-  const data = await resp.json();
-  return data.sources || [];
+  return resp.json();
 }

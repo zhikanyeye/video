@@ -1967,3 +1967,115 @@ body::after {
         font-size: var(--font-sm);
     }
 }
+
+/* 嗅探模态框 */
+.sniff-modal-content {
+    max-width: 760px;
+}
+
+.sniff-result {
+    display: grid;
+    gap: var(--space-md);
+}
+
+.sniff-meta {
+    padding: var(--space-sm) var(--space-md);
+    background: rgba(255, 255, 255, 0.04);
+    border-radius: var(--radius-medium);
+    color: var(--text-muted);
+    font-size: var(--font-xs);
+}
+
+.sniff-source-list {
+    display: grid;
+    gap: var(--space-sm);
+}
+
+.sniff-source-item {
+    display: flex;
+    align-items: center;
+    gap: var(--space-md);
+    padding: var(--space-sm) var(--space-md);
+    border: 1px solid var(--border-color);
+    border-radius: var(--radius-medium);
+    background: rgba(255, 255, 255, 0.03);
+    transition: background var(--transition-fast);
+}
+
+.sniff-source-item:hover {
+    background: rgba(255, 255, 255, 0.06);
+}
+
+.sniff-source-info {
+    display: flex;
+    align-items: center;
+    gap: var(--space-sm);
+    flex: 1;
+    min-width: 0;
+}
+
+.sniff-source-index {
+    color: var(--text-muted);
+    font-size: var(--font-xs);
+    min-width: 18px;
+    text-align: right;
+}
+
+.sniff-source-type {
+    padding: 2px 7px;
+    border-radius: var(--radius-small);
+    font-size: 11px;
+    font-weight: 700;
+    letter-spacing: 0.03em;
+    white-space: nowrap;
+    background: rgba(255, 255, 255, 0.1);
+    color: var(--text-secondary);
+}
+
+.sniff-type-m3u8 {
+    background: rgba(0, 184, 148, 0.18);
+    color: #00b894;
+}
+
+.sniff-type-mpd {
+    background: rgba(108, 92, 231, 0.2);
+    color: var(--primary-light);
+}
+
+.sniff-type-mp4 {
+    background: rgba(9, 132, 227, 0.18);
+    color: #74b9ff;
+}
+
+.sniff-type-flv {
+    background: rgba(253, 203, 110, 0.18);
+    color: #fdcb6e;
+}
+
+.sniff-type-webm {
+    background: rgba(255, 118, 117, 0.18);
+    color: #ff7675;
+}
+
+.sniff-source-from {
+    font-size: var(--font-xs);
+    color: var(--text-muted);
+    white-space: nowrap;
+}
+
+.sniff-source-url {
+    font-size: var(--font-xs);
+    color: var(--text-secondary);
+    font-family: 'SF Mono', 'Fira Code', 'Consolas', monospace;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+    min-width: 0;
+}
+
+.btn-sm {
+    padding: 4px 12px;
+    font-size: var(--font-xs);
+    border-radius: var(--radius-small);
+    white-space: nowrap;
+}

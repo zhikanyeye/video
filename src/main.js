@@ -6,6 +6,7 @@ import { escapeHtml, isValidVideoUrl, detectVideoType, getApiBase } from './util
 import { showToast } from './components/toast.js';
 import { showModal, initModalListeners } from './components/modal.js';
 import { GitHubManager } from './components/github-manager.js';
+import { sniffVideoSources } from './parsers/video-url.js';
 
 const github = new GitHubManager();
 
@@ -34,6 +35,7 @@ class VideoManager {
     document.getElementById('clearBulkTextBtn')?.addEventListener('click', () => this.clearBulkText());
     document.getElementById('bulkAddBtn')?.addEventListener('click', () => this.handleBulkAdd());
     document.getElementById('probeCurrentBtn')?.addEventListener('click', () => this.handleProbeCurrent());
+    document.getElementById('sniffCurrentBtn')?.addEventListener('click', () => this.handleSniffCurrent());
 
     // 批量添加折叠
     document.getElementById('bulkToggleBtn')?.addEventListener('click', () => {
@@ -79,6 +81,16 @@ class VideoManager {
     });
     document.getElementById('probeModal')?.addEventListener('click', (e) => {
       if (e.target.id === 'probeModal') this.hideProbeModal();
+    });
+
+    document.getElementById('sniffModalClose')?.addEventListener('click', () => this.hideSniffModal());
+    document.getElementById('sniffModalDone')?.addEventListener('click', () => this.hideSniffModal());
+    document.getElementById('sniffModal')?.addEventListener('click', (e) => {
+      if (e.target.id === 'sniffModal') this.hideSniffModal();
+    });
+    document.getElementById('sniffResult')?.addEventListener('click', (e) => {
+      const btn = e.target.closest('[data-sniff-add]');
+      if (btn) this.addSniffedSource(btn.dataset.sniffAdd, btn.dataset.sniffType);
     });
 
     window.addEventListener('github-auth-success', () => {
@@ -347,6 +359,108 @@ class VideoManager {
 
   hideProbeModal() {
     document.getElementById('probeModal')?.classList.remove('show');
+  }
+
+  // ---- 嗅探 ----
+
+  async handleSniffCurrent() {
+    const input = document.getElementById('videoUrl');
+    const url = input?.value.trim();
+    if (!url) return showToast('请先输入视频链接', 'warning');
+
+    const apiBase = this.getApiBase();
+    if (!apiBase) {
+      this.showSniffModal(this.renderApiConfigPrompt());
+      return;
+    }
+
+    this.showSniffModal('<div class="probe-loading">正在嗅探视频源...</div>');
+    try {
+      const data = await sniffVideoSources(url);
+      this.showSniffModal(this.renderSniffResult(data));
+    } catch (e) {
+      this.showSniffModal(this.renderSniffError(e, apiBase));
+    }
+  }
+
+  showSniffModal(html) {
+    const modal = document.getElementById('sniffModal');
+    const result = document.getElementById('sniffResult');
+    if (!modal || !result) return;
+    result.innerHTML = html;
+    modal.classList.add('show');
+  }
+
+  hideSniffModal() {
+    document.getElementById('sniffModal')?.classList.remove('show');
+  }
+
+  renderSniffResult(data) {
+    const sources = data.sources || [];
+    const meta = data.meta || {};
+
+    if (sources.length === 0) {
+      return `
+        <div class="probe-error">未找到视频源</div>
+        <div class="probe-section">
+          <ul>
+            <li>页面可能需要登录或使用了动态加载（JS 渲染）。</li>
+            <li>嗅探仅解析静态 HTML，无法执行 JavaScript。</li>
+            <li>可尝试直接粘贴视频直链地址。</li>
+          </ul>
+        </div>`;
+    }
+
+    const fromLabels = {
+      'dom-src': 'DOM', 'dom-data-src': 'DOM', 'dom-a': 'DOM',
+      'data-attr': 'data-*',
+      'script-json-key': 'Script/JSON', 'script-global-state': 'Script/State',
+      'script-var': 'Script/Var', 'script-json-parse': 'Script/Parse',
+      'regex-ext': '正则', 'head-verified': '已验证',
+    };
+
+    const rows = sources.map((s, i) => {
+      const base = s.from ? s.from.replace('/iframe', '') : '';
+      const suffix = s.from && s.from.includes('/iframe') ? ' (iframe)' : '';
+      const fromLabel = (fromLabels[base] || base) + suffix;
+      const typeClass = `sniff-type-${s.type}`;
+      const shortUrl = s.url.length > 60 ? s.url.slice(0, 57) + '...' : s.url;
+      return `
+        <div class="sniff-source-item">
+          <div class="sniff-source-info">
+            <span class="sniff-source-index">${i + 1}</span>
+            <span class="sniff-source-type ${typeClass}">${escapeHtml(s.type.toUpperCase())}</span>
+            <span class="sniff-source-from">${escapeHtml(fromLabel)}</span>
+            <span class="sniff-source-url" title="${escapeHtml(s.url)}">${escapeHtml(shortUrl)}</span>
+          </div>
+          <button class="btn btn-sm btn-primary" data-sniff-add="${escapeHtml(s.url)}" data-sniff-type="${escapeHtml(s.type)}" type="button">添加</button>
+        </div>`;
+    }).join('');
+
+    const metaLine = `<div class="sniff-meta">找到 ${sources.length} 个视频源，耗时 ${meta.elapsed || 0} ms（Layer1: ${meta.layer1Count || 0}，Layer2: ${meta.layer2Count || 0}）</div>`;
+
+    return metaLine + `<div class="sniff-source-list">${rows}</div>`;
+  }
+
+  renderSniffError(error, apiBase) {
+    return `
+      <div class="probe-error">嗅探失败：${escapeHtml(error.message)}</div>
+      <div class="probe-section">
+        <h4>当前后端地址</h4>
+        <div class="probe-code">${escapeHtml(apiBase)}</div>
+        <ul>
+          <li>确认后端服务正常运行（访问 <strong>/api/health</strong>）。</li>
+          <li>Render 免费服务可能正在冷启动，请等 30 秒后重试。</li>
+        </ul>
+      </div>`;
+  }
+
+  addSniffedSource(url, type) {
+    const title = `嗅探视频 ${this.videos.length + 1}`;
+    this.videos.push({ id: Date.now(), title, url, type, addedAt: new Date().toISOString() });
+    this._save();
+    showToast('已添加到播放列表', 'success');
+    this.syncToGitHubSilently();
   }
 
   renderProbeError(error, apiBase) {

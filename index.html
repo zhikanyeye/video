@@ -112,6 +112,10 @@
                             <i class="material-icons">manage_search</i>
                             检测源
                         </button>
+                        <button type="button" id="sniffCurrentBtn" class="btn btn-secondary">
+                            <i class="material-icons">travel_explore</i>
+                            嗅探视频源
+                        </button>
                     </div>
                 </form>
             </section>
@@ -260,6 +264,24 @@
             <div class="modal-footer">
                 <button id="modalCancel" class="btn btn-secondary">取消</button>
                 <button id="modalConfirm" class="btn btn-primary">确定</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- 视频源嗅探模态框 -->
+    <div id="sniffModal" class="modal">
+        <div class="modal-content sniff-modal-content">
+            <div class="modal-header">
+                <h3>视频源嗅探</h3>
+                <button id="sniffModalClose" class="modal-close" aria-label="关闭嗅探弹窗">
+                    <i class="material-icons">close</i>
+                </button>
+            </div>
+            <div class="modal-body">
+                <div id="sniffResult" class="sniff-result"></div>
+            </div>
+            <div class="modal-footer">
+                <button id="sniffModalDone" class="btn btn-secondary" type="button">完成</button>
             </div>
         </div>
     </div>
