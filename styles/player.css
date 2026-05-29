@@ -520,6 +520,37 @@
     color: #fff;
 }
 
+.quality-buttons {
+    display: flex;
+    gap: 8px;
+    flex-wrap: wrap;
+}
+
+.quality-btn {
+    flex: 1;
+    min-width: 70px;
+    padding: 8px 12px;
+    border: 1px solid rgba(255, 255, 255, 0.15);
+    border-radius: 6px;
+    background: rgba(255, 255, 255, 0.08);
+    color: var(--player-text);
+    font-size: 13px;
+    font-weight: 500;
+    cursor: pointer;
+    transition: all 0.2s ease;
+}
+
+.quality-btn:hover {
+    background: rgba(255, 255, 255, 0.12);
+    border-color: rgba(255, 255, 255, 0.25);
+}
+
+.quality-btn.active {
+    background: var(--player-primary);
+    border-color: var(--player-primary);
+    color: #fff;
+}
+
 .toast-container {
     position: fixed;
     top: 88px;

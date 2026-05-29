@@ -11,16 +11,19 @@ export class PlayerCore {
     this.playerType = null; // 'artplayer' | 'iframe'
     this.parsedVideo = null;
     this.externalPlayers = [];
+    this.hls = null; // HLS.js 实例
+    this.callbacks = {}; // 存储回调
   }
 
   /**
    * 初始化播放器
    * @param {Object} video - { title, url, type }
    * @param {HTMLElement} container
-   * @param {Object} callbacks - { onPlay, onPause, onTimeUpdate, onEnded, onError }
+   * @param {Object} callbacks - { onPlay, onPause, onTimeUpdate, onEnded, onError, onQualityLevels }
    */
   async init(video, container, callbacks = {}) {
     this.cleanup();
+    this.callbacks = callbacks;
 
     const parsed = await parseVideoUrl(video.url);
     this.parsedVideo = parsed;
@@ -170,6 +173,14 @@ export class PlayerCore {
     if (Hls.isSupported()) {
       const hls = this._createHlsInstance(Hls);
       this._registerExternalPlayer(hls);
+      this.hls = hls; // 保存 HLS 实例供质量切换使用
+
+      // 监听清单解析完成，提取质量档位
+      hls.on(Hls.Events.MANIFEST_PARSED, (_evt, data) => {
+        if (data.levels && data.levels.length > 1) {
+          this._onQualityLevelsAvailable(data.levels);
+        }
+      });
 
       // 仅在直连时挂回退监听；已经走代理的失败就直接抛错
       let fallbackTried = false;
@@ -179,6 +190,7 @@ export class PlayerCore {
         try { hls.destroy(); } catch { /* ignore */ }
         const fbHls = this._createHlsInstance(Hls);
         this._registerExternalPlayer(fbHls);
+        this.hls = fbHls;
         fbHls.loadSource(proxyUrl);
         fbHls.attachMedia(video);
         return true;
@@ -322,6 +334,40 @@ export class PlayerCore {
     return 'vtt'; // 默认 vtt
   }
 
+  _onQualityLevelsAvailable(levels) {
+    // 格式化质量档位信息
+    const qualities = levels.map((level, index) => ({
+      index,
+      height: level.height,
+      width: level.width,
+      bitrate: level.bitrate,
+      label: this._formatQualityLabel(level),
+    }));
+    this.callbacks.onQualityLevels?.(qualities);
+  }
+
+  _formatQualityLabel(level) {
+    if (level.height) {
+      return `${level.height}p`;
+    }
+    if (level.bitrate) {
+      const mbps = (level.bitrate / 1000000).toFixed(1);
+      return `${mbps}Mbps`;
+    }
+    return '未知';
+  }
+
+  setQuality(levelIndex) {
+    if (!this.hls) return;
+    // -1 表示自动模式
+    this.hls.currentLevel = levelIndex;
+  }
+
+  getCurrentQuality() {
+    if (!this.hls) return -1;
+    return this.hls.currentLevel;
+  }
+
   // ---- 播放控制 ----
 
   play() { this.art?.play(); }
@@ -392,7 +438,9 @@ export class PlayerCore {
       this.art.destroy(false);
       this.art = null;
     }
+    this.hls = null;
     this.playerType = null;
     this.parsedVideo = null;
+    this.callbacks = {};
   }
 }

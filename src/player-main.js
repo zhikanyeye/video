@@ -99,6 +99,7 @@ class VideoPlayer {
         },
         onEnded: () => this._onVideoEnded(),
         onError: (err) => this._showError(err.message),
+        onQualityLevels: (levels) => this._renderQualitySelector(levels),
       });
       this._showLoading(false);
       this._updateVideoInfo();
@@ -282,6 +283,43 @@ class VideoPlayer {
     store.setPlaybackRate(rate);
     this._renderSettings(); // 更新按钮高亮
     showToast(`播放速度：${rate}x`, 'info', 1500);
+  }
+
+  _renderQualitySelector(levels) {
+    const group = document.getElementById('qualitySettingGroup');
+    const container = document.getElementById('qualityButtons');
+    if (!group || !container) return;
+
+    // 显示质量选择器
+    group.style.display = 'block';
+
+    // 渲染按钮：自动 + 各档位
+    const buttons = [
+      `<button class="quality-btn active" data-quality="-1">自动</button>`,
+      ...levels.map((level) =>
+        `<button class="quality-btn" data-quality="${level.index}">${level.label}</button>`
+      ),
+    ];
+    container.innerHTML = buttons.join('');
+
+    // 绑定点击事件
+    container.querySelectorAll('.quality-btn').forEach((btn) => {
+      btn.addEventListener('click', () => {
+        const quality = parseInt(btn.dataset.quality);
+        this._setQuality(quality);
+      });
+    });
+  }
+
+  _setQuality(levelIndex) {
+    this.core.setQuality(levelIndex);
+    // 更新按钮高亮
+    document.querySelectorAll('.quality-btn').forEach((btn) => {
+      const quality = parseInt(btn.dataset.quality);
+      btn.classList.toggle('active', quality === levelIndex);
+    });
+    const label = levelIndex === -1 ? '自动' : document.querySelector(`[data-quality="${levelIndex}"]`)?.textContent || '未知';
+    showToast(`视频质量：${label}`, 'info', 1500);
   }
 
   _updateSetting(key, value) {
